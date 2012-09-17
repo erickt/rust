@@ -82,6 +82,7 @@ mod ext {
     mod ident_to_str;
     mod log_syntax;
     mod auto_serialize;
+    mod auto_serialize2;
     mod source_util;
 
     mod pipes {
