@@ -412,37 +412,51 @@ fn ser_ty(cx: ext_ctxt, ty: @ast::ty) -> ~[@ast::stmt] {
         },
 
         ast::ty_rec(fields) => {
-            /*
             let stmts = do fields.mapi |idx, field| {
                 let name = cx.lit_str(
                     field.span,
                     @cx.str_of(field.node.ident)
                 );
                 let idx = cx.lit_uint(field.span, idx);
-                #ast[stmt]{
-                    s.emit_rec_field(
-                        $(name),
-                        $(idx),
-                        || self. $(name) .serialize(s)
+
+                let expr_self = cx.expr(
+                    ty.span,
+                    ast::expr_path(
+                        cx.path(ty.span, ~[cx.ident_of(~"self")])
                     )
-                }
+                );
+
+                let expr_name = cx.expr(
+                    ty.span,
+                    ast::expr_field(
+                        expr_self,
+                        field.node.ident,
+                        ~[])
+                );
+
+                let expr_serialize = cx.expr(
+                    ty.span,
+                    ast::expr_field(expr_name, cx.ident_of(~"serialize"), ~[])
+                );
+
+                let expr_arg = cx.expr(
+                    ty.span,
+                    ast::expr_path(
+                        cx.path(ty.span, ~[cx.ident_of(~"s")])
+                    )
+                );
+
+                let expr = cx.expr(
+                    ty.span,
+                    ast::expr_call(expr_serialize, ~[expr_arg], false)
+                );
+
+                #ast[stmt]{ s.emit_rec_field($(name), $(idx), || $(expr))) }
             };
 
             let fields_lambda = cx.lambda(cx.blk(ty.span, stmts));
 
             ~[#ast[stmt]{ s.emit_rec($(fields_lambda)) }]
-            */
-            io::println(fmt!("%?", #ast[stmt]{
-                impl {x: int, y: bool}: Serializable {
-                    fn serialize<S: Serializer>(s: S) {
-                        s.emit_rec(|| {
-                            s.emit_rec_field("x", 0, || self.x.serialize(s));
-                            s.emit_rec_field("y", 1, || self.y.serialize(s));
-                        })
-                    }
-                }
-            }));
-            ~[#ast[stmt]{ fail }]
         },
 
         ast::ty_fn(*) => {
