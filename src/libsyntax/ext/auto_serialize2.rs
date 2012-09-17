@@ -380,7 +380,7 @@ fn mk_ser_method(cx: ext_ctxt, ty: @ast::ty) -> @ast::method {
         ident: cx.ident_of(~"serialize"),
         attrs: ~[],
         tps: ser_tps,
-        self_ty: {node: ast::sty_value, span: ty.span},
+        self_ty: {node: ast::sty_by_ref, span: ty.span},
         purity: ast::impure_fn,
         decl: ser_decl,
         body: ser_blk,
@@ -464,7 +464,7 @@ fn ser_ty(cx: ext_ctxt, ty: @ast::ty) -> ~[@ast::stmt] {
             ~[]
         },
 
-        ast::ty_tup(tys) => ~[#ast[stmt]{ self.serialize(s) }],
+        ast::ty_tup(_) => ~[#ast[stmt]{ self.serialize(s) }],
 
         ast::ty_path(_path, _) => {
             ~[#ast[stmt]{ fail }]

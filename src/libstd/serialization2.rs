@@ -267,3 +267,34 @@ impl<
     }
 }
 
+impl<
+    A: Serializable,
+    B: Serializable,
+    C: Serializable,
+    D: Serializable
+> (A, B, C, D): Serializable {
+    fn serialize<S: Serializer>(s: S) {
+        match self {
+            (a, b, c, d) => {
+                do s.emit_tup(4) {
+                    s.emit_tup_elt(0, || a.serialize(s));
+                    s.emit_tup_elt(1, || b.serialize(s));
+                    s.emit_tup_elt(2, || c.serialize(s));
+                    s.emit_tup_elt(3, || d.serialize(s));
+                }
+            }
+        }
+    }
+
+    static fn deserialize<DD: Deserializer>(d: DD) -> (A, B, C, D) {
+        do d.read_tup(4) {
+            (
+                d.read_tup_elt(0, || deserialize(d)),
+                d.read_tup_elt(1, || deserialize(d)),
+                d.read_tup_elt(2, || deserialize(d)),
+                d.read_tup_elt(3, || deserialize(d))
+            )
+        }
+    }
+}
+
