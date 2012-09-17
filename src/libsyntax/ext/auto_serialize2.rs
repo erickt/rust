@@ -71,207 +71,6 @@ mod syntax {
     pub use parse;
 }
 
-type ser_tps_map = map::HashMap<ast::ident, fn@(@ast::expr) -> ~[@ast::stmt]>;
-type deser_tps_map = map::HashMap<ast::ident, fn@() -> @ast::expr>;
-
-/*
-trait ext_ctxt_helpers {
-    fn helper_path(base_path: @ast::path, helper_name: ~str) -> @ast::path;
-    fn path(span: span, strs: ~[ast::ident]) -> @ast::path;
-    fn path_tps(span: span, strs: ~[ast::ident],
-                tps: ~[@ast::ty]) -> @ast::path;
-    fn ty_path(span: span, strs: ~[ast::ident], tps: ~[@ast::ty]) -> @ast::ty;
-    fn ty_fn(span: span,
-             -input_tys: ~[@ast::ty],
-             -output: @ast::ty) -> @ast::ty;
-    fn ty_nil(span: span) -> @ast::ty;
-    fn expr(span: span, node: ast::expr_) -> @ast::expr;
-    fn var_ref(span: span, name: ast::ident) -> @ast::expr;
-    fn blk(span: span, stmts: ~[@ast::stmt]) -> ast::blk;
-    fn expr_blk(expr: @ast::expr) -> ast::blk;
-    fn binder_pat(span: span, nm: ast::ident) -> @ast::pat;
-    fn stmt(expr: @ast::expr) -> @ast::stmt;
-    fn alt_stmt(arms: ~[ast::arm], span: span, -v: @ast::expr) -> @ast::stmt;
-    fn lit_str(span: span, s: @~str) -> @ast::expr;
-    fn lit_uint(span: span, i: uint) -> @ast::expr;
-    fn lambda(blk: ast::blk) -> @ast::expr;
-    fn clone_folder() -> fold::ast_fold;
-    fn clone(v: @ast::expr) -> @ast::expr;
-    fn clone_ty(v: @ast::ty) -> @ast::ty;
-    fn clone_ty_param(v: ast::ty_param) -> ast::ty_param;
-    fn at(span: span, expr: @ast::expr) -> @ast::expr;
-}
-
-impl ext_ctxt: ext_ctxt_helpers {
-    fn helper_path(base_path: @ast::path,
-                   helper_name: ~str) -> @ast::path {
-        let head = vec::init(base_path.idents);
-        let tail = vec::last(base_path.idents);
-        self.path(base_path.span,
-                  vec::append(head,
-                              ~[self.parse_sess().interner.
-                                intern(@(helper_name + ~"_" +
-                                         *self.parse_sess().interner.get(
-                                             tail)))]))
-    }
-
-    fn path(span: span, strs: ~[ast::ident]) -> @ast::path {
-        @{span: span, global: false, idents: strs, rp: None, types: ~[]}
-    }
-
-    fn path_tps(span: span, strs: ~[ast::ident],
-                tps: ~[@ast::ty]) -> @ast::path {
-        @{span: span, global: false, idents: strs, rp: None, types: tps}
-    }
-
-    fn ty_path(span: span, strs: ~[ast::ident],
-               tps: ~[@ast::ty]) -> @ast::ty {
-        @{id: self.next_id(),
-          node: ast::ty_path(self.path_tps(span, strs, tps), self.next_id()),
-          span: span}
-    }
-
-    fn ty_fn(span: span,
-             -input_tys: ~[@ast::ty],
-             -output: @ast::ty) -> @ast::ty {
-        let args = do vec::map(input_tys) |ty| {
-            {mode: ast::expl(ast::by_ref),
-             ty: ty,
-             ident: parse::token::special_idents::invalid,
-             id: self.next_id()}
-        };
-
-        @{id: self.next_id(),
-          node: ast::ty_fn(ast::proto_block,
-                           ast::impure_fn,
-                           @~[],
-                           {inputs: args,
-                            output: output,
-                            cf: ast::return_val}),
-          span: span}
-    }
-
-    fn ty_nil(span: span) -> @ast::ty {
-        @{id: self.next_id(), node: ast::ty_nil, span: span}
-    }
-
-    fn expr(span: span, node: ast::expr_) -> @ast::expr {
-        @{id: self.next_id(), callee_id: self.next_id(),
-          node: node, span: span}
-    }
-
-    fn var_ref(span: span, name: ast::ident) -> @ast::expr {
-        self.expr(span, ast::expr_path(self.path(span, ~[name])))
-    }
-
-    fn blk(span: span, stmts: ~[@ast::stmt]) -> ast::blk {
-        {node: {view_items: ~[],
-                stmts: stmts,
-                expr: None,
-                id: self.next_id(),
-                rules: ast::default_blk},
-         span: span}
-    }
-
-    fn expr_blk(expr: @ast::expr) -> ast::blk {
-        {node: {view_items: ~[],
-                stmts: ~[],
-                expr: Some(expr),
-                id: self.next_id(),
-                rules: ast::default_blk},
-         span: expr.span}
-    }
-
-    fn binder_pat(span: span, nm: ast::ident) -> @ast::pat {
-        let path = @{span: span, global: false, idents: ~[nm],
-                     rp: None, types: ~[]};
-        @{id: self.next_id(),
-          node: ast::pat_ident(ast::bind_by_implicit_ref,
-                               path,
-                               None),
-          span: span}
-    }
-
-    fn stmt(expr: @ast::expr) -> @ast::stmt {
-        @{node: ast::stmt_semi(expr, self.next_id()),
-          span: expr.span}
-    }
-
-    fn alt_stmt(arms: ~[ast::arm],
-                span: span, -v: @ast::expr) -> @ast::stmt {
-        self.stmt(
-            self.expr(
-                span,
-                ast::expr_match(v, arms)))
-    }
-
-    fn lit_str(span: span, s: @~str) -> @ast::expr {
-        self.expr(
-            span,
-            ast::expr_vstore(
-                self.expr(
-                    span,
-                    ast::expr_lit(
-                        @{node: ast::lit_str(s),
-                          span: span})),
-                ast::expr_vstore_uniq))
-    }
-
-    fn lit_uint(span: span, i: uint) -> @ast::expr {
-        self.expr(
-            span,
-            ast::expr_lit(
-                @{node: ast::lit_uint(i as u64, ast::ty_u),
-                  span: span}))
-    }
-
-    fn lambda(blk: ast::blk) -> @ast::expr {
-        let ext_cx = self;
-        let blk_e = self.expr(blk.span, ast::expr_block(blk));
-        #ast{ || $(blk_e) }
-    }
-
-    fn clone_folder() -> fold::ast_fold {
-        fold::make_fold(@{
-            new_id: |_id| self.next_id(),
-            .. *fold::default_ast_fold()
-        })
-    }
-
-    fn clone(v: @ast::expr) -> @ast::expr {
-        let fld = self.clone_folder();
-        fld.fold_expr(v)
-    }
-
-    fn clone_ty(v: @ast::ty) -> @ast::ty {
-        let fld = self.clone_folder();
-        fld.fold_ty(v)
-    }
-
-    fn clone_ty_param(v: ast::ty_param) -> ast::ty_param {
-        let fld = self.clone_folder();
-        fold::fold_ty_param(v, fld)
-    }
-
-    fn at(span: span, expr: @ast::expr) -> @ast::expr {
-        fn repl_sp(old_span: span, repl_span: span, with_span: span) -> span {
-            if old_span == repl_span {
-                with_span
-            } else {
-                old_span
-            }
-        }
-
-        let fld = fold::make_fold(@{
-            new_span: |a| repl_sp(a, ast_util::dummy_sp(), span),
-            .. *fold::default_ast_fold()
-        });
-
-        fld.fold_expr(expr)
-    }
-}
-*/
-
 fn expand(cx: ext_ctxt,
           span: span,
           _mitem: ast::meta_item,
@@ -288,20 +87,65 @@ fn expand(cx: ext_ctxt,
     do vec::flat_map(in_items) |in_item| {
         match in_item.node {
             ast::item_ty(ty, tps) => {
-                ~[filter_attrs(in_item), ty_impl(cx, ty, tps)]
+                match ty.node {
+                    ast::ty_rec(fields) => {
+                        ~[
+                            filter_attrs(in_item),
+                            mk_impl(
+                                cx,
+                                ty,
+                                tps,
+                                mk_rec_ser_body(cx, ty, fields),
+                                mk_rec_deser_body(cx, ty, fields)
+                            )
+                        ]
+                    }
+                    _ => {
+                        cx.span_err(span, ~"#[auto_serialize2] can only be \
+                                            applied to record types");
+                        ~[in_item]
+                    }
+                }
+            }
+            ast::item_enum(enum_definition, tps) => {
+                ~[
+                    filter_attrs(in_item),
+                    mk_impl(
+                        cx,
+                        cx.ty_path(span, ~[in_item.ident], ~[]),
+                        tps,
+                        mk_enum_ser_body(
+                            cx,
+                            in_item.ident,
+                            in_item.span,
+                            enum_definition.variants
+                        ),
+                        mk_enum_deser_body(
+                            cx,
+                            in_item.ident,
+                            in_item.span,
+                            enum_definition.variants
+                        )
+                    )
+                ]
             }
             _ => {
-                cx.span_err(span, ~"#[auto_serialize] can only be \
-                                   applied to type and enum \
-                                   definitions");
+                cx.span_err(span, ~"#[auto_serialize2] can only be \
+                                    applied to record types and enum \
+                                    definitions");
                 ~[in_item]
             }
         }
     }
 }
 
-fn ty_impl(cx: ext_ctxt, ty: @ast::ty, tps: ~[ast::ty_param]) -> @ast::item {
-
+fn mk_impl(
+    cx: ext_ctxt,
+    ty: @ast::ty,
+    tps: ~[ast::ty_param],
+    ser_body: @ast::stmt,
+    deser_body: @ast::expr
+) -> @ast::item {
     // This is a new-style impl declaration.
     // XXX: clownshoes
     let ident = ast::token::special_idents::clownshoes_extensions;
@@ -325,8 +169,8 @@ fn ty_impl(cx: ext_ctxt, ty: @ast::ty, tps: ~[ast::ty_param]) -> @ast::item {
     });
 
     let methods = ~[
-        mk_ser_method(cx, ty),
-        mk_deser_method(cx, ty),
+        mk_ser_method(cx, ty, cx.blk(ty.span, ~[ser_body])),
+        mk_deser_method(cx, ty, cx.expr_blk(deser_body)),
     ];
 
     @{ident: ident,
@@ -338,7 +182,11 @@ fn ty_impl(cx: ext_ctxt, ty: @ast::ty, tps: ~[ast::ty_param]) -> @ast::item {
     }
 }
 
-fn mk_ser_method(cx: ext_ctxt, ty: @ast::ty) -> @ast::method {
+fn mk_ser_method(
+    cx: ext_ctxt,
+    ty: @ast::ty,
+    ser_body: ast::blk
+) -> @ast::method {
     let ser_bound = cx.ty_path(
         ty.span,
         ~[
@@ -374,8 +222,6 @@ fn mk_ser_method(cx: ext_ctxt, ty: @ast::ty) -> @ast::method {
         cf: ast::return_val,
     };
 
-    let ser_blk = cx.blk(ty.span, ser_ty(cx, ty));
-
     @{
         ident: cx.ident_of(~"serialize"),
         attrs: ~[],
@@ -383,7 +229,7 @@ fn mk_ser_method(cx: ext_ctxt, ty: @ast::ty) -> @ast::method {
         self_ty: {node: ast::sty_by_ref, span: ty.span},
         purity: ast::impure_fn,
         decl: ser_decl,
-        body: ser_blk,
+        body: ser_body,
         id: cx.next_id(),
         span: ty.span,
         self_id: cx.next_id(),
@@ -391,104 +237,11 @@ fn mk_ser_method(cx: ext_ctxt, ty: @ast::ty) -> @ast::method {
     }
 }
 
-fn ser_ty(cx: ext_ctxt, ty: @ast::ty) -> ~[@ast::stmt] {
-    let ext_cx = cx; // required for #ast{}
-
-    match ty.node {
-        ast::ty_nil => ~[#ast[stmt]{ self.serialize(s) }],
-
-        ast::ty_bot => {
-            cx.span_err(ty.span, ~"Cannot serialize bottom type");
-            ~[]
-        },
-
-        ast::ty_box(_) => ~[#ast[stmt]{ self.serialize(s) }],
-
-        ast::ty_uniq(_) => ~[#ast[stmt]{ self.serialize(s) }],
-
-        ast::ty_ptr(_) | ast::ty_rptr(*) => {
-            cx.span_err(ty.span, ~"cannot serialize pointer types");
-            ~[]
-        },
-
-        ast::ty_rec(fields) => {
-            let stmts = do fields.mapi |idx, field| {
-                let name = cx.lit_str(
-                    field.span,
-                    @cx.str_of(field.node.ident)
-                );
-                let idx = cx.lit_uint(field.span, idx);
-
-                let expr_self = cx.expr(
-                    ty.span,
-                    ast::expr_path(
-                        cx.path(ty.span, ~[cx.ident_of(~"self")])
-                    )
-                );
-
-                let expr_name = cx.expr(
-                    ty.span,
-                    ast::expr_field(
-                        expr_self,
-                        field.node.ident,
-                        ~[])
-                );
-
-                let expr_serialize = cx.expr(
-                    ty.span,
-                    ast::expr_field(expr_name, cx.ident_of(~"serialize"), ~[])
-                );
-
-                let expr_arg = cx.expr(
-                    ty.span,
-                    ast::expr_path(
-                        cx.path(ty.span, ~[cx.ident_of(~"s")])
-                    )
-                );
-
-                let expr = cx.expr(
-                    ty.span,
-                    ast::expr_call(expr_serialize, ~[expr_arg], false)
-                );
-
-                #ast[stmt]{ s.emit_rec_field($(name), $(idx), || $(expr))) }
-            };
-
-            let fields_lambda = cx.lambda(cx.blk(ty.span, stmts));
-
-            ~[#ast[stmt]{ s.emit_rec($(fields_lambda)) }]
-        },
-
-        ast::ty_fn(*) => {
-            cx.span_err(ty.span, ~"cannot serialize function types");
-            ~[]
-        },
-
-        ast::ty_tup(_) => ~[#ast[stmt]{ self.serialize(s) }],
-
-        ast::ty_path(_path, _) => {
-            ~[#ast[stmt]{ fail }]
-        },
-
-        ast::ty_mac(_) => {
-            cx.span_err(ty.span, ~"cannot serialize macro types");
-            ~[]
-        },
-
-        ast::ty_infer => {
-            cx.span_err(ty.span, ~"cannot serialize inferred types");
-            ~[]
-        },
-
-        ast::ty_vec(_) => ~[#ast[stmt]{ self.serialize(s) }],
-
-        ast::ty_fixed_length(*) => {
-            cx.span_unimpl(ty.span, ~"serialization for fixed length types");
-        }
-    }
-}
-
-fn mk_deser_method(cx: ext_ctxt, ty: @ast::ty) -> @ast::method {
+fn mk_deser_method(
+    cx: ext_ctxt,
+    ty: @ast::ty,
+    deser_body: ast::blk
+) -> @ast::method {
     let deser_bound = cx.ty_path(
         ty.span,
         ~[
@@ -518,8 +271,6 @@ fn mk_deser_method(cx: ext_ctxt, ty: @ast::ty) -> @ast::method {
         cf: ast::return_val,
     };
 
-    let deser_blk = cx.expr_blk(deser_ty(cx, ty));
-
     @{
         ident: cx.ident_of(~"deserialize"),
         attrs: ~[],
@@ -527,7 +278,7 @@ fn mk_deser_method(cx: ext_ctxt, ty: @ast::ty) -> @ast::method {
         self_ty: {node: ast::sty_static, span: ty.span},
         purity: ast::impure_fn,
         decl: deser_decl,
-        body: deser_blk,
+        body: deser_body,
         id: cx.next_id(),
         span: ty.span,
         self_id: cx.next_id(),
@@ -535,97 +286,250 @@ fn mk_deser_method(cx: ext_ctxt, ty: @ast::ty) -> @ast::method {
     }
 }
 
-fn deser_ty(cx: ext_ctxt, ty: @ast::ty) -> @ast::expr {
+fn mk_rec_ser_body(
+    cx: ext_ctxt,
+    ty: @ast::ty,
+    fields: ~[ast::ty_field]
+) -> @ast::stmt {
     let ext_cx = cx; // required for #ast{}
-    
-    match ty.node {
-        ast::ty_nil => #ast{ deserialize(d) },
 
-        ast::ty_bot => #ast{ fail },
+    let stmts = do fields.mapi |idx, field| {
+        let name = cx.lit_str(
+            field.span,
+            @cx.str_of(field.node.ident)
+        );
+        let idx = cx.lit_uint(field.span, idx);
 
-        ast::ty_box(_) => #ast{ @d.read_box(|| deserialize(d)) },
+        // XXX: The next couple stanzas are just to write
+        // `self.$(name).serialize(s)`. It'd be nice if the #ast macro could
+        // write this for us, but it doesn't appear to support quaziquoting a
+        // value inside a field chain.
+        let expr_self = cx.expr(
+            ty.span,
+            ast::expr_path(
+                cx.path(ty.span, ~[cx.ident_of(~"self")])
+            )
+        );
 
-        ast::ty_uniq(_) => #ast{ ~d.read_uniq(|| deserialize(d)) },
+        let expr_name = cx.expr(
+            ty.span,
+            ast::expr_field(
+                expr_self,
+                field.node.ident,
+                ~[])
+        );
 
-        ast::ty_ptr(*) | ast::ty_rptr(*) => #ast{ fail },
+        let expr_serialize = cx.expr(
+            ty.span,
+            ast::expr_field(expr_name, cx.ident_of(~"serialize"), ~[])
+        );
 
-        ast::ty_rec(fields) => {
-            let fields = do fields.mapi |idx, field| {
-                let name = cx.lit_str(
-                    field.span,
-                    @cx.str_of(field.node.ident)
-                );
-                let idx = cx.lit_uint(field.span, idx);
-                let expr = #ast{
-                     d.read_rec_field($(name), $(idx), || deserialize(d))
-                };
+        let expr_arg = cx.expr(
+            ty.span,
+            ast::expr_path(
+                cx.path(ty.span, ~[cx.ident_of(~"s")])
+            )
+        );
 
-                {
-                    node: {
-                        mutbl: field.node.mt.mutbl,
-                        ident: field.node.ident,
-                        expr: expr,
-                    },
-                    span: field.span,
+        let expr = cx.expr(
+            ty.span,
+            ast::expr_call(expr_serialize, ~[expr_arg], false)
+        );
+
+        #ast[stmt]{ s.emit_rec_field($(name), $(idx), || $(expr))) }
+    };
+
+    let fields_lambda = cx.lambda(cx.blk(ty.span, stmts));
+
+    #ast[stmt]{ s.emit_rec($(fields_lambda)) }
+}
+
+fn mk_rec_deser_body(
+    cx: ext_ctxt,
+    ty: @ast::ty,
+    fields: ~[ast::ty_field]
+) -> @ast::expr {
+    let ext_cx = cx; // required for #ast{}
+
+    let fields = do fields.mapi |idx, field| {
+        let name = cx.lit_str(
+            field.span,
+            @cx.str_of(field.node.ident)
+        );
+        let idx = cx.lit_uint(field.span, idx);
+        let expr = #ast{
+             d.read_rec_field($(name), $(idx), || deserialize(d))
+        };
+
+        {
+            node: {
+                mutbl: field.node.mt.mutbl,
+                ident: field.node.ident,
+                expr: expr,
+            },
+            span: field.span,
+        }
+    };
+
+    let fields_expr = cx.expr(ty.span, ast::expr_rec(fields, None));
+    let fields_lambda = cx.lambda(cx.expr_blk(fields_expr));
+
+    #ast{ d.read_rec($(fields_lambda)) }
+}
+
+fn ser_variant(
+    cx: ext_ctxt,
+    v_span: span,
+    v_name: ast::ident,
+    v_idx: @ast::expr,
+    args: ~[ast::variant_arg]
+) -> ast::arm {
+    let ext_cx = cx; // required for #ast{}
+
+    // Name the variant arguments.
+    let names = args.mapi(|i, _arg| cx.ident_of(fmt!("__v%u", i)));
+
+    // Bind the names to the variant argument type.
+    let pats = args.mapi(|i, arg| cx.binder_pat(arg.ty.span, names[i]));
+
+    let pat_node = if pats.is_empty() {
+        ast::pat_ident(
+            ast::bind_by_implicit_ref,
+            cx.path(v_span, ~[v_name]),
+            None
+        )
+    } else {
+        ast::pat_enum(
+            cx.path(v_span, ~[v_name]),
+            Some(pats)
+        )
+    };
+
+    let pat = @{
+        id: cx.next_id(),
+        node: pat_node,
+        span: v_span,
+    };
+
+    // Create the s.emit_variant_arg statements.
+    let stmts = do args.mapi |a_idx, _arg| {
+        let v = cx.var_ref(v_span, names[a_idx]);
+        let a_idx = cx.lit_uint(v_span, a_idx);
+
+        #ast[stmt]{ s.emit_enum_variant_arg($(a_idx), $(v)); }
+    };
+
+    let v_name = cx.lit_str(v_span, @cx.str_of(v_name));
+    let v_sz = cx.lit_uint(v_span, stmts.len());
+    let lambda = cx.lambda(cx.blk(v_span, stmts));
+    let body = #ast{
+         s.emit_enum_variant($(v_name), $(v_idx), $(v_sz), $(lambda))
+    };
+
+    { pats: ~[pat], guard: None, body: cx.expr_blk(body) }
+}
+
+fn mk_enum_ser_body(
+    cx: ext_ctxt,
+    e_name: ast::ident,
+    e_span: span,
+    variants: ~[ast::variant]
+) -> @ast::stmt {
+    let ext_cx = cx; // required for #ast{}
+
+    let arms = do variants.mapi |v_idx, variant| {
+        let v_span = variant.span;
+        let v_name = variant.node.name;
+        let v_idx = cx.lit_uint(v_span, v_idx);
+
+        match variant.node.kind {
+            ast::tuple_variant_kind(args) =>
+                ser_variant(cx, v_span, v_name, v_idx, args),
+            ast::struct_variant_kind(*) =>
+                fail ~"struct variants unimplemented",
+            ast::enum_variant_kind(*) =>
+                fail ~"enum variants unimplemented",
+        }
+    };
+
+    let match_expr = cx.expr(
+        e_span,
+        ast::expr_match(#ast{ self }, arms)
+    );
+    let e_name = cx.lit_str(e_span, @cx.str_of(e_name));
+
+    #ast[stmt]{ s.emit_enum($(e_name), || $(match_expr)) }
+}
+
+fn mk_enum_deser_body(
+    cx: ext_ctxt,
+    e_name: ast::ident,
+    e_span: span,
+    variants: ~[ast::variant]
+) -> @ast::expr {
+    let ext_cx = cx; // required for #ast{}
+
+    let mut arms = do variants.mapi |v_idx, variant| {
+        let v_span = variant.span;
+        let v_name = variant.node.name;
+
+        let body = match variant.node.kind {
+            ast::tuple_variant_kind(args) => {
+                let tys = args.map(|a| a.ty);
+
+                if tys.is_empty() {
+                    // for a nullary variant v, do "v"
+                    cx.var_ref(v_span, v_name)
+                } else {
+                    // for an n-ary variant v, do "v(a_1, ..., a_n)"
+
+                    let arg_exprs = do tys.mapi |a_idx, _ty| {
+                        let a_idx = cx.lit_uint(v_span, a_idx);
+                        let a_lambda = #ast{ || deserialize(d) };
+                        #ast{ d.read_enum_variant_arg($(a_idx), $(a_lambda)) }
+                    };
+
+                    cx.expr(
+                        v_span,
+                        ast::expr_call(
+                            cx.var_ref(v_span, v_name),
+                            arg_exprs,
+                            false
+                        )
+                    )
                 }
-            };
+            },
+            ast::struct_variant_kind(*) =>
+                fail ~"struct variants unimplemented",
+            ast::enum_variant_kind(*) =>
+                fail ~"enum variants unimplemented",
+        };
 
-            let fields_expr = cx.expr(ty.span, ast::expr_rec(fields, None));
-            let fields_lambda = cx.lambda(cx.expr_blk(fields_expr));
+        let pat = @{
+            id: cx.next_id(),
+            node: ast::pat_lit(cx.lit_uint(v_span, v_idx)),
+            span: v_span,
+        };
 
-            #ast{ d.read_rec($(fields_lambda)) }
-        },
+        {
+            pats: ~[pat],
+            guard: None,
+            body: cx.expr_blk(body),
+        }
+    };
 
-        ast::ty_fn(*) => #ast{ fail },
+    let impossible_case = {
+        pats: ~[@{ id: cx.next_id(), node: ast::pat_wild, span: e_span}],
+        guard: None,
 
-        ast::ty_tup(tys) => {
-            /*
-             Generate code like:
+        // FIXME(#3198): proper error message
+        body: cx.expr_blk(cx.expr(e_span, ast::expr_fail(None))),
+    };
 
-             do d.read_tup(3) {
-                 (d.read_tup_elt(0, || deserialize(d)),
-                  d.read_tup_elt(1, || deserialize(d)),
-                  d.read_tup_elt(2, || deserialize(d)))
-             }
-             */
+    vec::push(arms, impossible_case);
 
-            let sz = cx.lit_uint(ty.span, tys.len());
+    let e_name = cx.lit_str(e_span, @cx.str_of(e_name));
+    let alt_expr = cx.expr(e_span, ast::expr_match(#ast{i}, arms));
 
-            let arg_exprs = do tys.mapi |idx, _t| {
-                let idx = cx.lit_uint(ty.span, idx);
-                #ast{ d.read_tup_elt($(idx), || deserialize(d)) }
-            };
-
-            let expr = cx.expr(ty.span, ast::expr_tup(arg_exprs));
-            let body = cx.lambda(cx.expr_blk(expr));
-
-            #ast{ d.read_tup($(sz), $(body)) }
-        },
-
-        ast::ty_path(_path, _) => {
-            // ...
-            fail
-        },
-
-        ast::ty_mac(*) => #ast{ fail },
-
-        ast::ty_infer => #ast{ fail },
-
-        ast::ty_vec(_) => {
-            #ast{
-                do d.read_vec |len| {
-                    do d.read_vec(len) |i| {
-                        d.read_vec_elt(i, || deserialize(d))
-                    }
-                }
-            }
-        },
-
-        ast::ty_fixed_length(*) => {
-            cx.span_unimpl(
-                ty.span,
-                 ~"deserialization for fixed length types"
-            );
-        },
-    }
+    #ast{ d.read_enum($(e_name), || d.read_enum_variant(|i| $(alt_expr))) }
 }
