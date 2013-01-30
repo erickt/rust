@@ -29,7 +29,7 @@ pub use container::{Container, Mutable, Map, Set};
 pub use from_str::FromStr;
 pub use hash::Hash;
 pub use iter::{BaseIter, ReverseIter, ExtendedIter, EqIter, CopyableIter};
-pub use iter::{CopyableOrderedIter, CopyableNonstrictIter, Times};
+pub use iter::{CopyableOrderedIter, CopyableNonstrictIter, OwnedIter, Times};
 pub use num::NumCast;
 pub use path::GenericPath;
 pub use path::Path;

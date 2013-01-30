@@ -1893,7 +1893,6 @@ pub trait OwnedVector<T> {
     fn swap_remove(&mut self, index: uint) -> T;
     fn truncate(&mut self, newlen: uint);
     fn retain(&mut self, f: pure fn(t: &T) -> bool);
-    fn consume(self, f: fn(uint, v: T));
     fn filter(self, f: fn(t: &T) -> bool) -> ~[T];
     fn partition(self, f: pure fn(&T) -> bool) -> (~[T], ~[T]);
     fn grow_fn(&mut self, n: uint, op: iter::InitOp<T>);
@@ -1948,11 +1947,6 @@ impl<T> OwnedVector<T> for ~[T] {
     #[inline]
     fn retain(&mut self, f: pure fn(t: &T) -> bool) {
         retain(self, f);
-    }
-
-    #[inline]
-    fn consume(self, f: fn(uint, v: T)) {
-        consume(self, f)
     }
 
     #[inline]
@@ -2370,6 +2364,11 @@ impl<A:Eq> iter::EqIter<A> for ~[A] {
 impl<A:Eq> iter::EqIter<A> for @[A] {
     pub pure fn contains(&self, x: &A) -> bool { iter::contains(self, x) }
     pub pure fn count(&self, x: &A) -> uint { iter::count(self, x) }
+}
+
+impl<A> iter::OwnedIter<A> for ~[A] {
+    #[inline]
+    fn consume(self, f: fn(uint, A)) { consume(self, f) }
 }
 
 impl<A:Copy> iter::CopyableIter<A> for &[A] {
