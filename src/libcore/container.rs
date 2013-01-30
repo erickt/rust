@@ -28,7 +28,7 @@ pub trait Mutable: Container {
     fn clear(&mut self);
 }
 
-pub trait Map<K, V>: Mutable {
+pub trait Map<K, V>: Container {
     /// Return true if the map contains a value for the specified key
     pure fn contains_key(&self, key: &K) -> bool;
 
@@ -43,7 +43,9 @@ pub trait Map<K, V>: Mutable {
 
     /// Return the value corresponding to the key in the map
     pure fn find(&self, key: &K) -> Option<&self/V>;
+}
 
+pub trait MutableMap<K, V>: Mutable {
     /// Insert a key-value pair into the map. An existing value for a
     /// key is replaced by the new value. Return true if the key did
     /// not already exist in the map.
@@ -54,17 +56,9 @@ pub trait Map<K, V>: Mutable {
     fn remove(&mut self, key: &K) -> bool;
 }
 
-pub trait Set<T>: Mutable {
+pub trait Set<T>: Container {
     /// Return true if the set contains a value
     pure fn contains(&self, value: &T) -> bool;
-
-    /// Add a value to the set. Return true if the value was not already
-    /// present in the set.
-    fn insert(&mut self, value: T) -> bool;
-
-    /// Remove a value from the set. Return true if the value was
-    /// present in the set.
-    fn remove(&mut self, value: &T) -> bool;
 
     /// Return true if the set has no elements in common with `other`.
     /// This is equivalent to checking for an empty intersection.
@@ -87,4 +81,14 @@ pub trait Set<T>: Mutable {
 
     /// Visit the values representing the union
     pure fn union(&self, other: &Self, f: fn(&T) -> bool);
+}
+
+pub trait MutableSet<T>: Mutable {
+    /// Add a value to the set. Return true if the value was not already
+    /// present in the set.
+    fn insert(&mut self, value: T) -> bool;
+
+    /// Remove a value from the set. Return true if the value was
+    /// present in the set.
+    fn remove(&mut self, value: &T) -> bool;
 }

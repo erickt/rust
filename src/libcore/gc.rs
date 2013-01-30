@@ -41,15 +41,10 @@ with destructors.
 // Transitional
 #[allow(structural_records)];
 
-use cast;
-use container::{Container, Mutable, Map, Set};
-use io;
+use prelude::*;
 use libc::{size_t, uintptr_t};
-use option::{None, Option, Some};
-use ptr;
 use hashmap::linear::LinearSet;
 use stackwalk;
-use sys;
 
 pub use stackwalk::Word;
 

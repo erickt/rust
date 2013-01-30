@@ -14,7 +14,7 @@
 #[forbid(deprecated_mode)];
 #[forbid(deprecated_pattern)];
 
-use container::{Container, Mutable, Map, Set};
+use container::{Container, Mutable, Map, Set, MutableMap, MutableSet};
 use cmp::Eq;
 use hash::Hash;
 use to_bytes::IterBytes;
@@ -310,7 +310,9 @@ pub mod linear {
                 }
             }
         }
+    }
 
+    impl <K: Hash IterBytes Eq, V> LinearMap<K, V>: MutableMap<K, V> {
         /// Insert a key-value pair into the map. An existing value for a
         /// key is replaced by the new value. Return true if the key did
         /// not already exist in the map.
@@ -446,14 +448,6 @@ pub mod linear {
             self.map.contains_key(value)
         }
 
-        /// Add a value to the set. Return true if the value was not already
-        /// present in the set.
-        fn insert(&mut self, value: T) -> bool { self.map.insert(value, ()) }
-
-        /// Remove a value from the set. Return true if the value was
-        /// present in the set.
-        fn remove(&mut self, value: &T) -> bool { self.map.remove(value) }
-
         /// Return true if the set has no elements in common with `other`.
         /// This is equivalent to checking for an empty intersection.
         pure fn is_disjoint(&self, other: &LinearSet<T>) -> bool {
@@ -509,6 +503,16 @@ pub mod linear {
         }
     }
 
+    impl <T: Hash IterBytes Eq> LinearSet<T>: MutableSet<T> {
+        /// Add a value to the set. Return true if the value was not already
+        /// present in the set.
+        fn insert(&mut self, value: T) -> bool { self.map.insert(value, ()) }
+
+        /// Remove a value from the set. Return true if the value was
+        /// present in the set.
+        fn remove(&mut self, value: &T) -> bool { self.map.remove(value) }
+    }
+
     pub impl <T: Hash IterBytes Eq> LinearSet<T> {
         /// Create an empty LinearSet
         static fn new() -> LinearSet<T> { LinearSet{map: LinearMap::new()} }
@@ -517,11 +521,7 @@ pub mod linear {
 
 #[test]
 mod test_map {
-    use container::{Container, Mutable, Map, Set};
-    use option::{None, Some};
-    use hashmap::linear::LinearMap;
-    use hashmap::linear;
-    use uint;
+    use super::*;
 
     #[test]
     pub fn inserts() {
@@ -668,7 +668,6 @@ mod test_map {
 #[test]
 mod test_set {
     use super::*;
-    use vec;
 
     #[test]
     fn test_disjoint() {
@@ -745,7 +744,7 @@ mod test_set {
         let mut i = 0;
         let expected = [3, 5, 11, 77];
         for a.intersection(&b) |x| {
-            assert vec::contains(expected, x);
+            assert expected.contains(x);
             i += 1
         }
         assert i == expected.len();
@@ -768,7 +767,7 @@ mod test_set {
         let mut i = 0;
         let expected = [1, 5, 11];
         for a.difference(&b) |x| {
-            assert vec::contains(expected, x);
+            assert expected.contains(x);
             i += 1
         }
         assert i == expected.len();
@@ -794,7 +793,7 @@ mod test_set {
         let mut i = 0;
         let expected = [-2, 1, 5, 11, 14, 22];
         for a.symmetric_difference(&b) |x| {
-            assert vec::contains(expected, x);
+            assert expected.contains(x);
             i += 1
         }
         assert i == expected.len();
@@ -824,7 +823,7 @@ mod test_set {
         let mut i = 0;
         let expected = [-2, 1, 3, 5, 9, 11, 13, 16, 19, 24];
         for a.union(&b) |x| {
-            assert vec::contains(expected, x);
+            assert expected.contains(x);
             i += 1
         }
         assert i == expected.len();

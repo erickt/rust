@@ -29,13 +29,13 @@ pub use path::PosixPath;
 
 pub use tuple::{CopyableTuple, ImmutableTuple, ExtendedTupleOps};
 pub use str::{StrSlice, Trimmable};
-pub use container::{Container, Mutable};
 pub use vec::{CopyableVector, ImmutableVector};
 pub use vec::{ImmutableEqVector, ImmutableCopyableVector};
 pub use vec::{OwnedVector, OwnedCopyableVector};
 pub use iter::{BaseIter, ExtendedIter, EqIter, CopyableIter};
 pub use iter::{CopyableOrderedIter, CopyableNonstrictIter, Times};
-pub use container::{Container, Mutable, Map, Set};
+pub use container::{Container, Mutable};
+pub use container::{MutableMap, MutableSet};
 pub use pipes::{GenericChan, GenericPort};
 
 pub use num::Num;

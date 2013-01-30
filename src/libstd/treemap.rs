@@ -14,7 +14,7 @@
 
 #[forbid(deprecated_mode)];
 
-use core::container::{Container, Mutable, Map, Set};
+use core::container::{Container, Mutable, Map, MutableMap, Set, MutableSet};
 use core::cmp::{Eq, Ord};
 use core::option::{Option, Some, None};
 use core::prelude::*;
@@ -155,7 +155,9 @@ impl <K: Ord, V> TreeMap<K, V>: Map<K, V> {
             }
         }
     }
+}
 
+impl <K: Ord, V> TreeMap<K, V>: MutableMap<K, V> {
     /// Insert a key-value pair into the map. An existing value for a
     /// key is replaced by the new value. Return true if the key did
     /// not already exist in the map.
@@ -283,14 +285,6 @@ impl <T: Ord> TreeSet<T>: Set<T> {
     pure fn contains(&self, value: &T) -> bool {
         self.map.contains_key(value)
     }
-
-    /// Add a value to the set. Return true if the value was not already
-    /// present in the set.
-    fn insert(&mut self, value: T) -> bool { self.map.insert(value, ()) }
-
-    /// Remove a value from the set. Return true if the value was
-    /// present in the set.
-    fn remove(&mut self, value: &T) -> bool { self.map.remove(value) }
 
     /// Return true if the set has no elements in common with `other`.
     /// This is equivalent to checking for an empty intersection.
@@ -498,6 +492,16 @@ impl <T: Ord> TreeSet<T>: Set<T> {
             }
         }
     }
+}
+
+impl <T: Ord> TreeSet<T>: MutableSet<T> {
+    /// Add a value to the set. Return true if the value was not already
+    /// present in the set.
+    fn insert(&mut self, value: T) -> bool { self.map.insert(value, ()) }
+
+    /// Remove a value from the set. Return true if the value was
+    /// present in the set.
+    fn remove(&mut self, value: &T) -> bool { self.map.remove(value) }
 }
 
 impl <T: Ord> TreeSet<T> {
