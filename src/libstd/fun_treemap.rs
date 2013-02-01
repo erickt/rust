@@ -27,15 +27,7 @@ use container;
 #[deriving_eq]
 pub enum TreeMap<K, V> {
     priv Empty,
-    priv Node(TreeNode<K, V>),
-}
-
-#[deriving_eq]
-struct TreeNode<K, V> {
-    key: @K,
-    value: @V,
-    left: @TreeMap<K, V>,
-    right: @TreeMap<K, V>,
+    priv Node(@TreeNode<K, V>),
 }
 
 impl <K: Ord, V> TreeMap<K, V>: container::Container {
@@ -84,11 +76,11 @@ impl <K: Ord, V> TreeMap<K, V>: container::Map<K, V> {
         loop {
             match *current {
                 Node(ref n) => {
-                    let n: &self/TreeNode<K, V> = n; // FIXME: #3148
+                    let n: &self/@TreeNode<K, V> = n; // FIXME: #3148
                     if *key < *n.key {
-                        current = &*n.left;
+                        current = &n.left;
                     } else if *key > *n.key {
-                        current = &*n.right;
+                        current = &n.right;
                     } else {
                         return Some(&*n.value);
                     }
@@ -99,9 +91,98 @@ impl <K: Ord, V> TreeMap<K, V>: container::Map<K, V> {
     }
 }
 
+impl <K: Ord, V> TreeMap<K, V>: ImmutableMap<K, V> {
+    /// Insert a key-value pair into the map. An existing value for a
+    /// key is replaced by the value.
+    pure fn insert(&self, key: K, value: V) -> TreeMap<K, V> {
+        match *self {
+            Empty => Node(@TreeNode::new(@key, @value)),
+            Node(ref n) => {
+                if key < *n.key {
+                    Node(split(skew(@TreeNode {
+                        level: n.level,
+                        key: n.key,
+                        value: n.value,
+                        left: n.left.insert(key, value),
+                        right: n.right,
+                    })))
+                } else if key > *n.key {
+                    Node(split(skew(@TreeNode {
+                        level: n.level,
+                        key: n.key,
+                        value: n.value,
+                        left: n.left,
+                        right: n.right.insert(key, value),
+                    })))
+                } else {
+                    Node(@TreeNode {
+                        level: n.level,
+                        key: @key,
+                        value: @value,
+                        left: n.left,
+                        right: n.right,
+                    })
+                }
+            }
+        }
+    }
+
+    /// Remove a key-value pair from the map.
+    pure fn remove(&self, _key: &K) -> TreeMap<K, V> {
+        fail
+        /*
+        match *self {
+            Node(ref n) => {
+                if key < *n.key {
+                    Node(@TreeNode {
+                        key: n.key,
+                        value: n.value,
+                        left: n.left.remove(key),
+                        right: n.right,
+                    })
+                } else if key > *n.key {
+                    Node(@TreeNode {
+                        key: n.key,
+                        value: n.value,
+                        left: n.left,
+                        right: n.right.remove(key),
+                    })
+                } else {
+                    match (n.left, n.right) {
+                        (Node(ref left), Node(ref right)) => {
+                            match (left.
+
+                            Node(@TreeNode {
+                                key: left.key,
+                                value: left.value,
+                                left: ,
+                                right: ,
+                            })
+                        }
+                        (Empty, Node(ref right)) => n.right,
+                        (Node(ref left), Empty) => n.left,
+                        (Empty, Empty) => Empty,
+                    }
+                    fail
+                    / *
+                    Node(@TreeNode {
+                        key: @key,
+                        value: @value,
+                        left: n.left,
+                        right: n.right,
+                    })
+                    * /
+                }
+            }
+            Emtpy => Empty,
+        }
+        */
+    }
+}
+
 impl <K: Ord, V> TreeMap<K, V> {
     /// Create an empty TreeMap
-    static pure fn new() -> @TreeMap<K, V> { @Empty }
+    static pure fn new() -> TreeMap<K, V> { Empty }
 
     /// Visit all key-value pairs in reverse order
     pure fn each_reverse(&self, f: fn(&K, &V) -> bool) {
@@ -115,12 +196,12 @@ impl <K: Ord, V> TreeMap<K, V> {
     }
 
     /// Visit all keys in reverse order
-    pure fn each_key_reverse(@self, f: fn(&K) -> bool) {
+    pure fn each_key_reverse(&self, f: fn(&K) -> bool) {
         self.each_reverse(|k, _| f(k))
     }
 
     /// Visit all values in reverse order
-    pure fn each_value_reverse(@self, f: fn(&V) -> bool) {
+    pure fn each_value_reverse(&self, f: fn(&V) -> bool) {
         self.each_reverse(|_, v| f(v))
     }
 
@@ -129,49 +210,11 @@ impl <K: Ord, V> TreeMap<K, V> {
     pure fn iter(&self) -> TreeMapIterator/&self<K, V> {
         TreeMapIterator { stack: ~[], node: self, current: None }
     }
-
-    /// Insert a value into the map
-    pub fn insert(@self, key: K, value: V) -> @TreeMap<K, V> {
-        match self {
-            @Empty => {
-                @Node(TreeNode {
-                    key: @key,
-                    value: @value,
-                    left: @Empty,
-                    right: @Empty,
-                })
-            }
-            @Node(ref n) => {
-                if key < *n.key {
-                    @Node(TreeNode {
-                        key: n.key,
-                        value: n.value,
-                        left: n.left.insert(key, value),
-                        right: n.right,
-                    })
-                } else if key > *n.key {
-                    @Node(TreeNode {
-                        key: n.key,
-                        value: n.value,
-                        left: n.left,
-                        right: n.right.insert(key, value),
-                    })
-                } else {
-                    @Node(TreeNode {
-                        key: @key,
-                        value: @value,
-                        left: n.left,
-                        right: n.right,
-                    })
-                }
-            }
-        }
-    }
 }
 
 /// Lazy forward iterator over a map
 pub struct TreeMapIterator<K, V> {
-    priv stack: ~[&TreeMap<K, V>],
+    priv stack: ~[&@TreeNode<K, V>],
     priv node: &TreeMap<K, V>,
     priv current: Option<&@TreeNode<K, V>>,
 }
@@ -191,16 +234,16 @@ impl <K: Ord, V> TreeMapIterator<K, V> {
         let mut this = self;
         while !this.stack.is_empty() || !this.node.is_empty() {
             match *this.node {
-              Node(ref x) => {
-                this.stack.push(x);
-                this.node = &*x.left;
-              }
-              Empty => {
-                let res = this.stack.pop();
-                this.node = &*res.right;
-                this.current = Some(res);
-                return this;
-              }
+                Node(ref x) => {
+                    this.stack.push(x);
+                    this.node = &x.left;
+                }
+                Empty => {
+                    let res = this.stack.pop();
+                    this.node = &res.right;
+                    this.current = Some(res);
+                    return this;
+                }
             }
         }
         this.current = None;
@@ -209,7 +252,7 @@ impl <K: Ord, V> TreeMapIterator<K, V> {
 }
 
 pub struct TreeSet<T> {
-    priv map: @TreeMap<T, ()>,
+    priv map: TreeMap<T, ()>,
 }
 
 impl <T: Ord> TreeSet<T>: iter::BaseIter<T> {
@@ -440,6 +483,18 @@ impl <T: Ord> TreeSet<T>: Set<T> {
     }
 }
 
+impl <T: Ord> TreeSet<T>: ImmutableSet<T> {
+    /// Insert a value into the set.
+    pure fn insert(&self, value: T) -> TreeSet<T> {
+        TreeSet { map: self.map.insert(value, ()) }
+    }
+
+    /// Remove a value from the set.
+    pure fn remove(&self, value: &T) -> TreeSet<T> {
+        TreeSet { map: self.map.remove(value) }
+    }
+}
+
 impl <T: Ord> TreeSet<T> {
     /// Create an empty TreeSet
     static pure fn new() -> TreeSet<T> {
@@ -479,6 +534,80 @@ impl <T: Ord> TreeSetIterator<T> {
     }
 }
 
+// Nodes keep track of their level in the tree, starting at 1 in the
+// leaves and with a red child sharing the level of the parent.
+#[deriving_eq]
+struct TreeNode<K, V> {
+    level: uint,
+    key: @K,
+    value: @V,
+    left: TreeMap<K, V>,
+    right: TreeMap<K, V>,
+}
+
+impl <K: Ord, V> TreeNode<K, V> {
+    #[inline(always)]
+    static pure fn new(key: @K, value: @V) -> TreeNode<K, V> {
+        TreeNode {
+            level: 1,
+            key: key,
+            value: value,
+            left: Empty,
+            right: Empty,
+        }
+    }
+}
+
+// Remove left horizontal link by rotating right
+pure fn skew<K: Ord, V>(node: @TreeNode<K, V>) -> @TreeNode<K, V> {
+    match node.left {
+        Node(ref left) if node.level == left.level => {
+            @TreeNode {
+                level: left.level,
+                key: left.key,
+                value: left.value,
+                left: left.left,
+                right: Node(@TreeNode {
+                    level: node.level,
+                    key: node.key,
+                    value: node.value,
+                    left: left.right,
+                    right: node.right,
+                })
+            }
+        }
+        _ => node,
+    }
+}
+
+// Remove dual horizontal link by rotating left and increasing level of
+// the parent
+pure fn split<K: Ord, V>(node: @TreeNode<K, V>) -> @TreeNode<K, V> {
+    match node.right {
+        Node(ref r) => {
+            match r.right {
+                Node(rr) if r.level == rr.level => {
+                    @TreeNode {
+                        level: r.level + 1,
+                        key: r.key,
+                        value: r.value,
+                        left: Node(@TreeNode {
+                            level: node.level,
+                            key: node.key,
+                            value: node.value,
+                            left: node.left,
+                            right: r.left,
+                        }),
+                        right: r.right,
+                    }
+                }
+                _ => node,
+            }
+        }
+        _ => node,
+    }
+}
+
 #[cfg(test)]
 mod test_treemap {
     use super::*;
@@ -486,39 +615,26 @@ mod test_treemap {
 
     #[test]
     fn find_empty() {
-        let m = TreeMap::new::<int, int>(); assert m.find(&5) == None;
+        let m = TreeMap::new::<int, int>();
+        assert m.find(&5) == None;
     }
 
     #[test]
     fn find_not_found() {
         let mut m = TreeMap::new();
-        assert m.insert(1, 2);
-        assert m.insert(5, 3);
-        assert m.insert(9, 3);
+        m = m.insert(1, 2);
+        m = m.insert(5, 3);
+        m = m.insert(9, 3);
         assert m.find(&2) == None;
     }
 
     #[test]
     fn insert_replace() {
         let mut m = TreeMap::new();
-        assert m.insert(5, 2);
-        assert m.insert(2, 9);
-        assert !m.insert(2, 11);
+        m = m.insert(5, 2);
+        m = m.insert(2, 9);
+        m = m.insert(2, 11);
         assert m.find(&2).unwrap() == &11;
-    }
-
-    #[test]
-    fn test_clear() {
-        let mut m = TreeMap::new();
-        m.clear();
-        assert m.insert(5, 11);
-        assert m.insert(12, -3);
-        assert m.insert(19, 2);
-        m.clear();
-        assert m.find(&5).is_none();
-        assert m.find(&12).is_none();
-        assert m.find(&19).is_none();
-        assert m.is_empty();
     }
 
     #[test]
@@ -530,8 +646,8 @@ mod test_treemap {
         let v1 = str::to_bytes(~"baz");
         let v2 = str::to_bytes(~"foobar");
 
-        m.insert(k1, v1);
-        m.insert(k2, v2);
+        m = m.insert(k1, v1);
+        m = m.insert(k2, v2);
 
         assert m.find(&k2) == Some(&v2);
         assert m.find(&k1) == Some(&v1);
@@ -557,8 +673,10 @@ mod test_treemap {
         }
     }
 
-    fn check_left<K: Ord, V>(node: &Option<~TreeNode<K, V>>,
-                             parent: &~TreeNode<K, V>) {
+    fn check_left<K: Ord, V>(
+        node: &TreeMap<K, V>,
+        parent: &@TreeNode<K, V>
+    ) {
         match *node {
           Some(ref r) => {
             assert r.key < parent.key;
@@ -570,8 +688,11 @@ mod test_treemap {
         }
     }
 
-    fn check_right<K: Ord, V>(node: &Option<~TreeNode<K, V>>,
-                              parent: &~TreeNode<K, V>, parent_red: bool) {
+    fn check_right<K: Ord, V>(
+        node: &TreeMap<K, V>,
+        parent: &@TreeNode<K, V>,
+        parent_red: bool
+    ) {
         match *node {
           Some(ref r) => {
             assert r.key > parent.key;
@@ -610,7 +731,7 @@ mod test_treemap {
                 let k = rng.gen_int();
                 let v = rng.gen_int();
                 if !ctrl.contains(&(k, v)) {
-                    assert map.insert(k, v);
+                    map = map.insert(k, v);
                     ctrl.push((k, v));
                     check_structure(&map);
                     check_equal(ctrl, &map);
@@ -620,7 +741,7 @@ mod test_treemap {
             for 30.times {
                 let r = rng.gen_uint_range(0, ctrl.len());
                 let (key, _) = vec::remove(&mut ctrl, r);
-                assert map.remove(&key);
+                map = map.remove(&key);
                 check_structure(&map);
                 check_equal(ctrl, &map);
             }
@@ -630,31 +751,30 @@ mod test_treemap {
     #[test]
     fn test_len() {
         let mut m = TreeMap::new();
-        assert m.insert(3, 6);
+        m = m.insert(3, 6);
         assert m.len() == 1;
-        assert m.insert(0, 0);
+        m = m.insert(0, 0);
         assert m.len() == 2;
-        assert m.insert(4, 8);
+        m = m.insert(4, 8);
         assert m.len() == 3;
-        assert m.remove(&3);
+        m = m.remove(&3);
         assert m.len() == 2;
-        assert !m.remove(&5);
+        m = m.remove(&5);
         assert m.len() == 2;
-        assert m.insert(2, 4);
+        m = m.insert(2, 4);
         assert m.len() == 3;
-        assert m.insert(1, 2);
+        m = m.insert(1, 2);
         assert m.len() == 4;
     }
 
     #[test]
     fn test_each() {
         let mut m = TreeMap::new();
-
-        assert m.insert(3, 6);
-        assert m.insert(0, 0);
-        assert m.insert(4, 8);
-        assert m.insert(2, 4);
-        assert m.insert(1, 2);
+        m = m.insert(3, 6);
+        m = m.insert(0, 0);
+        m = m.insert(4, 8);
+        m = m.insert(2, 4);
+        m = m.insert(1, 2);
 
         let mut n = 0;
         for m.each |k, v| {
@@ -667,14 +787,13 @@ mod test_treemap {
     #[test]
     fn test_each_reverse() {
         let mut m = TreeMap::new();
+        m = m.insert(3, 6);
+        m = m.insert(0, 0);
+        m = m.insert(4, 8);
+        m = m.insert(2, 4);
+        m = m.insert(1, 2);
 
-        assert m.insert(3, 6);
-        assert m.insert(0, 0);
-        assert m.insert(4, 8);
-        assert m.insert(2, 4);
-        assert m.insert(1, 2);
-
-        let mut n = 4;
+        let n = 4;
         for m.each_reverse |k, v| {
             assert *k == n;
             assert *v == n * 2;
@@ -688,15 +807,15 @@ mod test_treemap {
         let mut b = TreeMap::new();
 
         assert a == b;
-        assert a.insert(0, 5);
+        a = a.insert(0, 5);
         assert a != b;
-        assert b.insert(0, 4);
+        b = b.insert(0, 4);
         assert a != b;
-        assert a.insert(5, 19);
+        a = a.insert(5, 19);
         assert a != b;
-        assert !b.insert(0, 5);
+        b = b.insert(0, 5);
         assert a != b;
-        assert b.insert(5, 19);
+        b = b.insert(5, 19);
         assert a == b;
     }
 
@@ -706,15 +825,15 @@ mod test_treemap {
         let mut b = TreeMap::new();
 
         assert !(a < b) && !(b < a);
-        assert b.insert(0, 5);
+        b = b.insert(0, 5);
         assert a < b;
-        assert a.insert(0, 7);
+        a = a.insert(0, 7);
         assert !(a < b) && !(b < a);
-        assert b.insert(-2, 0);
+        b = b.insert(-2, 0);
         assert b < a;
-        assert a.insert(-5, 2);
+        a = a.insert(-5, 2);
         assert a < b;
-        assert a.insert(6, 2);
+        a = a.insert(6, 2);
         assert a < b && !(b < a);
     }
 
@@ -724,10 +843,10 @@ mod test_treemap {
         let mut b = TreeMap::new();
 
         assert a <= b && a >= b;
-        assert a.insert(1, 1);
+        a = a.insert(1, 1);
         assert a > b && a >= b;
         assert b < a && b <= a;
-        assert b.insert(2, 2);
+        b = b.insert(2, 2);
         assert b > a && b >= a;
         assert a < b && a <= b;
     }
@@ -741,13 +860,12 @@ mod test_treemap {
         let (x4, y4) = (29, 5);
         let (x5, y5) = (103, 3);
 
-        assert m.insert(x1, y1);
-        assert m.insert(x2, y2);
-        assert m.insert(x3, y3);
-        assert m.insert(x4, y4);
-        assert m.insert(x5, y5);
+        m = m.insert(x1, y1);
+        m = m.insert(x2, y2);
+        m = m.insert(x3, y3);
+        m = m.insert(x4, y4);
+        m = m.insert(x5, y5);
 
-        let m = m;
         let mut iter = m.iter();
 
         // FIXME: #4492 (ICE): iter.next() == Some((&x1, &y1))
@@ -773,37 +891,23 @@ mod test_set {
     use super::*;
 
     #[test]
-    fn test_clear() {
-        let mut s = TreeSet::new();
-        s.clear();
-        assert s.insert(5);
-        assert s.insert(12);
-        assert s.insert(19);
-        s.clear();
-        assert !s.contains(&5);
-        assert !s.contains(&12);
-        assert !s.contains(&19);
-        assert s.is_empty();
-    }
-
-    #[test]
     fn test_disjoint() {
         let mut xs = TreeSet::new();
         let mut ys = TreeSet::new();
         assert xs.is_disjoint(&ys);
         assert ys.is_disjoint(&xs);
-        assert xs.insert(5);
-        assert ys.insert(11);
+        xs = xs.insert(5);
+        ys = ys.insert(11);
         assert xs.is_disjoint(&ys);
         assert ys.is_disjoint(&xs);
-        assert xs.insert(7);
-        assert xs.insert(19);
-        assert xs.insert(4);
-        assert ys.insert(2);
-        assert ys.insert(-11);
+        xs = xs.insert(7);
+        xs = xs.insert(19);
+        xs = xs.insert(4);
+        ys = ys.insert(2);
+        ys = ys.insert(-11);
         assert xs.is_disjoint(&ys);
         assert ys.is_disjoint(&xs);
-        assert ys.insert(7);
+        ys = ys.insert(7);
         assert !xs.is_disjoint(&ys);
         assert !ys.is_disjoint(&xs);
     }
@@ -811,25 +915,25 @@ mod test_set {
     #[test]
     fn test_subset_and_superset() {
         let mut a = TreeSet::new();
-        assert a.insert(0);
-        assert a.insert(5);
-        assert a.insert(11);
-        assert a.insert(7);
+        a = a.insert(0);
+        a = a.insert(5);
+        a = a.insert(11);
+        a = a.insert(7);
 
         let mut b = TreeSet::new();
-        assert b.insert(0);
-        assert b.insert(7);
-        assert b.insert(19);
-        assert b.insert(250);
-        assert b.insert(11);
-        assert b.insert(200);
+        b = b.insert(0);
+        b = b.insert(7);
+        b = b.insert(19);
+        b = b.insert(250);
+        b = b.insert(11);
+        b = b.insert(200);
 
         assert !a.is_subset(&b);
         assert !a.is_superset(&b);
         assert !b.is_subset(&a);
         assert !b.is_superset(&a);
 
-        assert b.insert(5);
+        b = b.insert(5);
 
         assert a.is_subset(&b);
         assert !a.is_superset(&b);
@@ -841,11 +945,11 @@ mod test_set {
     fn test_each() {
         let mut m = TreeSet::new();
 
-        assert m.insert(3);
-        assert m.insert(0);
-        assert m.insert(4);
-        assert m.insert(2);
-        assert m.insert(1);
+        m = m.insert(3);
+        m = m.insert(0);
+        m = m.insert(4);
+        m = m.insert(2);
+        m = m.insert(1);
 
         let mut n = 0;
         for m.each |x| {
@@ -858,11 +962,11 @@ mod test_set {
     fn test_each_reverse() {
         let mut m = TreeSet::new();
 
-        assert m.insert(3);
-        assert m.insert(0);
-        assert m.insert(4);
-        assert m.insert(2);
-        assert m.insert(1);
+        m = m.insert(3);
+        m = m.insert(0);
+        m = m.insert(4);
+        m = m.insert(2);
+        m = m.insert(1);
 
         let mut n = 4;
         for m.each_reverse |x| {
@@ -876,21 +980,21 @@ mod test_set {
         let mut a = TreeSet::new();
         let mut b = TreeSet::new();
 
-        assert a.insert(11);
-        assert a.insert(1);
-        assert a.insert(3);
-        assert a.insert(77);
-        assert a.insert(103);
-        assert a.insert(5);
-        assert a.insert(-5);
+        a = a.insert(11);
+        a = a.insert(1);
+        a = a.insert(3);
+        a = a.insert(77);
+        a = a.insert(103);
+        a = a.insert(5);
+        a = a.insert(-5);
 
-        assert b.insert(2);
-        assert b.insert(11);
-        assert b.insert(77);
-        assert b.insert(-9);
-        assert b.insert(-42);
-        assert b.insert(5);
-        assert b.insert(3);
+        b = b.insert(2);
+        b = b.insert(11);
+        b = b.insert(77);
+        b = b.insert(-9);
+        b = b.insert(-42);
+        b = b.insert(5);
+        b = b.insert(3);
 
         let mut i = 0;
         let expected = [3, 5, 11, 77];
@@ -906,14 +1010,14 @@ mod test_set {
         let mut a = TreeSet::new();
         let mut b = TreeSet::new();
 
-        assert a.insert(1);
-        assert a.insert(3);
-        assert a.insert(5);
-        assert a.insert(9);
-        assert a.insert(11);
+        a = a.insert(1);
+        a = a.insert(3);
+        a = a.insert(5);
+        a = a.insert(9);
+        a = a.insert(11);
 
-        assert b.insert(3);
-        assert b.insert(9);
+        b = b.insert(3);
+        b = b.insert(9);
 
         let mut i = 0;
         let expected = [1, 5, 11];
@@ -929,17 +1033,17 @@ mod test_set {
         let mut a = TreeSet::new();
         let mut b = TreeSet::new();
 
-        assert a.insert(1);
-        assert a.insert(3);
-        assert a.insert(5);
-        assert a.insert(9);
-        assert a.insert(11);
+        a = a.insert(1);
+        a = a.insert(3);
+        a = a.insert(5);
+        a = a.insert(9);
+        a = a.insert(11);
 
-        assert b.insert(-2);
-        assert b.insert(3);
-        assert b.insert(9);
-        assert b.insert(14);
-        assert b.insert(22);
+        b = b.insert(-2);
+        b = b.insert(3);
+        b = b.insert(9);
+        b = b.insert(14);
+        b = b.insert(22);
 
         let mut i = 0;
         let expected = [-2, 1, 5, 11, 14, 22];
@@ -955,21 +1059,21 @@ mod test_set {
         let mut a = TreeSet::new();
         let mut b = TreeSet::new();
 
-        assert a.insert(1);
-        assert a.insert(3);
-        assert a.insert(5);
-        assert a.insert(9);
-        assert a.insert(11);
-        assert a.insert(16);
-        assert a.insert(19);
-        assert a.insert(24);
+        a = a.insert(1);
+        a = a.insert(3);
+        a = a.insert(5);
+        a = a.insert(9);
+        a = a.insert(11);
+        a = a.insert(16);
+        a = a.insert(19);
+        a = a.insert(24);
 
-        assert b.insert(-2);
-        assert b.insert(1);
-        assert b.insert(5);
-        assert b.insert(9);
-        assert b.insert(13);
-        assert b.insert(19);
+        b = b.insert(-2);
+        b = b.insert(1);
+        b = b.insert(5);
+        b = b.insert(9);
+        b = b.insert(13);
+        b = b.insert(19);
 
         let mut i = 0;
         let expected = [-2, 1, 3, 5, 9, 11, 13, 16, 19, 24];
