@@ -1,4 +1,4 @@
-// Copyright 2012 The Rust Project Developers. See the COPYRIGHT
+// Copyright 2013 The Rust Project Developers. See the COPYRIGHT
 // file at the top-level directory of this distribution and at
 // http://rust-lang.org/COPYRIGHT.
 //
@@ -8,29 +8,101 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+//! An ordered map and set implemented as self-balancing binary search
+//! trees. The only requirement for the types is that the key implements
+//! `Ord`, and that the `lt` method provides a total ordering.
+
 #[forbid(deprecated_mode)];
 
-/*!
- * A functional key,value store that works on anything.
- *
- * This works using a binary search tree. In the first version, it's a
- * very naive algorithm, but it will probably be updated to be a
- * red-black tree or something else.
- *
- * This is copied and modified from treemap right now. It's missing a lot
- * of features.
- */
-
 use prelude::*;
-use container;
 
-#[deriving_eq]
+// This is implemented as an AA tree, which is a simplified variation of
+// a red-black tree where where red (horizontal) nodes can only be added
+// as a right child. The time complexity is the same, and re-balancing
+// operations are more frequent but also cheaper.
+
+// Future improvements:
+
+// range search - O(log n) retrieval of an iterator from some key
+
+// (possibly) implement the overloads Python does for sets:
+//   * intersection: &
+//   * difference: -
+//   * symmetric difference: ^
+//   * union: |
+// These would be convenient since the methods work like `each`
+
 pub enum TreeMap<K, V> {
     priv Empty,
     priv Node(@TreeNode<K, V>),
 }
 
-impl <K: Ord, V> TreeMap<K, V>: container::Container {
+impl <K: Eq Ord, V: Eq> TreeMap<K, V>: Eq {
+    pure fn eq(&self, other: &TreeMap<K, V>) -> bool {
+        if self.len() != other.len() {
+            false
+        } else {
+            let mut x = self.iter();
+            let mut y = other.iter();
+            for self.len().times {
+                unsafe { // unsafe as a purity workaround
+                    x = x.next();
+                    y = y.next();
+                    // FIXME: #4492 (ICE), x.get() == y.get()
+                    let (x1, x2) = x.get().unwrap();
+                    let (y1, y2) = y.get().unwrap();
+
+                    if x1 != y1 || x2 != y2 {
+                        return false
+                    }
+                }
+            }
+            true
+        }
+    }
+    pure fn ne(&self, other: &TreeMap<K, V>) -> bool { !self.eq(other) }
+}
+
+// Lexicographical comparison
+pure fn lt<K: Ord, V>(a: &TreeMap<K, V>, b: &TreeMap<K, V>) -> bool {
+    let mut x = a.iter();
+    let mut y = b.iter();
+
+    let (a_len, b_len) = (a.len(), b.len());
+    for uint::min(a_len, b_len).times {
+        unsafe { // purity workaround
+            x = x.next();
+            y = y.next();
+            let (key_a,_) = x.get().unwrap();
+            let (key_b,_) = y.get().unwrap();
+            if *key_a < *key_b { return true; }
+            if *key_a > *key_b { return false; }
+        }
+    };
+
+    return a_len < b_len;
+}
+
+impl <K: Ord, V> TreeMap<K, V>: Ord {
+    #[inline(always)]
+    pure fn lt(&self, other: &TreeMap<K, V>) -> bool {
+        lt(self, other)
+    }
+    #[inline(always)]
+    pure fn le(&self, other: &TreeMap<K, V>) -> bool {
+        !lt(other, self)
+    }
+    #[inline(always)]
+    pure fn ge(&self, other: &TreeMap<K, V>) -> bool {
+        !lt(self, other)
+    }
+    #[inline(always)]
+    pure fn gt(&self, other: &TreeMap<K, V>) -> bool {
+        lt(other, self)
+    }
+}
+
+impl <K: Ord, V> TreeMap<K, V>: Container {
     /// Return the number of elements in the map
     pure fn len(&self) -> uint {
         let mut count = 0;
@@ -47,7 +119,7 @@ impl <K: Ord, V> TreeMap<K, V>: container::Container {
     }
 }
 
-impl <K: Ord, V> TreeMap<K, V>: container::Map<K, V> {
+impl <K: Ord, V> TreeMap<K, V>: Map<K, V> {
     /// Return true if the map contains a value for the specified key
     pure fn contains_key(&self, key: &K) -> bool {
         self.find(key).is_some()
@@ -259,6 +331,22 @@ impl <T: Ord> TreeSet<T>: iter::BaseIter<T> {
     /// Visit all values in order
     pure fn each(&self, f: fn(&T) -> bool) { self.map.each_key(f) }
     pure fn size_hint(&self) -> Option<uint> { Some(self.len()) }
+}
+
+impl <T: Eq Ord> TreeSet<T>: Eq {
+    pure fn eq(&self, other: &TreeSet<T>) -> bool { self.map == other.map }
+    pure fn ne(&self, other: &TreeSet<T>) -> bool { self.map != other.map }
+}
+
+impl <T: Ord> TreeSet<T>: Ord {
+    #[inline(always)]
+    pure fn lt(&self, other: &TreeSet<T>) -> bool { self.map < other.map }
+    #[inline(always)]
+    pure fn le(&self, other: &TreeSet<T>) -> bool { self.map <= other.map }
+    #[inline(always)]
+    pure fn ge(&self, other: &TreeSet<T>) -> bool { self.map >= other.map }
+    #[inline(always)]
+    pure fn gt(&self, other: &TreeSet<T>) -> bool { self.map > other.map }
 }
 
 impl <T: Ord> TreeSet<T>: Container {
@@ -536,7 +624,6 @@ impl <T: Ord> TreeSetIterator<T> {
 
 // Nodes keep track of their level in the tree, starting at 1 in the
 // leaves and with a red child sharing the level of the parent.
-#[deriving_eq]
 struct TreeNode<K, V> {
     level: uint,
     key: @K,
@@ -678,13 +765,13 @@ mod test_treemap {
         parent: &@TreeNode<K, V>
     ) {
         match *node {
-          Some(ref r) => {
+          Node(ref r) => {
             assert r.key < parent.key;
             assert r.level == parent.level - 1; // left is black
             check_left(&r.left, r);
             check_right(&r.right, r, false);
           }
-          None => assert parent.level == 1 // parent is leaf
+          Empty => assert parent.level == 1 // parent is leaf
         }
     }
 
@@ -694,7 +781,7 @@ mod test_treemap {
         parent_red: bool
     ) {
         match *node {
-          Some(ref r) => {
+          Node(ref r) => {
             assert r.key > parent.key;
             let red = r.level == parent.level;
             if parent_red { assert !red } // no dual horizontal links
@@ -702,17 +789,17 @@ mod test_treemap {
             check_left(&r.left, r);
             check_right(&r.right, r, red);
           }
-          None => assert parent.level == 1 // parent is leaf
+          Empty => assert parent.level == 1 // parent is leaf
         }
     }
 
     fn check_structure<K: Ord, V>(map: &TreeMap<K, V>) {
-        match map.root {
-          Some(ref r) => {
+        match *map {
+          Node(ref r) => {
             check_left(&r.left, r);
             check_right(&r.right, r, false);
           }
-          None => ()
+          Empty => ()
         }
     }
 
@@ -770,6 +857,7 @@ mod test_treemap {
     #[test]
     fn test_each() {
         let mut m = TreeMap::new();
+
         m = m.insert(3, 6);
         m = m.insert(0, 0);
         m = m.insert(4, 8);
@@ -787,13 +875,14 @@ mod test_treemap {
     #[test]
     fn test_each_reverse() {
         let mut m = TreeMap::new();
+
         m = m.insert(3, 6);
         m = m.insert(0, 0);
         m = m.insert(4, 8);
         m = m.insert(2, 4);
         m = m.insert(1, 2);
 
-        let n = 4;
+        let mut n = 4;
         for m.each_reverse |k, v| {
             assert *k == n;
             assert *v == n * 2;
@@ -866,6 +955,7 @@ mod test_treemap {
         m = m.insert(x4, y4);
         m = m.insert(x5, y5);
 
+        let m = m;
         let mut iter = m.iter();
 
         // FIXME: #4492 (ICE): iter.next() == Some((&x1, &y1))
