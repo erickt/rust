@@ -38,7 +38,7 @@ struct TreeNode<K, V> {
     right: @TreeMap<K, V>,
 }
 
-impl <K: Ord, V> @TreeMap<K, V>: container::Container {
+impl <K: Ord, V> TreeMap<K, V>: container::Container {
     /// Return the number of elements in the map
     pure fn len(&self) -> uint {
         let mut count = 0;
@@ -48,21 +48,29 @@ impl <K: Ord, V> @TreeMap<K, V>: container::Container {
 
     /// Return true if the map contains no elements
     pure fn is_empty(&self) -> bool {
-        match self {
-            &@Empty => true,
+        match *self {
+            Empty => true,
             _ => false,
         }
     }
 }
 
-impl <K: Ord, V> @TreeMap<K, V>: container::Map<K, V> {
+impl <K: Ord, V> TreeMap<K, V>: container::Map<K, V> {
     /// Return true if the map contains a value for the specified key
     pure fn contains_key(&self, key: &K) -> bool {
         self.find(key).is_some()
     }
 
     /// Visit all key-value pairs in order
-    pure fn each(&self, f: fn(&K, &V) -> bool) { each(*self, f) }
+    pure fn each(&self, f: fn(&K, &V) -> bool) {
+        match *self {
+            Node(ref n) => {
+                n.left.each(f);
+                if f(&*n.key, &*n.value) { n.right.each(f); }
+            }
+            Empty => (),
+        }
+    }
 
     /// Visit all keys in order
     pure fn each_key(&self, f: fn(&K) -> bool) { self.each(|k, _| f(k)) }
@@ -72,20 +80,20 @@ impl <K: Ord, V> @TreeMap<K, V>: container::Map<K, V> {
 
     /// Return the value corresponding to the key in the map
     pure fn find(&self, key: &K) -> Option<&self/V> {
-        let mut current: &self/@TreeMap<K, V> = self;
+        let mut current: &self/TreeMap<K, V> = self;
         loop {
             match *current {
-                @Node(ref n) => {
+                Node(ref n) => {
                     let n: &self/TreeNode<K, V> = n; // FIXME: #3148
                     if *key < *n.key {
-                        current = &n.left;
+                        current = &*n.left;
                     } else if *key > *n.key {
-                        current = &n.right;
+                        current = &*n.right;
                     } else {
                         return Some(&*n.value);
                     }
                 }
-                @Empty => return None
+                Empty => return None
             }
         }
     }
@@ -96,8 +104,14 @@ impl <K: Ord, V> TreeMap<K, V> {
     static pure fn new() -> @TreeMap<K, V> { @Empty }
 
     /// Visit all key-value pairs in reverse order
-    pure fn each_reverse(@self, f: fn(&K, &V) -> bool) {
-        each_reverse(self, f)
+    pure fn each_reverse(&self, f: fn(&K, &V) -> bool) {
+        match *self {
+            Node(ref n) => {
+                n.right.each_reverse(f);
+                if f(&*n.key, &*n.value) { n.left.each_reverse(f) }
+            }
+            Empty => (),
+        }
     }
 
     /// Visit all keys in reverse order
@@ -113,10 +127,7 @@ impl <K: Ord, V> TreeMap<K, V> {
     /// Get a lazy iterator over the key-value pairs in the map.
     /// Requires that it be frozen (immutable).
     pure fn iter(&self) -> TreeMapIterator/&self<K, V> {
-        fail
-/*
-        TreeMapIterator { stack: ~[], node: &self, current: None }
-    */
+        TreeMapIterator { stack: ~[], node: self, current: None }
     }
 
     /// Insert a value into the map
@@ -158,68 +169,42 @@ impl <K: Ord, V> TreeMap<K, V> {
     }
 }
 
-pure fn each<K: Ord, V>(node: @TreeMap<K, V>, f: fn(&K, &V) -> bool) {
-    match *node {
-        Empty => (),
-        Node(ref n) => {
-            each(n.left, f);
-            if f(&*n.key, &*n.value) { each(n.right, f) }
-        }
-    }
-}
-
-pure fn each_reverse<K: Ord, V>(node: @TreeMap<K, V>, f: fn(&K, &V) -> bool) {
-    match *node {
-        Empty => (),
-        Node(ref n) => {
-            each_reverse(n.right, f);
-            if f(&*n.key, &*n.value) { each_reverse(n.left, f) }
-        }
-    }
-}
-
 /// Lazy forward iterator over a map
 pub struct TreeMapIterator<K, V> {
-    priv stack: ~[&~TreeNode<K, V>],
-    priv node: &Option<~TreeNode<K, V>>,
-    priv current: Option<&~TreeNode<K, V>>
+    priv stack: ~[&TreeMap<K, V>],
+    priv node: &TreeMap<K, V>,
+    priv current: Option<&@TreeNode<K, V>>,
 }
 
 impl <K: Ord, V> TreeMapIterator<K, V> {
     // Returns the current node, or None if this iterator is at the end.
     fn get(&const self) -> Option<(&self/K, &self/V)> {
-        fail
-        /*
         match self.current {
-            Some(res) => Some((&res.key, &res.value)),
+            Some(res) => Some((&*res.key, &*res.value)),
             None => None
         }
-        */
     }
 
     /// Advance the iterator to the next node (in order). If this iterator
     /// is finished, does nothing.
     fn next(self) -> TreeMapIterator/&self<K, V> {
-        fail
-        /*
         let mut this = self;
-        while !this.stack.is_empty() || this.node.is_some() {
+        while !this.stack.is_empty() || !this.node.is_empty() {
             match *this.node {
-              Some(ref x) => {
+              Node(ref x) => {
                 this.stack.push(x);
-                this.node = &x.left;
+                this.node = &*x.left;
               }
-              None => {
+              Empty => {
                 let res = this.stack.pop();
-                this.node = &res.right;
+                this.node = &*res.right;
                 this.current = Some(res);
                 return this;
               }
             }
         }
         this.current = None;
-        return this;
-        */
+        this
     }
 }
 
