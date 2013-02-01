@@ -45,7 +45,8 @@ pub trait Map<K, V>: Container {
     pure fn find(&self, key: &K) -> Option<&self/V>;
 }
 
-pub trait MutableMap<K, V>: Mutable {
+// FIXME(#4723): This really should subclass Map<K, V> and Mutable
+pub trait MutableMap<K, V>: Container {
     /// Insert a key-value pair into the map. An existing value for a
     /// key is replaced by the new value. Return true if the key did
     /// not already exist in the map.
@@ -54,6 +55,16 @@ pub trait MutableMap<K, V>: Mutable {
     /// Remove a key-value pair from the map. Return true if the key
     /// was present in the map, otherwise false.
     fn remove(&mut self, key: &K) -> bool;
+}
+
+// FIXME(#4723): This really should subclass Map<K, V>
+pub trait ImmutableMap<K, V>: Container {
+    /// Insert a key-value pair into the map. An existing value for a
+    /// key is replaced by the value.
+    pure fn insert(&self, key: K, value: V) -> Self;
+
+    /// Remove a key-value pair from the map.
+    pure fn remove(&self, key: &K) -> Self;
 }
 
 pub trait Set<T>: Container {
@@ -83,7 +94,8 @@ pub trait Set<T>: Container {
     pure fn union(&self, other: &Self, f: fn(&T) -> bool);
 }
 
-pub trait MutableSet<T>: Mutable {
+// FIXME(#4723): This really should subclass Set<T> and Mutable
+pub trait MutableSet<T>: Container {
     /// Add a value to the set. Return true if the value was not already
     /// present in the set.
     fn insert(&mut self, value: T) -> bool;
@@ -91,4 +103,13 @@ pub trait MutableSet<T>: Mutable {
     /// Remove a value from the set. Return true if the value was
     /// present in the set.
     fn remove(&mut self, value: &T) -> bool;
+}
+
+// FIXME(#4723): This really should subclass Set<T>
+pub trait ImmutableSet<T>: Container {
+    /// Insert a value into a copy of the set.
+    pure fn insert(&self, value: T) -> Self;
+
+    /// Remove a value from a copy of the set.
+    pure fn remove(&self, value: &T) -> Self;
 }
