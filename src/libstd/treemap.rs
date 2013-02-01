@@ -14,10 +14,7 @@
 
 #[forbid(deprecated_mode)];
 
-use core::container::{Container, Mutable, Map, MutableMap, Set, MutableSet};
-use core::cmp::{Eq, Ord};
-use core::option::{Option, Some, None};
-use core::prelude::*;
+use prelude::*;
 
 // This is implemented as an AA tree, which is a simplified variation of
 // a red-black tree where where red (horizontal) nodes can only be added
@@ -141,17 +138,17 @@ impl <K: Ord, V> TreeMap<K, V>: Map<K, V> {
         let mut current: &self/Option<~TreeNode<K, V>> = &self.root;
         loop {
             match *current {
-              Some(ref r) => {
-                let r: &self/~TreeNode<K, V> = r; // FIXME: #3148
-                if *key < r.key {
-                    current = &r.left;
-                } else if r.key < *key {
-                    current = &r.right;
-                } else {
-                    return Some(&r.value);
+                Some(ref r) => {
+                    let r: &self/~TreeNode<K, V> = r; // FIXME: #3148
+                    if *key < r.key {
+                        current = &r.left;
+                    } else if r.key < *key {
+                        current = &r.right;
+                    } else {
+                        return Some(&r.value);
+                    }
                 }
-              }
-              None => return None
+                None => return None
             }
         }
     }
@@ -198,7 +195,7 @@ impl <K: Ord, V> TreeMap<K, V> {
     /// Get a lazy iterator over the key-value pairs in the map.
     /// Requires that it be frozen (immutable).
     pure fn iter(&self) -> TreeMapIterator/&self<K, V> {
-        TreeMapIterator{stack: ~[], node: &self.root, current: None}
+        TreeMapIterator { stack: ~[], node: &self.root, current: None }
     }
 }
 
@@ -224,20 +221,20 @@ impl <K: Ord, V> TreeMapIterator<K, V> {
         let mut this = self;
         while !this.stack.is_empty() || this.node.is_some() {
             match *this.node {
-              Some(ref x) => {
-                this.stack.push(x);
-                this.node = &x.left;
-              }
-              None => {
-                let res = this.stack.pop();
-                this.node = &res.right;
-                this.current = Some(res);
-                return this;
-              }
+                Some(ref x) => {
+                    this.stack.push(x);
+                    this.node = &x.left;
+                }
+                None => {
+                    let res = this.stack.pop();
+                    this.node = &res.right;
+                    this.current = Some(res);
+                    return this;
+                }
             }
         }
         this.current = None;
-        return this;
+        this
     }
 }
 
@@ -516,7 +513,7 @@ impl <T: Ord> TreeSet<T> {
     /// Get a lazy iterator over the values in the set.
     /// Requires that it be frozen (immutable).
     pure fn iter(&self) -> TreeSetIterator/&self<T> {
-        TreeSetIterator{iter: self.map.iter()}
+        TreeSetIterator { iter: self.map.iter() }
     }
 }
 
@@ -554,7 +551,7 @@ struct TreeNode<K, V> {
 impl <K: Ord, V> TreeNode<K, V> {
     #[inline(always)]
     static pure fn new(key: K, value: V) -> TreeNode<K, V> {
-        TreeNode{key: key, value: value, left: None, right: None, level: 1}
+        TreeNode { key: key, value: value, left: None, right: None, level: 1 }
     }
 }
 
