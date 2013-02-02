@@ -733,8 +733,8 @@ mod test_treemap {
         let v1 = str::to_bytes(~"baz");
         let v2 = str::to_bytes(~"foobar");
 
-        m = m.insert(k1, v1);
-        m = m.insert(k2, v2);
+        m = m.insert(copy k1, copy v1);
+        m = m.insert(copy k2, copy v2);
 
         assert m.find(&k2) == Some(&v2);
         assert m.find(&k1) == Some(&v1);
