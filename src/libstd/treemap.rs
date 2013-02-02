@@ -217,6 +217,7 @@ impl <K: Ord, V> TreeMapIterator<K, V> {
 
     /// Advance the iterator to the next node (in order). If this iterator
     /// is finished, does nothing.
+    // FIXME(#4666): This should probably use &mut self.
     fn next(self) -> TreeMapIterator/&self<K, V> {
         let mut this = self;
         while !this.stack.is_empty() || this.node.is_some() {
@@ -533,6 +534,7 @@ impl <T: Ord> TreeSetIterator<T> {
 
     /// Advance the iterator to the next node (in order). If this iterator is
     /// finished, does nothing.
+    // FIXME(#4666): This should probably use &mut self.
     fn next(self) -> TreeSetIterator/&self<T> {
         TreeSetIterator { iter: self.iter.next() }
     }
