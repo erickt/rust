@@ -201,7 +201,7 @@ impl <K: Ord, V> TreeMap<K, V>: ImmutableMap<K, V> {
 
     /// Remove a key-value pair from the map.
     pure fn remove(&self, _key: &K) -> TreeMap<K, V> {
-        fail
+        die!()
         /*
         match *self {
             Node(ref n) => {
@@ -235,7 +235,7 @@ impl <K: Ord, V> TreeMap<K, V>: ImmutableMap<K, V> {
                         (Node(ref left), Empty) => n.left,
                         (Empty, Empty) => Empty,
                     }
-                    fail
+                    die!()
                     / *
                     Node(@TreeNode {
                         key: @key,
