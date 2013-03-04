@@ -16,7 +16,7 @@ pub mod linear {
     use cmp::Eq;
     use hash::Hash;
     use to_bytes::IterBytes;
-    use iter::BaseIter;
+    use iter::{BaseIter, OwnedIter};
     use hash::Hash;
     use iter;
     use kinds::Copy;
@@ -431,26 +431,28 @@ pub mod linear {
             }
         }
 
-        fn consume(&mut self, f: fn(K, V)) {
-            let mut buckets = ~[];
-            self.buckets <-> buckets;
-            self.size = 0;
-
-            do vec::consume(buckets) |_, bucket| {
-                match bucket {
-                    None => {},
-                    Some(bucket) => {
-                        let Bucket{key: key, value: value, _} = bucket;
-                        f(key, value)
-                    }
-                }
-            }
-        }
-
         pure fn get(&self, k: &K) -> &self/V {
             match self.find(k) {
                 Some(v) => v,
                 None => fail!(fmt!("No entry found for key: %?", k)),
+            }
+        }
+    }
+
+    impl<K, V> OwnedIter<(K, V)> for LinearMap<K, V> {
+        fn consume(self, f: fn(uint, (K, V))) {
+            let LinearMap { buckets: buckets, _ } = self;
+            let mut i = 0;
+
+            do buckets.consume |_, bucket| {
+                match bucket {
+                    None => {},
+                    Some(bucket) => {
+                        let Bucket { key: key, value: value, _ } = bucket;
+                        f(i, (key, value));
+                        i += 1;
+                    }
+                }
             }
         }
     }
@@ -480,6 +482,13 @@ pub mod linear {
         /// Visit all values in order
         pure fn each(&self, f: fn(&T) -> bool) { self.map.each_key(f) }
         pure fn size_hint(&self) -> Option<uint> { Some(self.len()) }
+    }
+
+    impl <T> OwnedIter<T> for LinearSet<T> {
+        fn consume(self, f: fn(uint, T)) {
+            let LinearSet { map: map } = self;
+            map.consume(|i, (key, ())| { f(i, key) })
+        }
     }
 
     impl<T:Hash + IterBytes + Eq> Eq for LinearSet<T> {
@@ -676,10 +685,9 @@ pub mod linear {
             assert m.insert(1, 2);
             assert m.insert(2, 3);
             let mut m2 = LinearMap::new();
-            do m.consume |k, v| {
+            do m.consume |_, (k, v)| {
                 m2.insert(k, v);
             }
-            assert m.len() == 0;
             assert m2.len() == 2;
             assert m2.get(&1) == &2;
             assert m2.get(&2) == &3;
