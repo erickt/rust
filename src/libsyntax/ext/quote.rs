@@ -88,7 +88,7 @@ pub mod rt {
         }
     }
 
-    impl ToSource for ~[@ast::item] {
+    impl ToSource for &'self [@ast::item] {
         fn to_source(&self, cx: @ext_ctxt) -> ~str {
             str::connect(self.map(|i| i.to_source(cx)), ~"\n\n")
         }
@@ -100,7 +100,7 @@ pub mod rt {
         }
     }
 
-    impl ToSource for ~[@ast::Ty] {
+    impl ToSource for &'self [@ast::Ty] {
         fn to_source(&self, cx: @ext_ctxt) -> ~str {
             str::connect(self.map(|i| i.to_source(cx)), ~", ")
         }
@@ -216,7 +216,7 @@ pub mod rt {
         }
     }
 
-    impl ToTokens for ~[@ast::item] {
+    impl ToTokens for &'self [@ast::item] {
         fn to_tokens(&self, cx: @ext_ctxt) -> ~[token_tree] {
             cx.parse_tts(self.to_source(cx))
         }
@@ -228,7 +228,7 @@ pub mod rt {
         }
     }
 
-    impl ToTokens for ~[@ast::Ty] {
+    impl ToTokens for &'self [@ast::Ty] {
         fn to_tokens(&self, cx: @ext_ctxt) -> ~[token_tree] {
             cx.parse_tts(self.to_source(cx))
         }
