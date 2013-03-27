@@ -1235,6 +1235,8 @@ mod tests {
     use core::prelude::*;
     use core::hashmap::linear::LinearMap;
 
+    use std::serialize::Decodable;
+
     fn mk_object(items: &[(~str, Json)]) -> Json {
         let mut d = ~LinearMap::new();
 
@@ -1388,6 +1390,8 @@ mod tests {
     }
 
     #[auto_encode]
+    #[auto_decode]
+    #[deriving(Eq)]
     enum Animal {
         Dog,
         Frog(~str, int)
@@ -1703,6 +1707,20 @@ mod tests {
                           ])
                       ]))
                   ]));
+    }
+
+    #[test]
+    fn test_read_none() {
+        let decoder = Decoder(from_str(~"null").unwrap());
+        let value: Option<~str> = Decodable::decode(&decoder);
+        assert_eq!(value, None);
+    }
+
+    #[test]
+    fn test_read_some() {
+        let decoder = Decoder(from_str(~"\"jodhpurs\"").unwrap());
+        let value: Animal = Decodable::decode(&decoder);
+        assert_eq!(value, Some(~"jodhpurs"));
     }
 
     #[test]
