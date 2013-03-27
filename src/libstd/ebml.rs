@@ -337,7 +337,20 @@ pub mod reader {
             self.push_doc(self.next_doc(EsEnum), f)
         }
 
+        #[cfg(stage0)]
         fn read_enum_variant<T>(&self, f: &fn(uint) -> T) -> T {
+            debug!("read_enum_variant()");
+            let idx = self._next_uint(EsEnumVid);
+            debug!("  idx=%u", idx);
+            do self.push_doc(self.next_doc(EsEnumBody)) {
+                f(idx)
+            }
+        }
+
+        #[cfg(stage1)]
+        #[cfg(stage2)]
+        #[cfg(stage3)]
+        fn read_enum_variant<T>(&self, _names: &[&str], f: &fn(uint) -> T) -> T {
             debug!("read_enum_variant()");
             let idx = self._next_uint(EsEnumVid);
             debug!("  idx=%u", idx);

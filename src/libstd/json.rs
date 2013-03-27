@@ -853,6 +853,7 @@ impl serialize::Decoder for Decoder<'self> {
         f()
     }
 
+    #[cfg(stage0)]
     fn read_enum_variant<T>(&self, f: &fn(uint) -> T) -> T {
         debug!("read_enum_variant()");
         let idx = match *self.peek() {
@@ -862,9 +863,25 @@ impl serialize::Decoder for Decoder<'self> {
         f(idx)
     }
 
+    #[cfg(stage1)]
+    #[cfg(stage2)]
+    #[cfg(stage3)]
+    fn read_enum_variant<T>(&self, names: &[&str], f: &fn(uint) -> T) -> T {
+        debug!("read_enum_variant(names=%?)", names);
+        let name = match *self.peek() {
+            String(ref s) => s,
+            List([String(ref s), .. _]) => s,
+            json => fail!(fmt!("invalid variant: %?", json)),
+        };
+        let idx = match vec::position(names, |n| str::eq_slice(*n, *name)) {
+            Some(idx) => idx,
+            None => fail!(fmt!("Unknown variant name: %?", name)),
+        };
+        f(idx)
+    }
+
     fn read_enum_variant_arg<T>(&self, idx: uint, f: &fn() -> T) -> T {
         debug!("read_enum_variant_arg(idx=%u)", idx);
-        if idx != 0 { fail!(~"unknown index") }
         f()
     }
 
@@ -1691,7 +1708,7 @@ mod tests {
     #[test]
     fn test_read_some() {
         let decoder = Decoder(from_str(~"\"jodhpurs\"").unwrap());
-        let value: Animal = Decodable::decode(&decoder);
+        let value: Option<~str> = Decodable::decode(&decoder);
         assert_eq!(value, Some(~"jodhpurs"));
     }
 

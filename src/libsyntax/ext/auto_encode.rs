@@ -1053,6 +1053,7 @@ fn mk_enum_deser_variant_nary(
     cx.expr_call(span, cx.expr_path(span, ~[name]), args)
 }
 
+#[cfg(stage0)]
 fn mk_enum_deser_body(
     ext_cx: @ext_ctxt,
     span: span,
@@ -1174,6 +1175,141 @@ fn mk_enum_deser_body(
     )
 }
 
+#[cfg(stage1)]
+#[cfg(stage2)]
+#[cfg(stage3)]
+fn mk_enum_deser_body(
+    ext_cx: @ext_ctxt,
+    span: span,
+    name: ast::ident,
+    variants: ~[ast::variant]
+) -> @ast::expr {
+    let expr_arm_names = build::mk_fixed_vec_e(
+        ext_cx,
+        span,
+         do variants.map |variant| {
+            build::mk_base_str(
+                ext_cx,
+                span,
+                variant.node.name
+            )
+        }
+    );
+
+    let mut arms = do variants.mapi |v_idx, variant| {
+        let body = match variant.node.kind {
+            ast::tuple_variant_kind(ref args) => {
+                if args.is_empty() {
+                    // for a nullary variant v, do "v"
+                    ext_cx.expr_path(span, ~[variant.node.name])
+                } else {
+                    // for an n-ary variant v, do "v(a_1, ..., a_n)"
+                    mk_enum_deser_variant_nary(
+                        ext_cx,
+                        span,
+                        variant.node.name,
+                        copy *args
+                    )
+                }
+            },
+            ast::struct_variant_kind(*) =>
+                fail!(~"struct variants unimplemented"),
+            ast::enum_variant_kind(*) =>
+                fail!(~"enum variants unimplemented")
+        };
+
+        let pat = @ast::pat {
+            id: ext_cx.next_id(),
+            node: ast::pat_lit(ext_cx.lit_uint(span, v_idx)),
+            span: span,
+        };
+
+        ast::arm {
+            pats: ~[pat],
+            guard: None,
+            body: ext_cx.expr_blk(body),
+        }
+    };
+
+    let quoted_expr = copy quote_expr!(
+      ::core::sys::begin_unwind(~"explicit failure", ~"empty", 1);
+    ).node;
+
+    let impossible_case = ast::arm {
+        pats: ~[@ast::pat {
+            id: ext_cx.next_id(),
+            node: ast::pat_wild,
+            span: span,
+        }],
+        guard: None,
+
+        // FIXME(#3198): proper error message
+        body: ext_cx.expr_blk(ext_cx.expr(span, quoted_expr)),
+    };
+
+    arms.push(impossible_case);
+
+    // ast for `|i| { match i { $(arms) } }`
+    let expr_lambda = ext_cx.expr(
+        span,
+        ast::expr_fn_block(
+            ast::fn_decl {
+                inputs: ~[ast::arg {
+                    mode: ast::infer(ext_cx.next_id()),
+                    is_mutbl: false,
+                    ty: @ast::Ty {
+                        id: ext_cx.next_id(),
+                        node: ast::ty_infer,
+                        span: span
+                    },
+                    pat: @ast::pat {
+                        id: ext_cx.next_id(),
+                        node: ast::pat_ident(
+                            ast::bind_by_copy,
+                            ast_util::ident_to_path(span,
+                                ext_cx.ident_of(~"i")),
+                            None),
+                        span: span,
+                    },
+                    id: ext_cx.next_id(),
+                }],
+                output: @ast::Ty {
+                    id: ext_cx.next_id(),
+                    node: ast::ty_infer,
+                    span: span,
+                },
+                cf: ast::return_val,
+            },
+            ext_cx.expr_blk(
+                ext_cx.expr(
+                    span,
+                    ast::expr_match(ext_cx.expr_var(span, ~"i"), arms)
+                )
+            )
+        )
+    );
+
+    // ast for `__d.read_enum_variant($expr_arm_names, $(expr_lambda))`
+    let expr_lambda = ext_cx.lambda_expr(
+        ext_cx.expr_method_call(
+            span,
+            ext_cx.expr_var(span, ~"__d"),
+            ext_cx.ident_of(~"read_enum_variant"),
+            ~[expr_arm_names, expr_lambda]
+        )
+    );
+
+    // ast for `__d.read_enum($(e_name), $(expr_lambda))`
+    ext_cx.expr_method_call(
+        span,
+        ext_cx.expr_var(span, ~"__d"),
+        ext_cx.ident_of(~"read_enum"),
+        ~[
+            ext_cx.lit_str(span, @ext_cx.str_of(name)),
+            expr_lambda
+        ]
+    )
+}
 
 #[cfg(test)]
 mod test {
