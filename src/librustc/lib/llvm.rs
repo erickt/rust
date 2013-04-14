@@ -2022,6 +2022,17 @@ pub fn type_to_str_inner(names: @TypeNames, outer0: &[TypeRef], ty: TypeRef)
     }
 }
 
+pub fn value_to_str(llvalue: ValueRef) -> ~str {
+    unsafe {
+        let name = llvm::LLVMGetValueName(llvalue);
+        if name == ptr::null() {
+            ~""
+        } else {
+            str::raw::from_c_str(name)
+        }
+    }
+}
+
 pub fn float_width(llt: TypeRef) -> uint {
     unsafe {
         return match llvm::LLVMGetTypeKind(llt) as int {

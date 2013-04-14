@@ -845,7 +845,8 @@ pub fn invoke(bcx: block, llfn: ValueRef, llargs: ~[ValueRef])
 
     if need_invoke(bcx) {
         unsafe {
-            debug!("invoking %x at %x",
+            debug!("invoking %s (%x) at %x",
+                   ::lib::llvm::value_to_str(llfn),
                    ::core::cast::transmute(llfn),
                    ::core::cast::transmute(bcx.llbb));
             for llargs.each |&llarg| {
@@ -861,7 +862,8 @@ pub fn invoke(bcx: block, llfn: ValueRef, llargs: ~[ValueRef])
         return (llresult, normal_bcx);
     } else {
         unsafe {
-            debug!("calling %x at %x",
+            debug!("calling %s (%x) at %x",
+                   ::lib::llvm::value_to_str(llfn),
                    ::core::cast::transmute(llfn),
                    ::core::cast::transmute(bcx.llbb));
             for llargs.each |&llarg| {
@@ -1929,7 +1931,9 @@ pub fn trans_fn(ccx: @CrateContext,
     let do_time = ccx.sess.trans_stats();
     let start = if do_time { time::get_time() }
                 else { time::Timespec::new(0, 0) };
-    debug!("trans_fn(ty_self=%?, param_substs=%s)",
+    let the_path_str = path_str(ccx.sess, path);
+    debug!("trans_fn(path=%s, ty_self=%?, param_substs=%s)",
+           the_path_str,
            ty_self,
            param_substs.repr(ccx.tcx));
     let _icx = ccx.insn_ctxt("trans_fn");
@@ -1954,6 +1958,9 @@ pub fn trans_fn(ccx: @CrateContext,
                       }
                   },
                   |_bcx| { });
+
+    debug!("finished trans_fn(path=%s)", the_path_str);
+
     if do_time {
         let end = time::get_time();
         log_fn_time(ccx, the_path_str, start, end);
