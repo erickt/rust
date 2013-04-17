@@ -1730,13 +1730,11 @@ pub fn create_llargs_for_fn_args(cx: fn_ctxt,
 }
 
 pub fn copy_args_to_allocas(fcx: fn_ctxt,
-                            bcx: block,
+                            mut bcx: block,
                             args: &[ast::arg],
                             raw_llargs: &[ValueRef],
                             arg_tys: &[ty::arg]) -> block {
     let _icx = fcx.insn_ctxt("copy_args_to_allocas");
-    let tcx = bcx.tcx();
-    let mut bcx = bcx;
 
     match fcx.llself {
       Some(copy slf) => {
@@ -1753,50 +1751,62 @@ pub fn copy_args_to_allocas(fcx: fn_ctxt,
     }
 
     for uint::range(0, arg_tys.len()) |arg_n| {
+        let arg = args[arg_n];
         let arg_ty = &arg_tys[arg_n];
         let raw_llarg = raw_llargs[arg_n];
-        let arg_id = args[arg_n].id;
 
-        // For certain mode/type combinations, the raw llarg values are passed
-        // by value.  However, within the fn body itself, we want to always
-        // have all locals and arguments be by-ref so that we can cancel the
-        // cleanup and for better interaction with LLVM's debug info.  So, if
-        // the argument would be passed by value, we store it into an alloca.
-        // This alloca should be optimized away by LLVM's mem-to-reg pass in
-        // the event it's not truly needed.
-        let llarg;
-        match ty::resolved_mode(tcx, arg_ty.mode) {
-            ast::by_ref => {
-                llarg = raw_llarg;
-            }
-            ast::by_copy => {
-                // only by value if immediate:
-                if datum::appropriate_mode(arg_ty.ty).is_by_value() {
-                    let alloc = alloc_ty(bcx, arg_ty.ty);
-                    Store(bcx, raw_llarg, alloc);
-                    llarg = alloc;
-                } else {
-                    llarg = raw_llarg;
-                }
-
-                add_clean(bcx, llarg, arg_ty.ty);
-            }
-        }
-
-        bcx = _match::bind_irrefutable_pat(bcx,
-                                          args[arg_n].pat,
-                                          llarg,
-                                          false,
-                                          _match::BindArgument);
-
-        fcx.llargs.insert(arg_id, local_mem(llarg));
-
-        if fcx.ccx.sess.opts.extra_debuginfo && fcx_has_nonzero_span(fcx) {
-            debuginfo::create_arg(bcx, args[arg_n], args[arg_n].ty.span);
-        }
+        bcx = copy_arg_to_alloca(fcx, bcx, arg, arg_ty, raw_llarg);
     }
 
     return bcx;
+}
+
+pub fn copy_arg_to_alloca(fcx: fn_ctxt,
+                          mut bcx: block,
+                          arg: ast::arg,
+                          arg_ty: &ty::arg,
+                          raw_llarg: ValueRef) -> block {
+    let tcx = bcx.tcx();
+    let arg_id = arg.id;
+
+    // For certain mode/type combinations, the raw llarg values are passed
+    // by value.  However, within the fn body itself, we want to always
+    // have all locals and arguments be by-ref so that we can cancel the
+    // cleanup and for better interaction with LLVM's debug info.  So, if
+    // the argument would be passed by value, we store it into an alloca.
+    // This alloca should be optimized away by LLVM's mem-to-reg pass in
+    // the event it's not truly needed.
+    let llarg = match ty::resolved_mode(tcx, arg_ty.mode) {
+        ast::by_ref => raw_llarg,
+        ast::by_copy => {
+            // only by value if immediate:
+            let llarg = if datum::appropriate_mode(arg_ty.ty).is_by_value() {
+                let alloc = alloc_ty(bcx, arg_ty.ty);
+                Store(bcx, raw_llarg, alloc);
+                alloc
+            } else {
+                raw_llarg
+            };
+
+            add_clean(bcx, llarg, arg_ty.ty);
+
+            llarg
+        }
+    };
+
+    bcx = _match::bind_irrefutable_pat(bcx,
+                                       arg.pat,
+                                       llarg,
+                                       false,
+                                       _match::BindArgument);
+
+    fcx.llargs.insert(arg_id, local_mem(llarg));
+
+    if fcx.ccx.sess.opts.extra_debuginfo && fcx_has_nonzero_span(fcx) {
+        debuginfo::create_arg(bcx, args[arg_n], args[arg_n].ty.span);
+    }
+
+    bcx
 }
 
 // Ties up the llstaticallocas -> llloadenv -> lltop edges,
