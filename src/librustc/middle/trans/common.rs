@@ -497,7 +497,7 @@ pub fn add_clean_frozen_root(bcx: block, val: ValueRef, t: ty::t) {
         scope_clean_changed(scope_info);
     }
 }
-pub fn add_clean_free(cx: block, ptr: ValueRef, heap: heap) {
+pub fn add_clean_free(bcx: block, ptr: ValueRef, heap: heap) {
     let free_fn = match heap {
       heap_managed | heap_managed_unique => {
         let f: @fn(block) -> block = |a| glue::trans_free(a, ptr);
@@ -508,7 +508,7 @@ pub fn add_clean_free(cx: block, ptr: ValueRef, heap: heap) {
         f
       }
     };
-    do in_scope_cx(cx) |scope_info| {
+    do in_scope_cx(bcx) |scope_info| {
         scope_info.cleanups.push(clean_temp(ptr, free_fn,
                                       normal_exit_and_unwind));
         scope_clean_changed(scope_info);
@@ -519,8 +519,8 @@ pub fn add_clean_free(cx: block, ptr: ValueRef, heap: heap) {
 // to a system where we can also cancel the cleanup on local variables, but
 // this will be more involved. For now, we simply zero out the local, and the
 // drop glue checks whether it is zero.
-pub fn revoke_clean(cx: block, val: ValueRef) {
-    do in_scope_cx(cx) |scope_info| {
+pub fn revoke_clean(bcx: block, val: ValueRef) {
+    do in_scope_cx(bcx) |scope_info| {
         let cleanup_pos = vec::position(
             scope_info.cleanups,
             |cu| match *cu {
