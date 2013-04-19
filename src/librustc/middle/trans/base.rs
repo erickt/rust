@@ -1701,6 +1701,34 @@ pub fn create_llargs_for_fn_args(cx: fn_ctxt,
                               -> ~[ValueRef] {
     let _icx = cx.insn_ctxt("create_llargs_for_fn_args");
 
+    match ty_self {
+      impl_self(tt) => {
+        cx.llself = Some(ValSelfData {
+            v: cx.llenv,
+            t: tt,
+            is_owned: false
+        });
+      }
+      impl_owned_self(tt) => {
+        cx.llself = Some(ValSelfData {
+            v: cx.llenv,
+            t: tt,
+            is_owned: true
+        });
+      }
+      no_self => ()
+    }
+
+    // Return an array containing the ValueRefs that we get from
+    // llvm::LLVMGetParam for each argument.
+    vec::from_fn(args.len(), |i| {
+        unsafe {
+            let arg_n = first_real_arg + i;
+            llvm::LLVMGetParam(cx.llfn, arg_n as c_uint)
+        }
+    })
+
+/*
     let has_self = match ty_self {
         impl_self(tt) => {
             cx.llself = Some(ValSelfData {
@@ -1741,6 +1769,7 @@ pub fn create_llargs_for_fn_args(cx: fn_ctxt,
     }
 
     llargs
+    */
 }
 
 pub fn copy_args_to_allocas(fcx: fn_ctxt,
@@ -1749,6 +1778,20 @@ pub fn copy_args_to_allocas(fcx: fn_ctxt,
                             raw_llargs: &[ValueRef],
                             arg_tys: &[ty::arg]) -> block {
     let _icx = fcx.insn_ctxt("copy_args_to_allocas");
+
+    match fcx.llself {
+      Some(copy slf) => {
+        // We really should do this regardless of whether self is owned, but
+        // it doesn't work right with default method impls yet. (FIXME: #2794)
+        if slf.is_owned {
+            let self_val = PointerCast(bcx, slf.v,
+                                       T_ptr(type_of(bcx.ccx(), slf.t)));
+            fcx.llself = Some(ValSelfData {v: self_val, ..slf});
+            add_clean(bcx, self_val, slf.t);
+        }
+      }
+      _ => {}
+    }
 
     for uint::range(0, arg_tys.len()) |arg_n| {
         let arg = args[arg_n];
