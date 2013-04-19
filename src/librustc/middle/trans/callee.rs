@@ -480,14 +480,8 @@ pub fn trans_call_inner(in_cx: block,
 
         let (llfn, llenv) = unsafe {
             match callee.data {
-                Fn(d) => {
-                    (d.llfn, llvm::LLVMGetUndef(T_opaque_box_ptr(ccx)))
-                }
-                Method(d) => {
-                    // Weird but true: we pass self in the *environment* slot!
-                    let llself = PointerCast(bcx, d.llself,
-                                             T_opaque_box_ptr(ccx));
-                    (d.llfn, llself)
+                Fn(FnData { llfn, _ }) | Method(MethodData { llfn, _ }) => {
+                    (llfn, llvm::LLVMGetUndef(T_opaque_box_ptr(ccx)))
                 }
                 Closure(d) => {
                     // Closures are represented as (llfn, llclosure) pair:
