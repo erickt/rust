@@ -1846,7 +1846,7 @@ pub fn copy_arg_to_alloca(fcx: fn_ctxt,
     fcx.llargs.insert(arg_id, local_mem(llarg));
 
     if fcx.ccx.sess.opts.extra_debuginfo && fcx_has_nonzero_span(fcx) {
-        debuginfo::create_arg(bcx, args[arg_n], args[arg_n].ty.span);
+        debuginfo::create_arg(bcx, arg, arg.ty.span);
     }
 
     bcx
