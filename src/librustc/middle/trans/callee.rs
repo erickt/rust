@@ -509,18 +509,30 @@ pub fn trans_call_inner(in_cx: block,
         }
 
         llargs.push(llenv);
+
+        // Add in the self value.
+        match callee.data {
+            Method(d) => {
+                let llself = PointerCast(bcx, d.llself, T_opaque_box_ptr(ccx));
+                llargs.push(llself);
+            }
+            _ => ()
+        }
+
         bcx = trans_args(bcx, args, fn_expr_ty,
                          ret_flag, autoref_arg, &mut llargs);
 
 
         // Now that the arguments have finished evaluating, we need to revoke
         // the cleanup for the self argument, if it exists
+        /*
         match callee.data {
             Method(d) if d.self_mode == ast::by_copy => {
                 revoke_clean(bcx, d.llself);
             }
             _ => {}
         }
+        */
 
         // Uncomment this to debug calls.
         /*
