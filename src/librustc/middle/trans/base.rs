@@ -1701,6 +1701,7 @@ pub fn create_llargs_for_fn_args(cx: fn_ctxt,
                               -> ~[ValueRef] {
     let _icx = cx.insn_ctxt("create_llargs_for_fn_args");
 
+/*
     match ty_self {
       impl_self(tt) => {
         cx.llself = Some(ValSelfData {
@@ -1727,8 +1728,8 @@ pub fn create_llargs_for_fn_args(cx: fn_ctxt,
             llvm::LLVMGetParam(cx.llfn, arg_n as c_uint)
         }
     })
+    */
 
-/*
     let has_self = match ty_self {
         impl_self(tt) => {
             cx.llself = Some(ValSelfData {
@@ -1769,7 +1770,6 @@ pub fn create_llargs_for_fn_args(cx: fn_ctxt,
     }
 
     llargs
-    */
 }
 
 pub fn copy_args_to_allocas(fcx: fn_ctxt,
