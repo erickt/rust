@@ -58,8 +58,8 @@ pub struct FnData {
 pub struct MethodData {
     llfn: ValueRef,
     llself: ValueRef,
-    self_ty: ty::t,
-    self_mode: ast::rmode
+    //self_ty: ty::t,
+    //self_mode: ast::rmode
 }
 
 pub enum CalleeData {

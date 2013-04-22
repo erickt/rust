@@ -81,6 +81,24 @@ pub fn type_of_fn_from_ty(cx: @CrateContext, fty: ty::t) -> TypeRef {
     }
 }
 
+pub fn type_of_method_from_ty(cx: @CrateContext, self_arg: ty::arg, fty: ty::t) -> TypeRef {
+    debug!("type_of_method_from_ty: self_arg: %? fty: %?", self_arg, fty);
+
+    match ty::get(fty).sty {
+        ty::ty_bare_fn(ref f) => {
+            debug!("weeeee: inputs: %?, output: %?", f.sig.inputs, f.sig.output);
+            // Self is passed in the first argument, so add it to our type list.
+            let mut inputs = ~[self_arg];
+            inputs.push_all(f.sig.inputs);
+
+            type_of_fn(cx, inputs, f.sig.output)
+        },
+        _ => {
+            cx.sess.bug(~"type_of_method_from_ty given non-bare-fn")
+        }
+    }
+}
+
 pub fn type_of_non_gc_box(cx: @CrateContext, t: ty::t) -> TypeRef {
     assert!(!ty::type_needs_infer(t));
 

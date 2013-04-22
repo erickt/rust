@@ -192,7 +192,7 @@ pub fn Invoke(cx: block,
     }
     check_not_terminated(cx);
     terminate(cx, "Invoke");
-    debug!("Invoke(%s, Fn=%s, Args=%s)",
+    debug!("Invoke(%s, Fn=%s, Args=[%s])",
            lib::llvm::value_to_str(Fn),
            val_str(cx.ccx().tn, Fn),
            str::connect(vec::map(Args, |a| val_str(cx.ccx().tn,
@@ -911,7 +911,7 @@ pub fn Call(cx: block, Fn: ValueRef, Args: &[ValueRef]) -> ValueRef {
     unsafe {
         count_insn(cx, "call");
 
-        debug!("Call(%s, Fn=%s, Args=%?)",
+        debug!("Call(%s, Fn=%s, Args=[%?])",
                lib::llvm::value_to_str(Fn),
                val_str(cx.ccx().tn, Fn),
                Args.map(|arg| val_str(cx.ccx().tn, *arg)));

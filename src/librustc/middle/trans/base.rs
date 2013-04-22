@@ -2371,9 +2371,10 @@ pub fn register_fn_fuller(ccx: @CrateContext,
                           cc: lib::llvm::CallConv,
                           llfty: TypeRef)
                           -> ValueRef {
-    debug!("register_fn_fuller creating fn for item %d with path %s",
+    debug!("register_fn_fuller(path=%s, node_id=%d, node_type=%s)",
+           ast_map::path_to_str(path, ccx.sess.parse_sess.interner),
            node_id,
-           ast_map::path_to_str(path, ccx.sess.parse_sess.interner));
+           ppaux::ty_to_str(ccx.tcx, node_type));
 
     let ps = if attr::attrs_contains_name(attrs, "no_mangle") {
         path_elt_to_str(*path.last(), ccx.sess.parse_sess.interner)
@@ -2757,12 +2758,15 @@ pub fn get_item_val(ccx: @CrateContext, id: ast::node_id) -> ValueRef {
 
 pub fn register_method(ccx: @CrateContext,
                        id: ast::node_id,
-                       pth: @ast_map::path,
+                       path: @ast_map::path,
                        m: @ast::method) -> ValueRef {
     let mty = ty::node_id_to_type(ccx.tcx, id);
-    let pth = vec::append(/*bad*/copy *pth, ~[path_name((ccx.names)(~"meth")),
+    let path = vec::append(/*bad*/copy *path, ~[path_name((ccx.names)(~"meth")),
                                   path_name(m.ident)]);
-    let llfn = register_fn_full(ccx, m.span, pth, id, m.attrs, mty);
+    debug!("register_method creating fn for item %d with path %s",
+           id,
+           ast_map::path_to_str(path, ccx.sess.parse_sess.interner));
+    let llfn = register_fn_full(ccx, m.span, path, id, m.attrs, mty);
     set_inline_hint_if_appr(m.attrs, llfn);
     llfn
 }

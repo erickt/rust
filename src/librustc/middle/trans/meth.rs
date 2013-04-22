@@ -48,7 +48,7 @@ pub fn trans_impl(ccx: @CrateContext, path: path, name: ast::ident,
     let _icx = ccx.insn_ctxt("impl::trans_impl");
     if !generics.ty_params.is_empty() { return; }
     let sub_path = vec::append_one(path, path_name(name));
-    for vec::each(methods) |method| {
+    for methods.each |method| {
         if method.generics.ty_params.len() == 0u {
             let llfn = get_item_val(ccx, method.id);
             let path = vec::append_one(/*bad*/copy sub_path,
@@ -95,6 +95,12 @@ pub fn trans_method(ccx: @CrateContext,
                     base_self_ty: Option<ty::t>,
                     llfn: ValueRef,
                     impl_id: ast::def_id) {
+    debug!("trans_method(path=%s, method=%?, base_self_ty=%?, param_substs=%s)",
+           path_str(ccx.sess, path),
+           method,
+           base_self_ty,
+           param_substs.repr(ccx.tcx));
+
     // figure out how self is being passed
     let self_arg = match method.self_ty.node {
       ast::sty_static => {
@@ -231,8 +237,8 @@ pub fn trans_method_callee(bcx: block,
                 data: Method(MethodData {
                     llfn: callee_fn.llfn,
                     llself: val,
-                    self_ty: node_id_type(bcx, self.id),
-                    self_mode: ty::resolved_mode(tcx, mentry.self_arg.mode)
+                    //self_ty: node_id_type(bcx, self.id),
+                    //self_mode: ty::resolved_mode(tcx, mentry.self_arg.mode)
                 })
             }
         }
@@ -456,6 +462,14 @@ pub fn trans_monomorphized_callee(bcx: block,
           let Result {bcx, val: llself_val} =
               trans_self_arg(bcx, base, mentry);
 
+          // obtain the `self` type:
+          let self_ty = node_id_type(bcx, base.id);
+
+          let self_arg = arg {
+              mode: mentry.self_arg.mode,
+              ty: self_ty,
+          };
+
           // create a concatenated set of substitutions which includes
           // those from the impl and those from the method:
           let callee_substs = combine_impl_and_methods_tps(
@@ -469,7 +483,7 @@ pub fn trans_monomorphized_callee(bcx: block,
 
           // create a llvalue that represents the fn ptr
           let fn_ty = node_id_type(bcx, callee_id);
-          let llfn_ty = T_ptr(type_of_fn_from_ty(ccx, fn_ty));
+          let llfn_ty = T_ptr(type_of_method_from_ty(ccx, self_arg, fn_ty));
           let llfn_val = PointerCast(bcx, callee.llfn, llfn_ty);
 
           // combine the self environment with the rest
@@ -479,8 +493,8 @@ pub fn trans_monomorphized_callee(bcx: block,
               data: Method(MethodData {
                   llfn: llfn_val,
                   llself: llself_val,
-                  self_ty: node_id_type(bcx, base.id),
-                  self_mode: ty::resolved_mode(tcx, mentry.self_arg.mode)
+                  //self_ty: self_ty,
+                  //self_mode: ty::resolved_mode(tcx, mentry.self_arg.mode)
               })
           }
       }
@@ -715,8 +729,8 @@ pub fn trans_trait_callee_from_llval(bcx: block,
         data: Method(MethodData {
             llfn: mptr,
             llself: llself,
-            self_ty: ty::mk_opaque_box(bcx.tcx()),
-            self_mode: self_mode,
+            //self_ty: ty::mk_opaque_box(bcx.tcx()),
+            //self_mode: self_mode,
             /* XXX: Some(llbox) */
         })
     };
