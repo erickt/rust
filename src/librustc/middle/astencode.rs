@@ -536,8 +536,8 @@ fn encode_method_map_entry(ecx: @e::EncodeContext,
                               ebml_w: &writer::Encoder,
                               mme: method_map_entry) {
     do ebml_w.emit_struct("method_map_entry", 3) {
-        do ebml_w.emit_field(~"self_arg", 0u) {
-            ebml_w.emit_arg(ecx, mme.self_arg);
+        do ebml_w.emit_field(~"self_ty", 0u) {
+            ebml_w.emit_ty(ecx, mme.self_ty);
         }
         do ebml_w.emit_field(~"explicit_self", 2u) {
             mme.explicit_self.encode(ebml_w);
@@ -558,8 +558,8 @@ fn encode_method_map_entry(ecx: @e::EncodeContext,
                               ebml_w: &writer::Encoder,
                               mme: method_map_entry) {
     do ebml_w.emit_struct("method_map_entry", 3) {
-        do ebml_w.emit_struct_field("self_arg", 0u) {
-            ebml_w.emit_arg(ecx, mme.self_arg);
+        do ebml_w.emit_struct_field("self_ty", 0u) {
+            ebml_w.emit_ty(ecx, mme.self_ty);
         }
         do ebml_w.emit_struct_field("explicit_self", 2u) {
             mme.explicit_self.encode(ebml_w);
@@ -579,8 +579,8 @@ impl read_method_map_entry_helper for reader::Decoder {
         -> method_map_entry {
         do self.read_struct("method_map_entry", 3) {
             method_map_entry {
-                self_arg: self.read_field(~"self_arg", 0u, || {
-                    self.read_arg(xcx)
+                self_ty: self.read_field(~"self_ty", 0u, || {
+                    self.read_ty(xcx)
                 }),
                 explicit_self: self.read_field(~"explicit_self", 2u, || {
                     let self_type: ast::self_ty_ = Decodable::decode(self);
@@ -606,8 +606,8 @@ impl read_method_map_entry_helper for reader::Decoder {
         -> method_map_entry {
         do self.read_struct("method_map_entry", 3) {
             method_map_entry {
-                self_arg: self.read_struct_field("self_arg", 0u, || {
-                    self.read_arg(xcx)
+                self_ty: self.read_struct_field("self_ty", 0u, || {
+                    self.read_ty(xcx)
                 }),
                 explicit_self: self.read_struct_field("explicit_self", 2, || {
                     let self_type: ast::self_ty_ = Decodable::decode(self);
@@ -770,7 +770,6 @@ impl get_ty_str_ctxt for e::EncodeContext {
 }
 
 trait ebml_writer_helpers {
-    fn emit_arg(&self, ecx: @e::EncodeContext, arg: ty::arg);
     fn emit_ty(&self, ecx: @e::EncodeContext, ty: ty::t);
     fn emit_vstore(&self, ecx: @e::EncodeContext, vstore: ty::vstore);
     fn emit_tys(&self, ecx: @e::EncodeContext, tys: ~[ty::t]);
@@ -791,12 +790,6 @@ impl ebml_writer_helpers for writer::Encoder {
     fn emit_vstore(&self, ecx: @e::EncodeContext, vstore: ty::vstore) {
         do self.emit_opaque {
             e::write_vstore(ecx, self, vstore)
-        }
-    }
-
-    fn emit_arg(&self, ecx: @e::EncodeContext, arg: ty::arg) {
-        do self.emit_opaque {
-            tyencode::enc_arg(self.writer, ecx.ty_str_ctxt(), arg);
         }
     }
 
@@ -1041,7 +1034,6 @@ impl doc_decoder_helpers for ebml::Doc {
 }
 
 trait ebml_decoder_decoder_helpers {
-    fn read_arg(&self, xcx: @ExtendedDecodeContext) -> ty::arg;
     fn read_ty(&self, xcx: @ExtendedDecodeContext) -> ty::t;
     fn read_tys(&self, xcx: @ExtendedDecodeContext) -> ~[ty::t];
     fn read_type_param_def(&self, xcx: @ExtendedDecodeContext) -> ty::TypeParameterDef;
@@ -1053,14 +1045,6 @@ trait ebml_decoder_decoder_helpers {
 }
 
 impl ebml_decoder_decoder_helpers for reader::Decoder {
-    fn read_arg(&self, xcx: @ExtendedDecodeContext) -> ty::arg {
-        do self.read_opaque |doc| {
-            tydecode::parse_arg_data(
-                doc.data, xcx.dcx.cdata.cnum, doc.start, xcx.dcx.tcx,
-                |s, a| self.convert_def_id(xcx, s, a))
-        }
-    }
-
     fn read_ty(&self, xcx: @ExtendedDecodeContext) -> ty::t {
         // Note: regions types embed local node ids.  In principle, we
         // should translate these node ids into the new decode
