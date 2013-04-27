@@ -284,13 +284,9 @@ pub impl Reflector {
                 let sym = mangle_internal_name_by_path_and_seq(ccx,
                                                                sub_path,
                                                                ~"get_disr");
-                let args = [
-                    ty::arg {
-                        ty: opaqueptrty
-                    }
-                ];
+                let arg_tys = [opaqueptrty];
 
-                let llfty = type_of_fn(ccx, args, ty::mk_int());
+                let llfty = type_of_fn(ccx, arg_tys, ty::mk_int());
                 let llfdecl = decl_internal_cdecl_fn(ccx.llmod, sym, llfty);
                 let arg = unsafe {
                     llvm::LLVMGetParam(llfdecl, first_real_arg as c_uint)
@@ -357,7 +353,7 @@ pub impl Reflector {
             let modeval = 5u;   // "by copy"
             let extra = ~[self.c_uint(i),
                          self.c_uint(modeval),
-                         self.c_tydesc(arg.ty)];
+                         self.c_tydesc(*arg)];
             self.visit(~"fn_input", extra);
         }
         let extra = ~[self.c_uint(retval),
