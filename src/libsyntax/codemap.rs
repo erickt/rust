@@ -138,6 +138,12 @@ impl<D:Decoder> Decodable<D> for span {
     }
 }
 
+impl to_bytes::IterBytes for span {
+    fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) {
+        to_bytes::iter_bytes_3(&self.lo, &self.hi, &self.expn_info, lsb0, f);
+    }
+}
+
 pub fn spanned<T>(lo: BytePos, hi: BytePos, t: T) -> spanned<T> {
     respan(mk_sp(lo, hi), t)
 }
@@ -185,14 +191,34 @@ pub struct FileMapAndLine {fm: @FileMap, line: uint}
 pub struct FileMapAndBytePos {fm: @FileMap, pos: BytePos}
 pub struct NameAndSpan {name: ~str, span: Option<span>}
 
+impl to_bytes::IterBytes for NameAndSpan {
+    fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) {
+        to_bytes::iter_bytes_2(&self.name, &self.span, lsb0, f)
+    }
+}
+
 pub struct CallInfo {
     call_site: span,
     callee: NameAndSpan
 }
 
+impl to_bytes::IterBytes for CallInfo {
+    fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) {
+        to_bytes::iter_bytes_2(&self.call_site, &self.callee, lsb0, f)
+    }
+}
+
 /// Extra information for tracking macro expansion of spans
 pub enum ExpnInfo {
     ExpandedFrom(CallInfo)
+}
+
+impl to_bytes::IterBytes for ExpnInfo {
+    fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) {
+        match *self {
+            ExpandedFrom(ref call_info) => to_bytes::iter_bytes_2(&0u8, call_info, lsb0, f)
+        }
+    }
 }
 
 pub type FileName = ~str;
