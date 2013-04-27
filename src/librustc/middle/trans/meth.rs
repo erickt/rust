@@ -46,7 +46,7 @@ pub fn trans_impl(ccx: @CrateContext, path: path, name: ast::ident,
     let _icx = ccx.insn_ctxt("impl::trans_impl");
     if !generics.ty_params.is_empty() { return; }
     let sub_path = vec::append_one(path, path_name(name));
-    for vec::each(methods) |method| {
+    for methods.each |method| {
         if method.generics.ty_params.len() == 0u {
             let llfn = get_item_val(ccx, method.id);
             let path = vec::append_one(/*bad*/copy sub_path,
@@ -65,7 +65,12 @@ pub fn trans_impl(ccx: @CrateContext, path: path, name: ast::ident,
                 }
             }
 
-            trans_method(ccx, path, *method, param_substs_opt, self_ty, llfn,
+            trans_method(ccx,
+                         path,
+                         *method,
+                         param_substs_opt,
+                         self_ty,
+                         llfn,
                          ast_util::local_def(id));
         }
     }
@@ -101,11 +106,10 @@ pub fn trans_method(ccx: @CrateContext,
       _ => {
         // determine the (monomorphized) type that `self` maps to for
         // this method
-        let self_ty;
-        match base_self_ty {
-            None => self_ty = ty::node_id_to_type(ccx.tcx, method.self_id),
-            Some(provided_self_ty) => self_ty = provided_self_ty
-        }
+        let self_ty = match base_self_ty {
+            None => ty::node_id_to_type(ccx.tcx, method.self_id),
+            Some(provided_self_ty) => provided_self_ty,
+        };
         let self_ty = match param_substs {
             None => self_ty,
             Some(@param_substs {tys: ref tys, _}) => {
