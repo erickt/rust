@@ -489,6 +489,7 @@ fn parse_bare_fn_ty(st: @mut PState, conv: conv_did) -> ty::BareFnTy {
 }
 
 fn parse_sig(st: @mut PState, conv: conv_did) -> ty::FnSig {
+    let self_ty = parse_opt(st, || parse_ty(st, conv));
     assert!((next(st) == '['));
     let mut inputs = ~[];
     while peek(st) != ']' {
@@ -497,7 +498,7 @@ fn parse_sig(st: @mut PState, conv: conv_did) -> ty::FnSig {
     st.pos += 1u; // eat the ']'
     let ret_ty = parse_ty(st, conv);
     ty::FnSig {bound_lifetime_names: opt_vec::Empty, // FIXME(#4846)
-               self_ty: None,
+               self_ty: self_ty,
                inputs: inputs,
                output: ret_ty}
 }
