@@ -2812,7 +2812,8 @@ impl to_bytes::IterBytes for field {
 #[cfg(stage0)]
 impl to_bytes::IterBytes for FnSig {
     fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) {
-        to_bytes::iter_bytes_2(&self.inputs,
+        to_bytes::iter_bytes_3(&self.self_ty,
+                               &self.inputs,
                                &self.output,
                                lsb0, f);
     }
