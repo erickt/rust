@@ -384,6 +384,7 @@ fn enc_closure_ty(w: @io::Writer, cx: @ctxt, ft: &ty::ClosureTy) {
 }
 
 fn enc_fn_sig(w: @io::Writer, cx: @ctxt, fsig: &ty::FnSig) {
+    enc_opt(w, fsig.self_ty, |self_ty| enc_ty(w, cx, self_ty));
     w.write_char('[');
     for fsig.inputs.each |ty| {
         enc_ty(w, cx, *ty);
