@@ -356,6 +356,7 @@ fn check_start_fn_ty(ccx: @mut CrateCtxt,
                 abis: abi::AbiSet::Rust(),
                 sig: ty::FnSig {
                     bound_lifetime_names: opt_vec::Empty,
+                    self_ty: None,
                     inputs: ~[
                         ty::mk_int(),
                         ty::mk_imm_ptr(tcx, ty::mk_imm_ptr(tcx, ty::mk_u8())),

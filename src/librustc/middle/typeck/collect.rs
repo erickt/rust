@@ -569,6 +569,7 @@ pub fn compare_impl_method(tcx: ty::ctxt,
                           sig: ty::FnSig {
                               bound_lifetime_names:
                                   copy trait_m.fty.sig.bound_lifetime_names,
+                              self_ty: None,
                               inputs: trait_fn_args,
                               output: trait_m.fty.sig.output
                           }});
@@ -580,6 +581,7 @@ pub fn compare_impl_method(tcx: ty::ctxt,
                           sig: ty::FnSig {
                               bound_lifetime_names:
                                   copy impl_m.fty.sig.bound_lifetime_names,
+                              self_ty: None,
                               inputs: impl_fn_args,
                               output: impl_m.fty.sig.output
                           }});
@@ -1222,6 +1224,7 @@ pub fn ty_of_foreign_fn_decl(ccx: &CrateCtxt,
             abis: abis,
             purity: ast::unsafe_fn,
             sig: ty::FnSig {bound_lifetime_names: opt_vec::Empty,
+                            self_ty: None,
                             inputs: input_tys,
                             output: output_ty}
         });
