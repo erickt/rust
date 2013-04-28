@@ -500,6 +500,7 @@ fn parse_sig(st: @mut PState, conv: conv_did) -> ty::FnSig {
     st.pos += 1u; // eat the ']'
     let ret_ty = parse_ty(st, conv);
     ty::FnSig {bound_lifetime_names: opt_vec::Empty, // FIXME(#4846)
+               self_ty: None,
                inputs: inputs,
                output: ret_ty}
 }
