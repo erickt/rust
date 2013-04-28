@@ -1320,6 +1320,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                 // check each arg against "error", in order to set up
                 // all the node type bindings
                 FnSig {bound_lifetime_names: opt_vec::Empty,
+                       self_ty: None,
                        inputs: err_args(args.len()),
                        output: ty::mk_err()}
             }
@@ -1666,6 +1667,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
         let fty = if error_happened {
             fty_sig = FnSig {
                 bound_lifetime_names: opt_vec::Empty,
+                self_ty: fn_ty.sig.self_ty.map(|_| ty::mk_err()),
                 inputs: fn_ty.sig.inputs.map(|_| ty::mk_err()),
                 output: ty::mk_err()
             };
@@ -3464,6 +3466,7 @@ pub fn check_intrinsic_type(ccx: @mut CrateCtxt, it: @ast::foreign_item) {
             region: ty::re_bound(ty::br_anon(0)),
             sig: ty::FnSig {
                 bound_lifetime_names: opt_vec::Empty,
+                self_ty: None,
                 inputs: ~[ty::mk_imm_ptr(ccx.tcx, ty::mk_mach_uint(ast::ty_u8))],
                 output: ty::mk_nil()
             }
@@ -3583,6 +3586,7 @@ pub fn check_intrinsic_type(ccx: @mut CrateCtxt, it: @ast::foreign_item) {
         purity: ast::unsafe_fn,
         abis: AbiSet::Rust(),
         sig: FnSig {bound_lifetime_names: opt_vec::Empty,
+                    self_ty: None,
                     inputs: inputs,
                     output: output}
     });

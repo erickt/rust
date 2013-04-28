@@ -290,6 +290,7 @@ pub fn normalize_for_monomorphization(tcx: ty::ctxt,
                     purity: ast::impure_fn,
                     abis: AbiSet::Rust(),
                     sig: FnSig {bound_lifetime_names: opt_vec::Empty,
+                                self_ty: None,
                                 inputs: ~[],
                                 output: ty::mk_nil()}}))
         }
@@ -325,6 +326,7 @@ pub fn normalize_for_monomorphization(tcx: ty::ctxt,
                 onceness: ast::Many,
                 region: ty::re_static,
                 sig: ty::FnSig {bound_lifetime_names: opt_vec::Empty,
+                                self_ty: None,
                                 inputs: ~[],
                                 output: ty::mk_nil()}})
     }

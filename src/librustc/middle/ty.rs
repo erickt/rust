@@ -380,6 +380,7 @@ pub struct ClosureTy {
 #[deriving(Eq)]
 pub struct FnSig {
     bound_lifetime_names: OptVec<ast::ident>,
+    self_ty: Option<t>,
     inputs: ~[t],
     output: t
 }
@@ -1204,6 +1205,7 @@ pub fn mk_ctor_fn(cx: ctxt, input_tys: &[ty::t], output: ty::t) -> t {
                    abis: AbiSet::Rust(),
                    sig: FnSig {
                     bound_lifetime_names: opt_vec::Empty,
+                    self_ty: None,
                     inputs: input_args,
                     output: output
                    }
@@ -1300,6 +1302,7 @@ pub fn fold_sig(sig: &FnSig, fldop: &fn(t) -> t) -> FnSig {
 
     FnSig {
         bound_lifetime_names: copy sig.bound_lifetime_names,
+        self_ty: sig.self_ty.map(|self_ty| fldop(*self_ty)),
         inputs: args,
         output: fldop(sig.output)
     }

@@ -417,6 +417,7 @@ pub fn super_fn_sigs<C:Combine>(
             .chain |inputs| {
         do self.tys(a_f.output, b_f.output).chain |output| {
             Ok(FnSig {bound_lifetime_names: opt_vec::Empty, // FIXME(#4846)
+                      self_ty: None,
                       inputs: /*bad*/copy inputs,
                       output: output})
         }

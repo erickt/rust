@@ -608,6 +608,7 @@ fn ty_of_method_or_bare_fn<AC:AstConv,RS:region_scope + Copy + Durable>(
                 purity: purity,
                 abis: abi,
                 sig: ty::FnSig {bound_lifetime_names: bound_lifetime_names,
+                                self_ty: None,
                                 inputs: input_tys,
                                 output: output_ty}
             });
@@ -714,6 +715,7 @@ pub fn ty_of_closure<AC:AstConv,RS:region_scope + Copy + Durable>(
         onceness: onceness,
         region: bound_region,
         sig: ty::FnSig {bound_lifetime_names: bound_lifetime_names,
+                        self_ty: None,
                         inputs: input_tys,
                         output: output_ty}
     }
