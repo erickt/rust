@@ -583,8 +583,8 @@ impl read_method_map_entry_helper for reader::Decoder {
                     self.read_ty(xcx)
                 }),
                 explicit_self: self.read_field(~"explicit_self", 2u, || {
-                    let self_type: ast::self_ty_ = Decodable::decode(self);
-                    self_type
+                    let explicit_self: ast::explicit_self_ = Decodable::decode(self);
+                    explicit_self
                 }),
                 origin: self.read_field(~"origin", 1u, || {
                     let method_origin: method_origin =

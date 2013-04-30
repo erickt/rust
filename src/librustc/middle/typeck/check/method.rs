@@ -380,7 +380,7 @@ pub impl<'self> LookupContext<'self> {
             let trait_methods = ty::trait_methods(tcx, bound_trait_ref.def_id);
             let pos = {
                 match trait_methods.position(|m| {
-                    m.self_ty != ast::sty_static &&
+                    m.explicit_self != ast::sty_static &&
                         m.ident == self.m_name })
                 {
                     Some(pos) => pos,
@@ -944,11 +944,11 @@ pub impl<'self> LookupContext<'self> {
         self.enforce_drop_trait_limitations(candidate);
 
         // static methods should never have gotten this far:
-        assert!(candidate.method_ty.self_ty != sty_static);
+        assert!(candidate.method_ty.explicit_self != sty_static);
 
         let transformed_self_ty = match candidate.origin {
             method_trait(*) => {
-                match candidate.method_ty.self_ty {
+                match candidate.method_ty.explicit_self {
                     sty_region(*) => {
                         // FIXME(#5762) again, preserving existing
                         // behavior here which (for &self) desires
@@ -1030,7 +1030,7 @@ pub impl<'self> LookupContext<'self> {
         let fty = ty::mk_bare_fn(tcx, ty::BareFnTy {sig: fn_sig, ..bare_fn_ty});
         debug!("after replacing bound regions, fty=%s", self.ty_to_str(fty));
 
-        let self_mode = get_mode_from_self_type(candidate.method_ty.self_ty);
+        let self_mode = get_mode_from_explicit_self(candidate.method_ty.explicit_self);
 
         // before we only checked whether self_ty could be a subtype
         // of rcvr_ty; now we actually make it so (this may cause
@@ -1052,7 +1052,7 @@ pub impl<'self> LookupContext<'self> {
         method_map_entry {
             self_ty: candidate.rcvr_ty,
             self_mode: self_mode,
-            explicit_self: candidate.method_ty.self_ty,
+            explicit_self: candidate.method_ty.explicit_self,
             origin: candidate.origin,
         }
     }
@@ -1123,7 +1123,7 @@ pub impl<'self> LookupContext<'self> {
         // on an @Trait object here and so forth
         match candidate.origin {
             method_trait(*) => {
-                match candidate.method_ty.self_ty {
+                match candidate.method_ty.explicit_self {
                     sty_static | sty_value => {
                         return false;
                     }
@@ -1141,7 +1141,7 @@ pub impl<'self> LookupContext<'self> {
             _ => {}
         }
 
-        return match candidate.method_ty.self_ty {
+        return match candidate.method_ty.explicit_self {
             sty_static => {
                 false
             }
@@ -1298,8 +1298,8 @@ pub impl<'self> LookupContext<'self> {
     }
 }
 
-pub fn get_mode_from_self_type(self_type: ast::self_ty_) -> SelfMode {
-    match self_type {
+pub fn get_mode_from_explicit_self(explicit_self: ast::explicit_self_) -> SelfMode {
+    match explicit_self {
         sty_value => ty::ByCopy,
         _ => ty::ByRef,
     }

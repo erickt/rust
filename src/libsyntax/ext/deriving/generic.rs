@@ -367,12 +367,12 @@ impl<'self> MethodDef<'self> {
         let body_block = build::mk_simple_block(cx, span, body);
 
         // Create the method.
-        let self_ty = respan(span, sty_region(None, m_imm));
+        let explicit_self = respan(span, sty_region(None, m_imm));
         @ast::method {
             ident: method_ident,
             attrs: ~[],
             generics: ast_util::empty_generics(),
-            self_ty: self_ty,
+            explicit_self: explicit_self,
             purity: impure_fn,
             decl: fn_decl,
             body: body_block,
