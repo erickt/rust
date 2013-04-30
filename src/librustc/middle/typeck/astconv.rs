@@ -560,7 +560,7 @@ pub fn ty_of_method<AC:AstConv,RS:region_scope + Copy + Durable>(
     };
     let (a, b) = ty_of_method_or_bare_fn(
         self, rscope, purity, AbiSet::Rust(), lifetimes, Some(&self_info), decl);
-    (a.get(), b)
+    (a, b)
 }
 
 pub fn ty_of_bare_fn<AC:AstConv,RS:region_scope + Copy + Durable>(
@@ -583,7 +583,7 @@ fn ty_of_method_or_bare_fn<AC:AstConv,RS:region_scope + Copy + Durable>(
     abi: AbiSet,
     lifetimes: &OptVec<ast::Lifetime>,
     opt_self_info: Option<&SelfInfo>,
-    decl: &ast::fn_decl) -> (Option<Option<ty::t>>, ty::BareFnTy)
+    decl: &ast::fn_decl) -> (Option<ty::t>, ty::BareFnTy)
 {
     debug!("ty_of_bare_fn");
 
@@ -592,7 +592,7 @@ fn ty_of_method_or_bare_fn<AC:AstConv,RS:region_scope + Copy + Durable>(
     let bound_lifetime_names = bound_lifetimes(self, lifetimes);
     let rb = in_binding_rscope(rscope, RegionParamNames(copy bound_lifetime_names));
 
-    let opt_transformed_self_ty = opt_self_info.map(|&self_info| {
+    let opt_transformed_self_ty = opt_self_info.chain(|self_info| {
         transform_self_ty(self, &rb, self_info)
     });
 
@@ -608,7 +608,7 @@ fn ty_of_method_or_bare_fn<AC:AstConv,RS:region_scope + Copy + Durable>(
                 purity: purity,
                 abis: abi,
                 sig: ty::FnSig {bound_lifetime_names: bound_lifetime_names,
-                                self_ty: None,
+                                self_ty: opt_transformed_self_ty,
                                 inputs: input_tys,
                                 output: output_ty}
             });

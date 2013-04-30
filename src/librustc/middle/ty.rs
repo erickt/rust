@@ -1330,6 +1330,7 @@ pub fn fold_sig(sig: &FnSig, fldop: &fn(t) -> t) -> FnSig {
     FnSig {
         bound_lifetime_names: copy sig.bound_lifetime_names,
         self_ty: sig.self_ty.map(|self_ty| fldop(*self_ty)),
+        //self_ty: None,
         inputs: args,
         output: fldop(sig.output)
     }
