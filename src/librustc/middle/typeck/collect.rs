@@ -379,7 +379,7 @@ pub fn ensure_trait_methods(ccx: &CrateCtxt,
     {
         let trait_self_ty = ty::mk_self(self.tcx, local_def(trait_id));
         let rscope = MethodRscope::new(m_explicit_self.node, trait_rp, trait_generics);
-        let (transformed_self_ty, fty) =
+        let fty =
             astconv::ty_of_method(self, &rscope, *m_purity, &m_generics.lifetimes,
                                   trait_self_ty, *m_explicit_self, m_decl);
         let num_trait_type_params = trait_generics.ty_params.len();
@@ -549,10 +549,10 @@ pub fn compare_impl_method(tcx: ty::ctxt,
     // For both the trait and the impl, create an argument to
     // represent the self argument (unless this is a static method).
     // This argument will have the *transformed* self type.
-    for trait_m.transformed_self_ty.each |&t| {
+    for trait_m.fty.sig.self_ty.each |&t| {
         trait_fn_args.push(t);
     }
-    for impl_m.transformed_self_ty.each |&t| {
+    for impl_m.fty.sig.self_ty.each |&t| {
         impl_fn_args.push(t);
     }
 
@@ -560,7 +560,7 @@ pub fn compare_impl_method(tcx: ty::ctxt,
     trait_fn_args.push_all(trait_m.fty.sig.inputs);
     impl_fn_args.push_all(impl_m.fty.sig.inputs);
 
-    // Create a bare fn type for trait/impl that includes self argument
+    // Create a bare fn type for trait/impl that includes the `self` argument
     let trait_fty =
         ty::mk_bare_fn(
             tcx,
@@ -758,7 +758,7 @@ pub fn convert_methods(ccx: &CrateCtxt,
         let rscope = MethodRscope::new(m.explicit_self.node,
                                        rp,
                                        rcvr_generics);
-        let (transformed_self_ty, fty) =
+        let fty =
             astconv::ty_of_method(ccx, &rscope, m.purity,
                                   &method_generics.lifetimes,
                                   untransformed_rcvr_ty,
