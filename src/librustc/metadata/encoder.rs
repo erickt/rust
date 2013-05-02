@@ -583,7 +583,7 @@ fn encode_info_for_struct_ctor(ecx: @EncodeContext,
 
 fn encode_method_ty_fields(ecx: @EncodeContext,
                            ebml_w: &mut writer::Encoder,
-                           method_ty: &ty::method) {
+                           method_ty: &ty::Method) {
     encode_def_id(ebml_w, method_ty.def_id);
     encode_name(ecx, ebml_w, method_ty.ident);
     encode_ty_type_param_defs(ebml_w, ecx,
@@ -610,7 +610,7 @@ fn encode_info_for_method(ecx: @EncodeContext,
     ebml_w.start_tag(tag_items_data_item);
 
     let method_def_id = local_def(m.id);
-    let method_ty: @ty::method = ty::method(ecx.tcx, method_def_id);
+    let method_ty = ty::method(ecx.tcx, method_def_id);
     encode_method_ty_fields(ecx, ebml_w, method_ty);
 
     match m.explicit_self.node {
@@ -906,7 +906,7 @@ fn encode_info_for_item(ecx: @EncodeContext,
         for ty::trait_method_def_ids(tcx, local_def(item.id)).eachi |i, &method_def_id| {
             assert!(method_def_id.crate == ast::local_crate);
 
-            let method_ty: @ty::method = ty::method(tcx, method_def_id);
+            let method_ty = ty::method(tcx, method_def_id);
 
             index.push(entry {val: method_def_id.node, pos: ebml_w.writer.tell()});
 
