@@ -932,6 +932,10 @@ pub impl<'self> LookupContext<'self> {
                          candidate: &Candidate)
         -> method_map_entry
     {
+        // Remember, `self_ty` is different from the
+        // `candidate.method.transformed_self_ty`. `self_ty` may be a subtype
+        // of `transformed_self_ty`.
+
         let tcx = self.tcx();
         let fty = self.fn_ty_from_origin(&candidate.origin);
 
