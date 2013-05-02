@@ -24,22 +24,18 @@ use std::list::Cons;
 pub fn replace_bound_regions_in_fn_sig(
     tcx: ty::ctxt,
     isr: isr_alist,
-    opt_self_ty: Option<ty::t>,
     fn_sig: &ty::FnSig,
     mapf: &fn(ty::bound_region) -> ty::Region)
-    -> (isr_alist, Option<ty::t>, ty::FnSig)
+    -> (isr_alist, ty::FnSig)
 {
     let mut all_tys = ty::tys_in_fn_sig(fn_sig);
 
-    for opt_self_ty.each |&self_ty| {
-        all_tys.push(self_ty);
+    for fn_sig.self_ty.each |self_ty| {
+        all_tys.push(*self_ty);
     }
 
-    for opt_self_ty.each |&t| { all_tys.push(t) }
-
-    debug!("replace_bound_regions_in_fn_sig(self_ty=%?, fn_sig=%s, \
+    debug!("replace_bound_regions_in_fn_sig(fn_sig=%s, \
             all_tys=%?)",
-           opt_self_ty.map(|&t| ppaux::ty_to_str(tcx, t)),
            ppaux::fn_sig_to_str(tcx, fn_sig),
            all_tys.map(|&t| ppaux::ty_to_str(tcx, t)));
     let _i = indenter();
@@ -51,15 +47,12 @@ pub fn replace_bound_regions_in_fn_sig(
     let new_fn_sig = ty::fold_sig(fn_sig, |t| {
         replace_bound_regions(tcx, isr, t)
     });
-    let new_self_ty = opt_self_ty.map(|&t| replace_bound_regions(tcx, isr, t));
 
     debug!("result of replace_bound_regions_in_fn_sig: \
-            new_self_ty=%?, \
             fn_sig=%s",
-           new_self_ty.map(|&t| ppaux::ty_to_str(tcx, t)),
            ppaux::fn_sig_to_str(tcx, &new_fn_sig));
 
-    return (isr, new_self_ty, new_fn_sig);
+    return (isr, new_fn_sig);
 
     // Takes `isr`, a (possibly empty) mapping from in-scope region
     // names ("isr"s) to their corresponding regions; `tys`, a list of
@@ -239,7 +232,6 @@ pub fn relate_nested_regions(
 
 pub fn relate_free_regions(
     tcx: ty::ctxt,
-    self_ty: Option<ty::t>,
     fn_sig: &ty::FnSig)
 {
     /*!
@@ -260,7 +252,7 @@ pub fn relate_free_regions(
     for fn_sig.inputs.each |arg| {
         all_tys.push(*arg);
     }
-    for self_ty.each |&t| {
+    for fn_sig.self_ty.each |&t| {
         all_tys.push(t);
     }
 

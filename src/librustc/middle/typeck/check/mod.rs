@@ -333,24 +333,39 @@ pub fn check_fn(ccx: @mut CrateCtxt,
     let tcx = ccx.tcx;
     let err_count_on_creation = tcx.sess.err_count();
 
+    debug!("check_fn(self_ty=%?, opt_self_ty=%?)",
+           fn_sig.self_ty.map(|self_ty| ppaux::ty_to_str(tcx, *self_ty)),
+           opt_self_info.map(|si| ppaux::ty_to_str(tcx, si.self_ty)));
+
+    match opt_self_info {
+        Some(si) => {
+            assert!(si.self_ty == fn_sig.self_ty.get())
+        },
+        None => assert!(fn_sig.self_ty.is_none()),
+    }
+
     // ______________________________________________________________________
     // First, we have to replace any bound regions in the fn and self
     // types with free ones.  The free region references will be bound
     // the node_id of the body block.
     let (isr, opt_self_info, fn_sig) = {
         let opt_self_ty = opt_self_info.map(|i| i.self_ty);
-        let (isr, opt_self_ty, fn_sig) =
-            replace_bound_regions_in_fn_sig(
-                tcx, inherited_isr, opt_self_ty, fn_sig,
-                |br| ty::re_free(ty::FreeRegion {scope_id: body.node.id,
-                                                 bound_region: br}));
-        let opt_self_info =
-            opt_self_info.map(
-                |si| SelfInfo {self_ty: opt_self_ty.get(), ..*si});
+        let (isr, fn_sig) = do replace_bound_regions_in_fn_sig(
+            tcx,
+            inherited_isr,
+            fn_sig)
+        |br| {
+            ty::re_free(ty::FreeRegion {scope_id: body.node.id, bound_region: br})
+        };
+
+        let opt_self_info = do opt_self_info.map |si| {
+            SelfInfo { self_ty: fn_sig.self_ty.get(), ..*si }
+        };
+
         (isr, opt_self_info, fn_sig)
     };
 
-    relate_free_regions(tcx, opt_self_info.map(|s| s.self_ty), &fn_sig);
+    relate_free_regions(tcx, &fn_sig);
 
     let arg_tys = fn_sig.inputs.map(|a| *a);
     let ret_ty = fn_sig.output;
@@ -1334,11 +1349,13 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
             }
         };
 
+        assert!(fn_sig.self_ty.is_none());
+
         // Replace any bound regions that appear in the function
         // signature with region variables
-        let (_, _, fn_sig) =
+        let (_, fn_sig) =
             replace_bound_regions_in_fn_sig(
-                fcx.tcx(), @Nil, None, &fn_sig,
+                fcx.tcx(), @Nil, &fn_sig,
                 |_br| fcx.infcx().next_region_var_nb(call_expr.span));
 
         // Call the generic checker.
@@ -1638,10 +1655,12 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
              expected_onceness) = {
             match expected_sty {
                 Some(ty::ty_closure(ref cenv)) => {
+                    assert!(cenv.sig.self_ty.is_none());
+
                     let id = expr.id;
-                    let (_, _, sig) =
+                    let (_, sig) =
                         replace_bound_regions_in_fn_sig(
-                            tcx, @Nil, None, &cenv.sig,
+                            tcx, @Nil, &cenv.sig,
                             |br| ty::re_bound(ty::br_cap_avoid(id, @br)));
                     (Some(sig), cenv.purity, cenv.sigil, cenv.onceness)
                 }
