@@ -525,7 +525,7 @@ pub impl CoherenceChecker {
 
     fn each_provided_trait_method(&self,
             trait_did: ast::def_id,
-            f: &fn(x: @ty::method) -> bool) {
+            f: &fn(@ty::Method) -> bool) {
         // Make a list of all the names of the provided methods.
         // XXX: This is horrible.
         let mut provided_method_idents = HashSet::new();
@@ -1056,7 +1056,7 @@ fn subst_receiver_types_in_method_ty(
     impl_id: ast::node_id,
     trait_ref: &ty::TraitRef,
     new_def_id: ast::def_id,
-    method: &ty::method) -> ty::method
+    method: &ty::Method) -> ty::Method
 {
     /*!
      * Substitutes the values for the receiver's type parameters

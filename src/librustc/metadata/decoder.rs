@@ -732,7 +732,7 @@ pub fn get_method_name_and_explicit_self(
 }
 
 pub fn get_method(intr: @ident_interner, cdata: cmd, id: ast::node_id,
-                  tcx: ty::ctxt) -> ty::method
+                  tcx: ty::ctxt) -> ty::Method
 {
     let method_doc = lookup_item(id, cdata.data);
     let def_id = item_def_id(method_doc, cdata);
@@ -743,18 +743,18 @@ pub fn get_method(intr: @ident_interner, cdata: cmd, id: ast::node_id,
     let fty = doc_method_fty(method_doc, tcx, cdata);
     let vis = item_visibility(method_doc);
     let explicit_self = get_explicit_self(method_doc);
-    ty::method {
-        ident: name,
-        generics: ty::Generics {
+
+    ty::Method::new(
+        name,
+        ty::Generics {
             type_param_defs: type_param_defs,
             region_param: None
         },
-        transformed_self_ty: transformed_self_ty,
-        fty: fty,
-        explicit_self: explicit_self,
-        vis: vis,
-        def_id: def_id
-    }
+        fty,
+        explicit_self,
+        vis,
+        def_id
+    )
 }
 
 pub fn get_trait_method_def_ids(cdata: cmd,
@@ -796,18 +796,18 @@ pub fn get_provided_trait_methods(intr: @ident_interner, cdata: cmd,
 
         let transformed_self_ty = doc_transformed_self_ty(mth, tcx, cdata);
         let explicit_self = get_explicit_self(mth);
-        let ty_method = ty::method {
-            ident: name,
-            generics: ty::Generics {
+
+        let ty_method = ty::Method::new(
+            name,
+            ty::Generics {
                 type_param_defs: type_param_defs,
                 region_param: None
             },
-            transformed_self_ty: transformed_self_ty,
-            fty: fty,
-            explicit_self: explicit_self,
-            vis: ast::public,
-            def_id: did
-        };
+            fty,
+            explicit_self,
+            ast::public,
+            did
+        );
         let provided_trait_method_info = ProvidedTraitMethodInfo {
             ty: ty_method,
             def_id: did

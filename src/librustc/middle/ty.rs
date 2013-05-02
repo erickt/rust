@@ -55,7 +55,7 @@ pub struct field {
 
 pub type param_bounds = @~[param_bound];
 
-pub struct method {
+pub struct Method {
     ident: ast::ident,
     generics: ty::Generics,
     transformed_self_ty: Option<ty::t>,
@@ -63,6 +63,31 @@ pub struct method {
     explicit_self: ast::explicit_self_,
     vis: ast::visibility,
     def_id: ast::def_id
+}
+
+pub impl Method {
+    fn new(ident: ast::ident,
+           generics: ty::Generics,
+           fty: BareFnTy,
+           explicit_self: ast::explicit_self_,
+           vis: ast::visibility,
+           def_id: ast::def_id) -> Method {
+        // Check the invariants.
+        if explicit_self == ast::sty_static {
+            assert!(fty.sig.self_ty.is_none());
+        } else {
+            assert!(fty.sig.self_ty.is_some());
+        }
+
+       method {
+            ident: ident,
+            generics: generics,
+            fty: fty,
+            explicit_self: explicit_self,
+            vis: vis,
+            def_id: def_id
+        }
+    }
 }
 
 #[deriving(Eq)]

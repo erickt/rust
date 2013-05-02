@@ -169,7 +169,7 @@ pub struct LookupContext<'self> {
 pub struct Candidate {
     rcvr_ty: ty::t,
     rcvr_substs: ty::substs,
-    method_ty: @ty::method,
+    method_ty: @ty::Method,
     origin: method_origin,
 }
 
@@ -468,7 +468,7 @@ pub impl<'self> LookupContext<'self> {
                                           did: def_id,
                                           substs: &ty::substs) {
         struct MethodInfo {
-            method_ty: @ty::method,
+            method_ty: @ty::Method,
             trait_def_id: ast::def_id,
             index: uint
         }
