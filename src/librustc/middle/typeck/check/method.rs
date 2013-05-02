@@ -966,7 +966,7 @@ pub impl<'self> LookupContext<'self> {
                         // like &'a Self.  We then perform a
                         // substitution which will replace Self with
                         // @Trait.
-                        let t = candidate.method_ty.transformed_self_ty.get();
+                        let t = candidate.method_ty.fty.sig.self_ty.get();
                         ty::subst(tcx, &candidate.rcvr_substs, t)
                     }
                     _ => {
@@ -975,7 +975,7 @@ pub impl<'self> LookupContext<'self> {
                 }
             }
             _ => {
-                let t = candidate.method_ty.transformed_self_ty.get();
+                let t = candidate.method_ty.fty.sig.self_ty.get();
                 ty::subst(tcx, &candidate.rcvr_substs, t)
             }
         };

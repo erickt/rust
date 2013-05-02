@@ -539,7 +539,7 @@ pub fn check_method(ccx: @mut CrateCtxt,
 {
     let method_def_id = local_def(method.id);
     let method_ty = ty::method(ccx.tcx, method_def_id);
-    let opt_self_info = method_ty.transformed_self_ty.map(|&ty| {
+    let opt_self_info = method_ty.fty.sig.self_ty.map(|&ty| {
         SelfInfo {self_ty: ty,
                   self_id: method.self_id,
                   span: method.explicit_self.span}

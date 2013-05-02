@@ -58,7 +58,6 @@ pub type param_bounds = @~[param_bound];
 pub struct Method {
     ident: ast::ident,
     generics: ty::Generics,
-    transformed_self_ty: Option<ty::t>,
     fty: BareFnTy,
     explicit_self: ast::explicit_self_,
     vis: ast::visibility,
@@ -1322,8 +1321,9 @@ pub fn fold_sig(sig: &FnSig, fldop: &fn(t) -> t) -> FnSig {
 
     FnSig {
         bound_lifetime_names: copy sig.bound_lifetime_names,
-        self_ty: sig.self_ty.map(|self_ty| fldop(*self_ty)),
-        //self_ty: None,
+        // XXX: This is an ugly hack!! We handle the self_ty externally.
+        //self_ty: sig.self_ty.map(|self_ty| fldop(*self_ty)),
+        self_ty: None,
         inputs: args,
         output: fldop(sig.output)
     }

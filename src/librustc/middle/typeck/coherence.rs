@@ -1101,18 +1101,30 @@ fn subst_receiver_types_in_method_ty(
         tps: combined_tps
     };
 
+    // XXX: This is an ugly hack. Pull the `self_ty` out of the function
+    // signature before we do our substitutions.
+    let mut fty = copy method.fty;
+    let mut self_ty = None;
+    self_ty <-> fty.sig.self_ty;
+
+    // method tps cannot appear in the self_ty, so use `substs` from trait ref
+    self_ty = self_ty.subst(tcx, &trait_ref.substs);
+
+    fty = fty.subst(tcx, &combined_substs);
+    fty.sig.self_ty = self_ty;
+
+    if method.explicit_self == ast::sty_static {
+        assert!(fty.sig.self_ty.is_none());
+    } else {
+        assert!(fty.sig.self_ty.is_some());
+    }
+
     ty::Method::new(
         method.ident,
 
-        // method types *can* appear in the generic bounds
+        // method types *can* appear in the generic bounds or the fty
         method.generics.subst(tcx, &combined_substs),
-
-        // method tps cannot appear in the self_ty, so use `substs` from trait ref
-        method.transformed_self_ty.subst(tcx, &trait_ref.substs),
-
-        // method types *can* appear in the fty
-        method.fty.subst(tcx, &combined_substs),
-
+        fty,
         method.explicit_self,
         method.vis,
         new_def_id
