@@ -797,8 +797,10 @@ pub impl InferCtxt {
             span: span,
             fsig: &ty::FnSig)
          -> (ty::FnSig, isr_alist) {
-        let(isr, _, fn_sig) =
-            replace_bound_regions_in_fn_sig(self.tcx, @Nil, None, fsig, |br| {
+        assert!(fsig.self_ty.is_none());
+
+        let(isr, fn_sig) =
+            replace_bound_regions_in_fn_sig(self.tcx, @Nil, fsig, |br| {
                 // N.B.: The name of the bound region doesn't have anything to
                 // do with the region variable that's created for it.  The
                 // only thing we're doing with `br` here is using it in the

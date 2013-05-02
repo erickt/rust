@@ -1021,12 +1021,17 @@ pub impl<'self> LookupContext<'self> {
                     fmt!("Invoking method with non-bare-fn ty: %?", s));
             }
         };
-        let (_, opt_transformed_self_ty, fn_sig) =
+
+        // Move the `transformed_self_ty` back into the function signature.
+        let fn_sig = FnSig { self_ty: Some(transformed_self_ty), .. copy bare_fn_ty.sig };
+
+        let (_, fn_sig) =
             replace_bound_regions_in_fn_sig(
-                tcx, @Nil, Some(transformed_self_ty), &bare_fn_ty.sig,
+                tcx, @Nil, &fn_sig,
                 |_br| self.fcx.infcx().next_region_var(
                     self.expr.span, self.expr.id));
-        let transformed_self_ty = opt_transformed_self_ty.get();
+
+        let transformed_self_ty = fn_sig.self_ty.get();
         let fty = ty::mk_bare_fn(tcx, ty::BareFnTy {sig: fn_sig, ..bare_fn_ty});
         debug!("after replacing bound regions, fty=%s", self.ty_to_str(fty));
 

@@ -156,11 +156,12 @@ impl Combine for Sub {
             self.infcx.replace_bound_regions_with_fresh_regions(
                 self.span, a);
 
+        assert!(b.self_ty.is_none());
+
         // Second, we instantiate each bound region in the supertype with a
         // fresh concrete region.
-        let (skol_isr, _, b_sig) = {
-            do replace_bound_regions_in_fn_sig(self.infcx.tcx, @Nil,
-                                              None, b) |br| {
+        let (skol_isr, b_sig) = {
+            do replace_bound_regions_in_fn_sig(self.infcx.tcx, @Nil, b) |br| {
                 let skol = self.infcx.region_vars.new_skolemized(br);
                 debug!("Bound region %s skolemized to %?",
                        bound_region_to_str(self.infcx.tcx, br),
