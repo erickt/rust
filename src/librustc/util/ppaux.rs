@@ -369,7 +369,13 @@ pub fn ty_to_str(cx: ctxt, typ: t) -> ~str {
     }
     fn push_sig_to_str(cx: ctxt, s: &mut ~str, sig: &ty::FnSig) {
         s.push_char('(');
-        let strs = sig.inputs.map(|a| fn_input_to_str(cx, *a));
+        let mut strs = ~[];
+        for sig.self_ty.each |ty| {
+            strs.push(ty_to_str(cx, *ty));
+        }
+        for sig.inputs.each |ty| {
+            strs.push(ty_to_str(cx, *ty));
+        }
         s.push_str(str::connect(strs, ", "));
         s.push_char(')');
         if ty::get(sig.output).sty != ty_nil {
@@ -415,7 +421,8 @@ pub fn ty_to_str(cx: ctxt, typ: t) -> ~str {
       ty_uniq(ref tm) => ~"~" + mt_to_str(cx, tm),
       ty_ptr(ref tm) => ~"*" + mt_to_str(cx, tm),
       ty_rptr(r, ref tm) => {
-        region_to_str_space(cx, ~"&", r) + mt_to_str(cx, tm)
+        //region_to_str_space(cx, ~"&", r) + mt_to_str(cx, tm)
+        ~"&" + explain_region(cx, r) + mt_to_str(cx, tm)
       }
       ty_unboxed_vec(ref tm) => { ~"unboxed_vec<" + mt_to_str(cx, tm) + ~">" }
       ty_type => ~"type",

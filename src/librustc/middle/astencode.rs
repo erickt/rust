@@ -821,6 +821,9 @@ fn encode_side_tables_for_id(ecx: @e::EncodeContext,
 
     debug!("Encoding side tables for id %d", id);
 
+    io::println("here1");
+    io::stdout().flush();
+
     for tcx.def_map.find(&id).each |def| {
         do ebml_w.tag(c::tag_table_def) |ebml_w| {
             ebml_w.id(id);
@@ -830,14 +833,33 @@ fn encode_side_tables_for_id(ecx: @e::EncodeContext,
         }
     }
 
+
+    io::println("here2");
+    io::stdout().flush();
+
+
     for tcx.node_types.find(&(id as uint)).each |&ty| {
+        debug!("encode_side_tables_for_id: id: %? (%?) ty: %?",
+            id,
+            ast_map::node_id_to_str(ecx.tcx.items, id, ecx.tcx
+                                    .sess.parse_sess.interner),
+            ty_to_str(ecx.tcx, *ty));
+
         do ebml_w.tag(c::tag_table_node_type) |ebml_w| {
             ebml_w.id(id);
             do ebml_w.tag(c::tag_table_val) |ebml_w| {
+                io::println("before!");
+                io::stdout().flush();
                 ebml_w.emit_ty(ecx, *ty);
+                io::println("after!");
+                io::stdout().flush();
             }
         }
     }
+
+    io::println("here3");
+    io::stdout().flush();
+
 
     for tcx.node_type_substs.find(&id).each |tys| {
         do ebml_w.tag(c::tag_table_node_type_subst) |ebml_w| {
@@ -847,6 +869,11 @@ fn encode_side_tables_for_id(ecx: @e::EncodeContext,
             }
         }
     }
+
+
+    io::println("here4");
+    io::stdout().flush();
+
 
     for tcx.freevars.find(&id).each |&fv| {
         do ebml_w.tag(c::tag_table_freevars) |ebml_w| {
@@ -868,6 +895,11 @@ fn encode_side_tables_for_id(ecx: @e::EncodeContext,
             }
         }
     }
+
+
+    io::println("here5");
+    io::stdout().flush();
+
 
     for tcx.ty_param_defs.find(&id).each |&type_param_def| {
         do ebml_w.tag(c::tag_table_param_defs) |ebml_w| {
@@ -905,6 +937,11 @@ fn encode_side_tables_for_id(ecx: @e::EncodeContext,
         }
     }
 
+
+    io::println("here8");
+    io::stdout().flush();
+
+
     if maps.moves_map.contains(&id) {
         do ebml_w.tag(c::tag_table_moves_map) |ebml_w| {
             ebml_w.id(id);
@@ -921,6 +958,9 @@ fn encode_side_tables_for_id(ecx: @e::EncodeContext,
             }
         }
     }
+
+    io::println("hereX");
+    io::stdout().flush();
 }
 
 trait doc_decoder_helpers {

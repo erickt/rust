@@ -1039,8 +1039,6 @@ pub impl<'self> LookupContext<'self> {
                 tcx, @Nil, &fn_sig,
                 |_br| self.fcx.infcx().next_region_var_nb(self.expr.span));
         let transformed_self_ty = fn_sig.self_ty.get();
-        let fty = ty::mk_bare_fn(tcx, ty::BareFnTy {sig: fn_sig, ..bare_fn_ty});
-        debug!("after replacing bound regions, fty=%s", self.ty_to_str(fty));
 
         let self_mode = get_mode_from_explicit_self(candidate.method_ty.explicit_self);
 
@@ -1058,6 +1056,12 @@ pub impl<'self> LookupContext<'self> {
                               self.ty_to_str(transformed_self_ty)));
             }
         }
+
+        // Put the `self_ty` back again into the `fty`.
+        let fn_sig = FnSig { self_ty: Some(transformed_self_ty), .. copy fn_sig };
+
+        let fty = ty::mk_bare_fn(tcx, ty::BareFnTy {sig: fn_sig, ..bare_fn_ty});
+        debug!("after replacing bound regions, fty=%s", self.ty_to_str(fty));
 
         self.fcx.write_ty(self.callee_id, fty);
         self.fcx.write_substs(self.callee_id, all_substs);
