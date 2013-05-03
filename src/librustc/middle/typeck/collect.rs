@@ -386,7 +386,6 @@ pub fn ensure_trait_methods(ccx: &CrateCtxt,
         ty::Method::new(
             *m_ident,
             ty_generics(self, None, m_generics, num_trait_type_params),
-            transformed_self_ty,
             fty,
             m_explicit_self.node,
             // assume public, because this is only invoked on trait methods
@@ -774,7 +773,6 @@ pub fn convert_methods(ccx: &CrateCtxt,
         ty::Method::new(
             m.ident,
             ty_generics(ccx, None, &m.generics, num_rcvr_type_params),
-            transformed_self_ty,
             fty,
             m.explicit_self.node,
             method_vis,

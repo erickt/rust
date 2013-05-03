@@ -44,9 +44,13 @@ pub fn replace_bound_regions_in_fn_sig(
         debug!("br=%?", br);
         mapf(br)
     };
-    let new_fn_sig = ty::fold_sig(fn_sig, |t| {
+    // XXX: `ty::fold_sig` currently ignores `self_ty`!
+    let mut new_fn_sig = do ty::fold_sig(fn_sig) |t| {
         replace_bound_regions(tcx, isr, t)
-    });
+    };
+    new_fn_sig.self_ty = do fn_sig.self_ty.map |t| {
+        replace_bound_regions(tcx, isr, *t)
+    };
 
     debug!("result of replace_bound_regions_in_fn_sig: \
             fn_sig=%s",
