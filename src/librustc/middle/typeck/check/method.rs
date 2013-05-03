@@ -953,6 +953,7 @@ pub impl<'self> LookupContext<'self> {
 
         // static methods should never have gotten this far:
         assert!(candidate.method_ty.explicit_self != sty_static);
+        assert!(candidate.method_ty.fty.sig.self_ty.is_some());
 
         let transformed_self_ty = match candidate.origin {
             method_trait(*) => {

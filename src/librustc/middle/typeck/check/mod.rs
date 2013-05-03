@@ -339,6 +339,7 @@ pub fn check_fn(ccx: @mut CrateCtxt,
 
     match opt_self_info {
         Some(si) => {
+            assert!(fn_sig.self_ty.is_some());
             assert!(si.self_ty == fn_sig.self_ty.get())
         },
         None => assert!(fn_sig.self_ty.is_none()),
@@ -349,7 +350,6 @@ pub fn check_fn(ccx: @mut CrateCtxt,
     // types with free ones.  The free region references will be bound
     // the node_id of the body block.
     let (isr, opt_self_info, fn_sig) = {
-        let opt_self_ty = opt_self_info.map(|i| i.self_ty);
         let (isr, fn_sig) = do replace_bound_regions_in_fn_sig(
             tcx,
             inherited_isr,
