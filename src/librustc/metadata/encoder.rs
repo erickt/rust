@@ -589,7 +589,6 @@ fn encode_method_ty_fields(ecx: @EncodeContext,
     encode_ty_type_param_defs(ebml_w, ecx,
                               method_ty.generics.type_param_defs,
                               tag_item_method_tps);
-    encode_transformed_self_ty(ecx, ebml_w, method_ty.transformed_self_ty);
     encode_method_fty(ecx, ebml_w, &method_ty.fty);
     encode_visibility(ebml_w, method_ty.vis);
     encode_explicit_self(ebml_w, method_ty.explicit_self);
