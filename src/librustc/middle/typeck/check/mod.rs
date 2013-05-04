@@ -289,7 +289,7 @@ pub fn check_bare_fn(ccx: @mut CrateCtxt,
                      decl: &ast::fn_decl,
                      body: &ast::blk,
                      id: ast::node_id,
-                     self_info: Option<SelfInfo>) {
+                     self_info: Option<SelfInfo>) -> @mut FnCtxt {
     let fty = ty::node_id_to_type(ccx.tcx, id);
     match ty::get(fty).sty {
         ty::ty_bare_fn(ref fn_ty) => {
@@ -301,6 +301,8 @@ pub fn check_bare_fn(ccx: @mut CrateCtxt,
             vtable::resolve_in_block(fcx, body);
             regionck::regionck_fn(fcx, body);
             writeback::resolve_type_vars_in_fn(fcx, decl, body, self_info);
+
+            fcx
         }
         _ => ccx.tcx.sess.impossible_case(body.span,
                                  "check_bare_fn: function type expected")
@@ -545,12 +547,27 @@ pub fn check_method(ccx: @mut CrateCtxt,
                   span: method.explicit_self.span}
     };
 
-    check_bare_fn(
+    let fcx = check_bare_fn(
         ccx,
         &method.decl,
         &method.body,
         method.id,
         opt_self_info
+    );
+
+    // Update the method's type to include the resolved self argument.
+    fcx.write_ty(
+        method.id,
+        ty::mk_bare_fn(
+            ccx.tcx,
+            ty::BareFnTy {
+                sig: ty::FnSig {
+                    self_ty: Some(ty::node_id_to_type(ccx.tcx, method.self_id)),
+                    .. copy method_ty.fty.sig
+                },
+                .. copy method_ty.fty
+            }
+        )
     );
 }
 
@@ -1757,6 +1774,8 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
             _ => ()
         }
 
+        // Error out if either the field doesn't exist, or we are trying to
+        // take the value of a method.
         let tps = vec::map(tys, |ty| fcx.to_ty(*ty));
         match method::lookup(fcx,
                              expr,
