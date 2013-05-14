@@ -1123,9 +1123,6 @@ fn subst_receiver_types_in_method_ty(
         // method types *can* appear in the generic bounds
         method.generics.subst(tcx, &combined_substs),
 
-        // method tps cannot appear in the self_ty, so use `substs` from trait ref
-        method.transformed_self_ty.subst(tcx, &trait_ref.substs),
-
         // method types *can* appear in the fty
         method.fty.subst(tcx, &combined_substs),
 

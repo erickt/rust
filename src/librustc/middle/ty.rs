@@ -56,7 +56,6 @@ pub struct field {
 pub struct Method {
     ident: ast::ident,
     generics: ty::Generics,
-    transformed_self_ty: Option<ty::t>,
     fty: BareFnTy,
     explicit_self: ast::explicit_self_,
     vis: ast::visibility,
@@ -66,22 +65,20 @@ pub struct Method {
 pub impl Method {
     fn new(ident: ast::ident,
            generics: ty::Generics,
-           transformed_self_ty: Option<ty::t>,
            fty: BareFnTy,
            explicit_self: ast::explicit_self_,
            vis: ast::visibility,
            def_id: ast::def_id) -> Method {
         // Check the invariants.
         if explicit_self == ast::sty_static {
-            assert!(transformed_self_ty.is_none());
+            assert!(fty.sig.self_ty.is_none());
         } else {
-            assert!(transformed_self_ty.is_some());
+            assert!(fty.sig.self_ty.is_some());
         }
 
        Method {
             ident: ident,
             generics: generics,
-            transformed_self_ty: transformed_self_ty,
             fty: fty,
             explicit_self: explicit_self,
             vis: vis,

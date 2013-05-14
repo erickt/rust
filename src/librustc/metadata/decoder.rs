@@ -232,16 +232,6 @@ fn doc_method_fty(doc: ebml::Doc, tcx: ty::ctxt, cdata: cmd) -> ty::BareFnTy {
                           |_, did| translate_def_id(cdata, did))
 }
 
-fn doc_transformed_self_ty(doc: ebml::Doc,
-                           tcx: ty::ctxt,
-                           cdata: cmd) -> Option<ty::t>
-{
-    do reader::maybe_get_doc(doc, tag_item_method_transformed_self_ty).map |tp| {
-        parse_ty_data(tp.data, cdata.cnum, tp.start, tcx,
-                      |_, did| translate_def_id(cdata, did))
-    }
-}
-
 pub fn item_type(_item_id: ast::def_id, item: ebml::Doc,
                  tcx: ty::ctxt, cdata: cmd) -> ty::t {
     doc_type(item, tcx, cdata)
@@ -767,7 +757,6 @@ pub fn get_method(intr: @ident_interner, cdata: cmd, id: ast::node_id,
     let name = item_name(intr, method_doc);
     let type_param_defs = item_ty_param_defs(method_doc, tcx, cdata,
                                              tag_item_method_tps);
-    let transformed_self_ty = doc_transformed_self_ty(method_doc, tcx, cdata);
     let fty = doc_method_fty(method_doc, tcx, cdata);
     let vis = item_visibility(method_doc);
     let explicit_self = get_explicit_self(method_doc);
@@ -778,7 +767,6 @@ pub fn get_method(intr: @ident_interner, cdata: cmd, id: ast::node_id,
             type_param_defs: type_param_defs,
             region_param: None
         },
-        transformed_self_ty,
         fty,
         explicit_self,
         vis,
@@ -823,7 +811,6 @@ pub fn get_provided_trait_methods(intr: @ident_interner, cdata: cmd,
             }
         };
 
-        let transformed_self_ty = doc_transformed_self_ty(mth, tcx, cdata);
         let explicit_self = get_explicit_self(mth);
 
         let ty_method = ty::Method::new(
@@ -832,7 +819,6 @@ pub fn get_provided_trait_methods(intr: @ident_interner, cdata: cmd,
                 type_param_defs: type_param_defs,
                 region_param: None
             },
-            transformed_self_ty,
             fty,
             explicit_self,
             ast::public,

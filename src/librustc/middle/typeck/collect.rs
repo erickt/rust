@@ -383,14 +383,13 @@ pub fn ensure_trait_methods(ccx: &CrateCtxt,
     {
         let trait_self_ty = ty::mk_self(this.tcx, local_def(trait_id));
         let rscope = MethodRscope::new(m_explicit_self.node, trait_rp, trait_generics);
-        let (transformed_self_ty, fty) =
+        let fty =
             astconv::ty_of_method(this, &rscope, *m_purity, &m_generics.lifetimes,
                                   trait_self_ty, *m_explicit_self, m_decl);
         let num_trait_type_params = trait_generics.ty_params.len();
         ty::Method::new(
             *m_ident,
             ty_generics(this, None, m_generics, num_trait_type_params),
-            transformed_self_ty,
             fty,
             m_explicit_self.node,
             // assume public, because this is only invoked on trait methods
@@ -575,10 +574,10 @@ pub fn compare_impl_method(tcx: ty::ctxt,
     // For both the trait and the impl, create an argument to
     // represent the self argument (unless this is a static method).
     // This argument will have the *transformed* self type.
-    for trait_m.transformed_self_ty.each |&t| {
+    for trait_m.fty.sig.self_ty.each |&t| {
         trait_fn_args.push(t);
     }
-    for impl_m.transformed_self_ty.each |&t| {
+    for impl_m.fty.sig.self_ty.each |&t| {
         impl_fn_args.push(t);
     }
 
@@ -783,7 +782,7 @@ pub fn convert_methods(ccx: &CrateCtxt,
         let rscope = MethodRscope::new(m.explicit_self.node,
                                        rp,
                                        rcvr_generics);
-        let (transformed_self_ty, fty) =
+        let fty =
             astconv::ty_of_method(ccx, &rscope, m.purity,
                                   &method_generics.lifetimes,
                                   untransformed_rcvr_ty,
@@ -799,7 +798,6 @@ pub fn convert_methods(ccx: &CrateCtxt,
         ty::Method::new(
             m.ident,
             ty_generics(ccx, None, &m.generics, num_rcvr_type_params),
-            transformed_self_ty,
             fty,
             m.explicit_self.node,
             method_vis,

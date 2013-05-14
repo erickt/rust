@@ -293,8 +293,10 @@ pub fn check_bare_fn(ccx: @mut CrateCtxt,
     let fty = ty::node_id_to_type(ccx.tcx, id);
     match ty::get(fty).sty {
         ty::ty_bare_fn(ref fn_ty) => {
+            assert_eq!(self_info.self_ty, fn_ty.sig.self_ty);
+
             let fcx =
-                check_fn(ccx, self_info, fn_ty.purity,
+                check_fn(ccx, fn_ty.purity,
                          &fn_ty.sig, decl, id, body, Vanilla,
                          @Nil, blank_inherited(ccx));;
 
@@ -308,7 +310,6 @@ pub fn check_bare_fn(ccx: @mut CrateCtxt,
 }
 
 pub fn check_fn(ccx: @mut CrateCtxt,
-                opt_self_info: Option<SelfInfo>,
                 purity: ast::purity,
                 fn_sig: &ty::FnSig,
                 decl: &ast::fn_decl,
@@ -338,15 +339,20 @@ pub fn check_fn(ccx: @mut CrateCtxt,
     // types with free ones.  The free region references will be bound
     // the node_id of the body block.
     let (isr, opt_self_info, fn_sig) = {
-        let opt_self_ty = opt_self_info.map(|i| i.self_ty);
-        let (isr, opt_self_ty, fn_sig) =
-            replace_bound_regions_in_fn_sig(
-                tcx, inherited_isr, opt_self_ty, fn_sig,
-                |br| ty::re_free(ty::FreeRegion {scope_id: body.node.id,
-                                                 bound_region: br}));
-        let opt_self_info =
-            opt_self_info.map(
-                |si| SelfInfo {self_ty: opt_self_ty.get(), ..*si});
+        assert_eq!(opt_self_info, fn_sig.self_ty);
+
+        let (isr, fn_sig) = do replace_bound_regions_in_fn_sig(
+            tcx,
+            inherited_isr,
+            fn_sig)
+        |br| {
+            ty::re_free(ty::FreeRegion {scope_id: body.node.id, bound_region: br})
+        };
+
+        let opt_self_info = do opt_self_info.map |si| {
+            SelfInfo { self_ty: fn_sig.self_ty.get(), ..*si }
+        };
+
         (isr, opt_self_info, fn_sig)
     };
 
@@ -1725,7 +1731,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                                            (purity, expr.id),
                                            sigil);
 
-        check_fn(fcx.ccx, None, inherited_purity, &fty_sig,
+        check_fn(fcx.ccx, inherited_purity, &fty_sig,
                  decl, id, body, fn_kind, fcx.in_scope_regions, fcx.inh);
     }
 

@@ -949,6 +949,7 @@ pub impl<'self> LookupContext<'self> {
 
         // static methods should never have gotten this far:
         assert!(candidate.method_ty.explicit_self != sty_static);
+        assert!(candidate.method_ty.fty.sig.self_ty.is_some());
 
         let transformed_self_ty = match candidate.origin {
             method_trait(*) => {
@@ -962,7 +963,7 @@ pub impl<'self> LookupContext<'self> {
                         // like &'a Self.  We then perform a
                         // substitution which will replace Self with
                         // @Trait.
-                        let t = candidate.method_ty.transformed_self_ty.get();
+                        let t = candidate.method_ty.fty.sig.self_ty.get();
                         ty::subst(tcx, &candidate.rcvr_substs, t)
                     }
                     _ => {
@@ -971,7 +972,7 @@ pub impl<'self> LookupContext<'self> {
                 }
             }
             _ => {
-                let t = candidate.method_ty.transformed_self_ty.get();
+                let t = candidate.method_ty.fty.sig.self_ty.get();
                 ty::subst(tcx, &candidate.rcvr_substs, t)
             }
         };
@@ -1025,11 +1026,15 @@ pub impl<'self> LookupContext<'self> {
                     fmt!("Invoking method with non-bare-fn ty: %?", s));
             }
         };
-        let (_, opt_transformed_self_ty, fn_sig) =
+
+        // Move the `transformed_self_ty` back into the function signature.
+        let fn_sig = FnSig { self_ty: Some(transformed_self_ty), .. copy bare_fn_ty.sig };
+
+        let (_, fn_sig) =
             replace_bound_regions_in_fn_sig(
-                tcx, @Nil, Some(transformed_self_ty), &bare_fn_ty.sig,
+                tcx, @Nil, &bare_fn_ty.sig,
                 |_br| self.fcx.infcx().next_region_var_nb(self.expr.span));
-        let transformed_self_ty = opt_transformed_self_ty.get();
+
         let fty = ty::mk_bare_fn(tcx, ty::BareFnTy {sig: fn_sig, ..bare_fn_ty});
         debug!("after replacing bound regions, fty=%s", self.ty_to_str(fty));
 

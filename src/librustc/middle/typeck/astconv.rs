@@ -552,15 +552,14 @@ pub fn ty_of_method<AC:AstConv,RS:region_scope + Copy + 'static>(
     lifetimes: &OptVec<ast::Lifetime>,
     untransformed_self_ty: ty::t,
     explicit_self: ast::explicit_self,
-    decl: &ast::fn_decl) -> (Option<ty::t>, ty::BareFnTy)
+    decl: &ast::fn_decl) -> ty::BareFnTy
 {
     let self_info = SelfInfo {
         untransformed_self_ty: untransformed_self_ty,
         explicit_self: explicit_self
     };
-    let (a, b) = ty_of_method_or_bare_fn(
-        this, rscope, purity, AbiSet::Rust(), lifetimes, Some(&self_info), decl);
-    (a.get(), b)
+    ty_of_method_or_bare_fn(
+        this, rscope, purity, AbiSet::Rust(), lifetimes, Some(&self_info), decl)
 }
 
 pub fn ty_of_bare_fn<AC:AstConv,RS:region_scope + Copy + 'static>(
@@ -571,9 +570,8 @@ pub fn ty_of_bare_fn<AC:AstConv,RS:region_scope + Copy + 'static>(
     lifetimes: &OptVec<ast::Lifetime>,
     decl: &ast::fn_decl) -> ty::BareFnTy
 {
-    let (_, b) = ty_of_method_or_bare_fn(
-        this, rscope, purity, abi, lifetimes, None, decl);
-    b
+    ty_of_method_or_bare_fn(
+        this, rscope, purity, abi, lifetimes, None, decl)
 }
 
 fn ty_of_method_or_bare_fn<AC:AstConv,RS:region_scope + Copy + 'static>(
@@ -583,7 +581,7 @@ fn ty_of_method_or_bare_fn<AC:AstConv,RS:region_scope + Copy + 'static>(
     abi: AbiSet,
     lifetimes: &OptVec<ast::Lifetime>,
     opt_self_info: Option<&SelfInfo>,
-    decl: &ast::fn_decl) -> (Option<Option<ty::t>>, ty::BareFnTy)
+    decl: &ast::fn_decl) -> ty::BareFnTy
 {
     debug!("ty_of_bare_fn");
 
@@ -592,7 +590,7 @@ fn ty_of_method_or_bare_fn<AC:AstConv,RS:region_scope + Copy + 'static>(
     let bound_lifetime_names = bound_lifetimes(this, lifetimes);
     let rb = in_binding_rscope(rscope, RegionParamNames(copy bound_lifetime_names));
 
-    let opt_transformed_self_ty = opt_self_info.map(|&self_info| {
+    let opt_transformed_self_ty = opt_self_info.chain(|self_info| {
         transform_self_ty(this, &rb, self_info)
     });
 
@@ -603,15 +601,14 @@ fn ty_of_method_or_bare_fn<AC:AstConv,RS:region_scope + Copy + 'static>(
         _ => ast_ty_to_ty(this, &rb, decl.output)
     };
 
-    return (opt_transformed_self_ty,
-            ty::BareFnTy {
+    return ty::BareFnTy {
                 purity: purity,
                 abis: abi,
                 sig: ty::FnSig {bound_lifetime_names: bound_lifetime_names,
-                                self_ty: None,
+                                self_ty: opt_transformed_self_ty,
                                 inputs: input_tys,
                                 output: output_ty}
-            });
+            };
 
     fn transform_self_ty<AC:AstConv,RS:region_scope + Copy + 'static>(
         this: &AC,
