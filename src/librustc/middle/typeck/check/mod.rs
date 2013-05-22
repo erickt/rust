@@ -2577,7 +2577,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
         fcx.write_ty(id, fcx.node_ty(b.node.id));
       }
       ast::expr_call(_, f, ref args, sugar) => {
-          // XXX
+          // XXX: Why no callee_id?
           check_call(fcx, expr.id, expr, f, *args, sugar);
           let f_ty = fcx.expr_ty(f);
           let (args_bot, args_err) = args.foldl((false, false),
@@ -2594,7 +2594,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
           }
       }
       ast::expr_method_call(callee_id, rcvr, ident, ref tps, ref args, sugar) => {
-        check_method_call(fcx, expr, rcvr, ident, *args, *tps, sugar);
+        check_method_call(fcx, callee_id, expr, rcvr, ident, *args, *tps, sugar);
         let f_ty = fcx.expr_ty(rcvr);
         let arg_tys = args.map(|a| fcx.expr_ty(*a));
         let (args_bot, args_err) = arg_tys.foldl((false, false),

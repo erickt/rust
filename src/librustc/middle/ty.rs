@@ -3186,7 +3186,7 @@ pub fn expr_kind(tcx: ctxt,
             }
         }
 
-        ast::expr_unary(ast::deref, _) |
+        ast::expr_unary(_, ast::deref, _) |
         ast::expr_field(*) |
         ast::expr_index(*) => {
             LvalueExpr

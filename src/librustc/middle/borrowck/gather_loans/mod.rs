@@ -26,7 +26,6 @@ use util::ppaux::{Repr};
 
 use syntax::ast::{m_const, m_imm, m_mutbl};
 use syntax::ast;
-use syntax::ast_util;
 use syntax::ast_util::id_range;
 use syntax::codemap::span;
 use syntax::print::pprust;

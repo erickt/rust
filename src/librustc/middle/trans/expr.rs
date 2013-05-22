@@ -666,7 +666,7 @@ fn trans_rvalue_dps_unadjusted(bcx: block, expr: @ast::expr,
                                        expr_ty(bcx, expr),
                                        dest);
         }
-        ast::expr_index(callee_id, _, base, idx) => {
+        ast::expr_index(callee_id, base, idx) => {
             // if not overloaded, would be RvalueDatumExpr
             return trans_overloaded_op(bcx,
                                        expr,
@@ -821,13 +821,13 @@ fn trans_lvalue_unadjusted(bcx: block, expr: @ast::expr) -> DatumBlock {
         ast::expr_path(_) | ast::expr_self => {
             trans_def_lvalue(bcx, expr, bcx.def(expr.id))
         }
-        ast::expr_field(base, ident, _) => {
+        ast::expr_field(_, base, ident, _) => {
             trans_rec_field(bcx, base, ident)
         }
-        ast::expr_index(base, idx) => {
+        ast::expr_index(_, base, idx) => {
             trans_index(bcx, expr, base, idx)
         }
-        ast::expr_unary(ast::deref, base) => {
+        ast::expr_unary(_, ast::deref, base) => {
             let basedatum = unpack_datum!(bcx, trans_to_datum(bcx, base));
             basedatum.deref(bcx, expr, 0)
         }

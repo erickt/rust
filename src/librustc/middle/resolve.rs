@@ -4874,11 +4874,11 @@ pub impl Resolver {
 
     fn record_candidate_traits_for_expr_if_necessary(@mut self, expr: @expr) {
         match expr.node {
-            expr_field(_, ident, _) => {
+            expr_field(_, _, ident, _) => {
                 let traits = self.search_for_traits_containing_method(ident);
                 self.trait_map.insert(expr.id, @mut traits);
             }
-            expr_method_call(_, ident, _, _, _) => {
+            expr_method_call(_, _, ident, _, _, _) => {
                 let traits = self.search_for_traits_containing_method(ident);
                 self.trait_map.insert(expr.id, @mut traits);
             }

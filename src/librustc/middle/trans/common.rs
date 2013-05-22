@@ -49,7 +49,6 @@ use core::to_bytes;
 use core::vec::raw::to_ptr;
 use syntax::ast::ident;
 use syntax::ast_map::{path, path_elt};
-use syntax::ast_util;
 use syntax::codemap::span;
 use syntax::parse::token::ident_interner;
 use syntax::{ast, ast_map};
