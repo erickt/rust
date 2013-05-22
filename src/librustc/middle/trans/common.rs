@@ -49,6 +49,7 @@ use core::to_bytes;
 use core::vec::raw::to_ptr;
 use syntax::ast::ident;
 use syntax::ast_map::{path, path_elt};
+use syntax::ast_util;
 use syntax::codemap::span;
 use syntax::parse::token::ident_interner;
 use syntax::{ast, ast_map};
@@ -587,7 +588,7 @@ pub trait get_node_info {
 impl get_node_info for @ast::expr {
     fn info(&self) -> Option<NodeInfo> {
         Some(NodeInfo {id: self.id,
-                       callee_id: Some(self.callee_id),
+                       callee_id: self.get_callee_id(),
                        span: self.span})
     }
 }

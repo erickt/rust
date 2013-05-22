@@ -188,7 +188,7 @@ pub fn float_ty_to_str(t: float_ty) -> ~str {
 }
 
 pub fn is_call_expr(e: @expr) -> bool {
-    match e.node { expr_call(_, _, _) => true, _ => false }
+    match e.node { expr_call(*) => true, _ => false }
 }
 
 // This makes def_id hashable
@@ -435,7 +435,9 @@ pub fn id_visitor(vfn: @fn(node_id)) -> visit::vt<()> {
         visit_decl: |_| {},
 
         visit_expr: |e| {
-            vfn(e.callee_id);
+            for e.get_callee_id().each |callee_id| {
+                vfn(*callee_id);
+            }
             vfn(e.id);
         },
 

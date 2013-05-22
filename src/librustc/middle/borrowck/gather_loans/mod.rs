@@ -26,6 +26,7 @@ use util::ppaux::{Repr};
 
 use syntax::ast::{m_const, m_imm, m_mutbl};
 use syntax::ast;
+use syntax::ast_util;
 use syntax::ast_util::id_range;
 use syntax::codemap::span;
 use syntax::print::pprust;
@@ -138,7 +139,10 @@ fn gather_loans_in_expr(ex: @ast::expr,
            ex.id, pprust::expr_to_str(ex, tcx.sess.intr()));
 
     this.id_range.add(ex.id);
-    this.id_range.add(ex.callee_id);
+
+    for ex.get_callee_id().each |callee_id| {
+        this.id_range.add(*callee_id);
+    }
 
     // If this expression is borrowed, have to ensure it remains valid:
     for tcx.adjustments.find(&ex.id).each |&adjustments| {
@@ -167,8 +171,8 @@ fn gather_loans_in_expr(ex: @ast::expr,
         visit::visit_expr(ex, this, vt);
       }
 
-      ast::expr_index(_, arg) |
-      ast::expr_binary(_, _, arg)
+      ast::expr_index(_, _, arg) |
+      ast::expr_binary(_, _, _, arg)
       if this.bccx.method_map.contains_key(&ex.id) => {
           // Arguments in method calls are always passed by ref.
           //

@@ -453,7 +453,7 @@ pub impl VisitContext {
                 }
             }
 
-            expr_unary(deref, base) => {       // *base
+            expr_unary(_, deref, base) => {       // *base
                 if !self.use_overloaded_operator(
                     expr, base, [], visitor)
                 {
@@ -462,12 +462,12 @@ pub impl VisitContext {
                 }
             }
 
-            expr_field(base, _, _) => {        // base.f
+            expr_field(_, base, _, _) => {        // base.f
                 // Moving out of base.f moves out of base.
                 self.use_expr(base, comp_mode, visitor);
             }
 
-            expr_index(lhs, rhs) => {          // lhs[rhs]
+            expr_index(_, lhs, rhs) => {          // lhs[rhs]
                 if !self.use_overloaded_operator(
                     expr, lhs, [rhs], visitor)
                 {
@@ -476,16 +476,17 @@ pub impl VisitContext {
                 }
             }
 
-            expr_call(callee, ref args, _) => {    // callee(args)
+            expr_call(_, callee, ref args, _) => {    // callee(args)
                 self.use_expr(callee, Read, visitor);
+                // XXX: Should this use callee_id?
                 self.use_fn_args(callee.id, *args, visitor);
             }
 
-            expr_method_call(callee, _, _, ref args, _) => { // callee.m(args)
+            expr_method_call(callee_id, rcvr, _, _, ref args, _) => { // callee.m(args)
                 // Implicit self is equivalent to & mode, but every
                 // other kind should be + mode.
-                self.use_receiver(callee, visitor);
-                self.use_fn_args(expr.callee_id, *args, visitor);
+                self.use_receiver(rcvr, visitor);
+                self.use_fn_args(callee_id, *args, visitor);
             }
 
             expr_struct(_, ref fields, opt_with) => {
@@ -596,7 +597,7 @@ pub impl VisitContext {
                 self.consume_block(blk, visitor);
             }
 
-            expr_unary(_, lhs) => {
+            expr_unary(_, _, lhs) => {
                 if !self.use_overloaded_operator(
                     expr, lhs, [], visitor)
                 {
@@ -604,7 +605,7 @@ pub impl VisitContext {
                 }
             }
 
-            expr_binary(_, lhs, rhs) => {
+            expr_binary(_, _, lhs, rhs) => {
                 if !self.use_overloaded_operator(
                     expr, lhs, [rhs], visitor)
                 {
@@ -632,7 +633,7 @@ pub impl VisitContext {
                 self.consume_expr(base, visitor);
             }
 
-            expr_assign_op(_, lhs, rhs) => {
+            expr_assign_op(_, _, lhs, rhs) => {
                 // FIXME(#4712) --- Overloaded operators?
                 //
                 // if !self.use_overloaded_operator(

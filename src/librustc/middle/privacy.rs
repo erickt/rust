@@ -429,7 +429,7 @@ pub fn check_crate(tcx: ty::ctxt,
         },
         visit_expr: |expr, method_map: &method_map, visitor| {
             match expr.node {
-                expr_field(base, ident, _) => {
+                expr_field(_, base, ident, _) => {
                     // With type_autoderef, make sure we don't
                     // allow pointers to violate privacy
                     match ty::get(ty::type_autoderef(tcx, ty::expr_ty(tcx,
@@ -455,7 +455,7 @@ pub fn check_crate(tcx: ty::ctxt,
                         _ => {}
                     }
                 }
-                expr_method_call(base, ident, _, _, _) => {
+                expr_method_call(_, base, ident, _, _, _) => {
                     // Ditto
                     match ty::get(ty::type_autoderef(tcx, ty::expr_ty(tcx,
                                                           base))).sty {
@@ -527,7 +527,7 @@ pub fn check_crate(tcx: ty::ctxt,
                         }
                     }
                 }
-                expr_unary(ast::deref, operand) => {
+                expr_unary(_, ast::deref, operand) => {
                     // In *e, we need to check that if e's type is an
                     // enum type t, then t's first variant is public or
                     // privileged. (We can assume it has only one variant

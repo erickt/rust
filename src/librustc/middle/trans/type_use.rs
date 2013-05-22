@@ -320,7 +320,7 @@ pub fn mark_for_expr(cx: Context, e: @expr) {
       expr_ret(Some(val)) => {
         node_type_needs(cx, use_repr, val.id);
       }
-      expr_index(base, _) | expr_field(base, _, _) => {
+      expr_index(callee_id, base, _) | expr_field(callee_id, base, _, _) => {
         // FIXME (#2537): could be more careful and not count fields after
         // the chosen field.
         let base_ty = ty::node_id_to_type(cx.ccx.tcx, base.id);

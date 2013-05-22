@@ -1316,6 +1316,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
 
     // A generic function for doing all of the checking for call expressions
     fn check_call(fcx: @mut FnCtxt,
+                  callee_id: ast::node_id,
                   call_expr: @ast::expr,
                   f: @ast::expr,
                   args: &[@ast::expr],
@@ -1332,7 +1333,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
         // now. Best thing would I think be to just have a separate
         // "callee table" that contains the FnSig and not a general
         // purpose ty::t
-        fcx.write_ty(call_expr.callee_id, fn_ty);
+        fcx.write_ty(callee_id, fn_ty);
 
         // Extract the function signature from `in_fty`.
         let fn_sty = structure_of(fcx, f.span, fn_ty);
@@ -1369,6 +1370,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
 
     // Checks a method call.
     fn check_method_call(fcx: @mut FnCtxt,
+                         callee_id: ast::node_id,
                          expr: @ast::expr,
                          rcvr: @ast::expr,
                          method_name: ast::ident,
@@ -1386,7 +1388,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
         match method::lookup(fcx,
                              expr,
                              rcvr,
-                             expr.callee_id,
+                             callee_id,
                              method_name,
                              expr_t,
                              tps,
@@ -1410,12 +1412,12 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
 
                 // Add error type for the result
                 fcx.write_error(expr.id);
-                fcx.write_error(expr.callee_id);
+                fcx.write_error(callee_id);
             }
         }
 
         // Call the generic checker.
-        let fn_ty = fcx.node_ty(expr.callee_id);
+        let fn_ty = fcx.node_ty(callee_id);
         let ret_ty = check_method_argument_types(fcx, expr.span,
                                                  fn_ty, expr, args, sugar,
                                                  DontDerefArgs);
@@ -1450,6 +1452,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
     }
 
     fn lookup_op_method(fcx: @mut FnCtxt,
+                        callee_id: ast::node_id,
                         op_ex: @ast::expr,
                         self_ex: @ast::expr,
                         self_t: ty::t,
@@ -1462,10 +1465,10 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                        )
                      -> ty::t {
         match method::lookup(fcx, op_ex, self_ex,
-                             op_ex.callee_id, opname, self_t, [],
+                             callee_id, opname, self_t, [],
                              deref_args, CheckTraitsOnly, autoderef_receiver) {
             Some(ref origin) => {
-                let method_ty = fcx.node_ty(op_ex.callee_id);
+                let method_ty = fcx.node_ty(callee_id);
                 let method_map = fcx.inh.method_map;
                 method_map.insert(op_ex.id, *origin);
                 check_method_argument_types(fcx, op_ex.span,
@@ -1487,6 +1490,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
 
     // could be either a expr_binop or an expr_assign_binop
     fn check_binop(fcx: @mut FnCtxt,
+                   callee_id: ast::node_id,
                    expr: @ast::expr,
                    op: ast::binop,
                    lhs: @ast::expr,
@@ -1542,7 +1546,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
 
         }
 
-        let result_t = check_user_binop(fcx, expr, lhs, lhs_t, op, rhs,
+        let result_t = check_user_binop(fcx, callee_id, expr, lhs, lhs_t, op, rhs,
                                        expected_result);
         fcx.write_ty(expr.id, result_t);
         if ty::type_is_error(result_t) {
@@ -1551,6 +1555,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
     }
 
     fn check_user_binop(fcx: @mut FnCtxt,
+                        callee_id: ast::node_id,
                         ex: @ast::expr,
                         lhs_expr: @ast::expr,
                         lhs_resolved_t: ty::t,
@@ -1567,7 +1572,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                              ast_util::binop_to_str(op), actual)},
                             lhs_resolved_t, None)
                 };
-                return lookup_op_method(fcx, ex, lhs_expr, lhs_resolved_t,
+                return lookup_op_method(fcx, callee_id, ex, lhs_expr, lhs_resolved_t,
                                        fcx.tcx().sess.ident_of(*name),
                                        ~[rhs], DoDerefArgs, DontAutoderefReceiver, if_op_unbound,
                                        expected_result);
@@ -1592,6 +1597,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
     }
 
     fn check_user_unop(fcx: @mut FnCtxt,
+                       callee_id: ast::node_id,
                        op_str: &str,
                        mname: &str,
                        ex: @ast::expr,
@@ -1600,7 +1606,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                        expected_t: Option<ty::t>)
                     -> ty::t {
        lookup_op_method(
-            fcx, ex, rhs_expr, rhs_t,
+            fcx, callee_id, ex, rhs_expr, rhs_t,
             fcx.tcx().sess.ident_of(mname), ~[],
             DoDerefArgs, DontAutoderefReceiver,
             || {
@@ -2227,8 +2233,8 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
         let typ = check_lit(fcx, lit);
         fcx.write_ty(id, typ);
       }
-      ast::expr_binary(op, lhs, rhs) => {
-        check_binop(fcx, expr, op, lhs, rhs, expected);
+      ast::expr_binary(callee_id, op, lhs, rhs) => {
+        check_binop(fcx, callee_id, expr, op, lhs, rhs, expected);
         let lhs_ty = fcx.expr_ty(lhs);
         let rhs_ty = fcx.expr_ty(rhs);
         if ty::type_is_error(lhs_ty) ||
@@ -2240,8 +2246,8 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
             fcx.write_bot(id);
         }
       }
-      ast::expr_assign_op(op, lhs, rhs) => {
-        check_binop(fcx, expr, op, lhs, rhs, expected);
+      ast::expr_assign_op(callee_id, op, lhs, rhs) => {
+        check_binop(fcx, callee_id, expr, op, lhs, rhs, expected);
         let lhs_t = fcx.expr_ty(lhs);
         let result_t = fcx.expr_ty(expr);
         demand::suptype(fcx, expr.span, result_t, lhs_t);
@@ -2254,7 +2260,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
             fcx.write_nil(expr.id);
         }
       }
-      ast::expr_unary(unop, oprnd) => {
+      ast::expr_unary(callee_id, unop, oprnd) => {
         let exp_inner = do unpack_expected(fcx, expected) |sty| {
             match unop {
               ast::box(_) | ast::uniq(_) => match *sty {
@@ -2323,7 +2329,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                                                          oprnd_t);
                     if !(ty::type_is_integral(oprnd_t) ||
                          ty::get(oprnd_t).sty == ty::ty_bool) {
-                        oprnd_t = check_user_unop(fcx,
+                        oprnd_t = check_user_unop(fcx, callee_id,
                             "!", "not", expr, oprnd, oprnd_t,
                                                   expected);
                     }
@@ -2333,7 +2339,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                                                          oprnd_t);
                     if !(ty::type_is_integral(oprnd_t) ||
                          ty::type_is_fp(oprnd_t)) {
-                        oprnd_t = check_user_unop(fcx,
+                        oprnd_t = check_user_unop(fcx, callee_id,
                             "-", "neg", expr, oprnd, oprnd_t, expected);
                     }
                 }
@@ -2570,8 +2576,9 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
         check_block_with_expected(fcx, b, expected);
         fcx.write_ty(id, fcx.node_ty(b.node.id));
       }
-      ast::expr_call(f, ref args, sugar) => {
-          check_call(fcx, expr, f, *args, sugar);
+      ast::expr_call(_, f, ref args, sugar) => {
+          // XXX
+          check_call(fcx, expr.id, expr, f, *args, sugar);
           let f_ty = fcx.expr_ty(f);
           let (args_bot, args_err) = args.foldl((false, false),
              |&(rest_bot, rest_err), a| {
@@ -2586,7 +2593,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
               fcx.write_bot(id);
           }
       }
-      ast::expr_method_call(rcvr, ident, ref tps, ref args, sugar) => {
+      ast::expr_method_call(callee_id, rcvr, ident, ref tps, ref args, sugar) => {
         check_method_call(fcx, expr, rcvr, ident, *args, *tps, sugar);
         let f_ty = fcx.expr_ty(rcvr);
         let arg_tys = args.map(|a| fcx.expr_ty(*a));
@@ -2766,10 +2773,10 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
             }
         }
       }
-      ast::expr_field(base, field, ref tys) => {
+      ast::expr_field(_, base, field, ref tys) => {
         check_field(fcx, expr, base, field, *tys);
       }
-      ast::expr_index(base, idx) => {
+      ast::expr_index(callee_id, base, idx) => {
           check_expr(fcx, base);
           check_expr(fcx, idx);
           let raw_base_t = fcx.expr_ty(base);
@@ -2803,6 +2810,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                                                None);
                       };
                       let ret_ty = lookup_op_method(fcx,
+                                                    callee_id,
                                                     expr,
                                                     base,
                                                     resolved,

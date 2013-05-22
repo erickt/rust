@@ -930,7 +930,7 @@ pub impl Parser {
 
         if minus_present {
             let minus_hi = self.span.hi;
-            self.mk_expr(minus_lo, minus_hi, expr_unary(neg, expr))
+            self.mk_expr(minus_lo, minus_hi, self.mk_unary(neg, expr))
         } else {
             expr
         }
@@ -1171,16 +1171,47 @@ pub impl Parser {
     fn mk_expr(&self, lo: BytePos, hi: BytePos, node: expr_) -> @expr {
         @expr {
             id: self.get_id(),
-            callee_id: self.get_id(),
             node: node,
             span: mk_sp(lo, hi),
         }
     }
 
+    fn mk_unary(&self, unop: ast::unop, expr: @expr) -> ast::expr_ {
+        expr_unary(self.get_id(), unop, expr)
+    }
+
+    fn mk_binary(&self, binop: ast::binop, lhs: @expr, rhs: @expr) -> ast::expr_ {
+        expr_binary(self.get_id(), binop, lhs, rhs)
+    }
+
+    fn mk_call(&self, f: @expr, args: ~[@expr], sugar: CallSugar) -> ast::expr_ {
+        expr_call(self.get_id(), f, args, sugar)
+    }
+
+    fn mk_method_call(&self,
+                      rcvr: @expr,
+                      ident: ident,
+                      tps: ~[@Ty],
+                      args: ~[@expr],
+                      sugar: CallSugar) -> ast::expr_ {
+        expr_method_call(self.get_id(), rcvr, ident, tps, args, sugar)
+    }
+
+    fn mk_index(&self, expr: @expr, idx: @expr) -> ast::expr_ {
+        expr_index(self.get_id(), expr, idx)
+    }
+
+    fn mk_field(&self, expr: @expr, ident: ident, tys: ~[@Ty]) -> ast::expr_ {
+        expr_field(self.get_id(), expr, ident, tys)
+    }
+
+    fn mk_assign_op(&self, binop: ast::binop, lhs: @expr, rhs: @expr) -> ast::expr_ {
+        expr_assign_op(self.get_id(), binop, lhs, rhs)
+    }
+
     fn mk_mac_expr(&self, lo: BytePos, hi: BytePos, m: mac_) -> @expr {
         @expr {
             id: self.get_id(),
-            callee_id: self.get_id(),
             node: expr_mac(codemap::spanned {node: m, span: mk_sp(lo, hi)}),
             span: mk_sp(lo, hi),
         }
@@ -1195,7 +1226,6 @@ pub impl Parser {
 
         @expr {
             id: self.get_id(),
-            callee_id: self.get_id(),
             node: expr_lit(lv_lit),
             span: *span,
         }
@@ -1460,11 +1490,11 @@ pub impl Parser {
                             );
                             hi = self.span.hi;
 
-                            let nd = expr_method_call(e, i, tys, es, NoSugar);
+                            let nd = self.mk_method_call(e, i, tys, es, NoSugar);
                             e = self.mk_expr(lo, hi, nd);
                         }
                         _ => {
-                            e = self.mk_expr(lo, hi, expr_field(e, i, tys));
+                            e = self.mk_expr(lo, hi, self.mk_field(e, i, tys));
                         }
                     }
                   }
@@ -1484,7 +1514,7 @@ pub impl Parser {
                 );
                 hi = self.span.hi;
 
-                let nd = expr_call(e, es, NoSugar);
+                let nd = self.mk_call(e, es, NoSugar);
                 e = self.mk_expr(lo, hi, nd);
               }
 
@@ -1494,7 +1524,7 @@ pub impl Parser {
                 let ix = self.parse_expr();
                 hi = ix.span.hi;
                 self.expect(&token::RBRACKET);
-                e = self.mk_expr(lo, hi, expr_index(e, ix));
+                e = self.mk_expr(lo, hi, self.mk_index(e, ix));
               }
 
               _ => return e
@@ -1710,7 +1740,7 @@ pub impl Parser {
             self.bump();
             let e = self.parse_prefix_expr();
             hi = e.span.hi;
-            ex = expr_unary(not, e);
+            ex = self.mk_unary(not, e);
           }
           token::BINOP(b) => {
             match b {
@@ -1718,13 +1748,13 @@ pub impl Parser {
                 self.bump();
                 let e = self.parse_prefix_expr();
                 hi = e.span.hi;
-                ex = expr_unary(neg, e);
+                ex = self.mk_unary(neg, e);
               }
               token::STAR => {
                 self.bump();
                 let e = self.parse_prefix_expr();
                 hi = e.span.hi;
-                ex = expr_unary(deref, e);
+                ex = self.mk_unary(deref, e);
               }
               token::AND => {
                 self.bump();
@@ -1765,7 +1795,7 @@ pub impl Parser {
               expr_vec(*) |
               expr_lit(@codemap::spanned { node: lit_str(_), span: _}) |
               expr_repeat(*) if m == m_imm => expr_vstore(e, expr_vstore_box),
-              _ => expr_unary(box(m), e)
+              _ => self.mk_unary(box(m), e)
             };
           }
           token::TILDE => {
@@ -1783,7 +1813,7 @@ pub impl Parser {
               expr_lit(@codemap::spanned { node: lit_str(_), span: _}) |
               expr_repeat(*)
               if m == m_imm => expr_vstore(e, expr_vstore_uniq),
-              _ => expr_unary(uniq(m), e)
+              _ => self.mk_unary(uniq(m), e)
             };
           }
           _ => return self.parse_dot_or_call_expr()
@@ -1818,7 +1848,7 @@ pub impl Parser {
                         let expr = self.parse_prefix_expr();
                         let rhs = self.parse_more_binops(expr, cur_prec);
                         let bin = self.mk_expr(lhs.span.lo, rhs.span.hi,
-                                               expr_binary(cur_op, lhs, rhs));
+                                               self.mk_binary(cur_op, lhs, rhs));
                         self.parse_more_binops(bin, min_prec)
                     } else {
                         lhs
@@ -1868,7 +1898,7 @@ pub impl Parser {
                   token::SHR => aop = shr
               }
               self.mk_expr(lo, rhs.span.hi,
-                           expr_assign_op(aop, lhs, rhs))
+                           self.mk_assign_op(aop, lhs, rhs))
           }
           token::LARROW => {
               self.obsolete(*self.span, ObsoleteBinaryMove);
@@ -1992,36 +2022,47 @@ pub impl Parser {
         // them as the lambda arguments
         let e = self.parse_expr_res(RESTRICT_NO_BAR_OR_DOUBLEBAR_OP);
         match e.node {
-            expr_call(f, /*bad*/ copy args, NoSugar) => {
+            expr_call(_, f, /*bad*/ copy args, NoSugar) => {
                 let block = self.parse_lambda_block_expr();
                 let last_arg = self.mk_expr(block.span.lo, block.span.hi,
                                             ctor(block));
                 let args = vec::append(args, [last_arg]);
-                self.mk_expr(lo.lo, block.span.hi, expr_call(f, args, sugar))
+                self.mk_expr(
+                    lo.lo,
+                    block.span.hi,
+                    self.mk_call(f, args, sugar)
+                )
             }
-            expr_method_call(f, i, /*bad*/ copy tps,
+            expr_method_call(_, f, i, /*bad*/ copy tps,
                              /*bad*/ copy args, NoSugar) => {
                 let block = self.parse_lambda_block_expr();
                 let last_arg = self.mk_expr(block.span.lo, block.span.hi,
                                             ctor(block));
                 let args = vec::append(args, [last_arg]);
-                self.mk_expr(lo.lo, block.span.hi,
-                             expr_method_call(f, i, tps, args, sugar))
+                self.mk_expr(
+                    lo.lo,
+                    block.span.hi,
+                    self.mk_method_call(f, i, tps, args, sugar)
+                )
             }
-            expr_field(f, i, /*bad*/ copy tps) => {
+            expr_field(_, f, i, /*bad*/ copy tps) => {
                 let block = self.parse_lambda_block_expr();
                 let last_arg = self.mk_expr(block.span.lo, block.span.hi,
                                             ctor(block));
-                self.mk_expr(lo.lo, block.span.hi,
-                             expr_method_call(f, i, tps, ~[last_arg], sugar))
+                self.mk_expr(
+                    lo.lo,
+                    block.span.hi,
+                    self.mk_method_call(f, i, tps, ~[last_arg], sugar))
             }
             expr_path(*) | expr_call(*) | expr_method_call(*) |
                 expr_paren(*) => {
                 let block = self.parse_lambda_block_expr();
                 let last_arg = self.mk_expr(block.span.lo, block.span.hi,
                                             ctor(block));
-                self.mk_expr(lo.lo, last_arg.span.hi,
-                             expr_call(e, ~[last_arg], sugar))
+                self.mk_expr(
+                    lo.lo,
+                    last_arg.span.hi,
+                    self.mk_call(e, ~[last_arg], sugar))
             }
             _ => {
                 // There may be other types of expressions that can
@@ -2283,7 +2324,6 @@ pub impl Parser {
               }) => {
                 let vst = @expr {
                     id: self.get_id(),
-                    callee_id: self.get_id(),
                     node: expr_vstore(e, expr_vstore_box),
                     span: mk_sp(lo, hi),
                 };
@@ -2306,7 +2346,6 @@ pub impl Parser {
               }) => {
                 let vst = @expr {
                     id: self.get_id(),
-                    callee_id: self.get_id(),
                     node: expr_vstore(e, expr_vstore_uniq),
                     span: mk_sp(lo, hi),
                 };
@@ -2329,7 +2368,6 @@ pub impl Parser {
                   }) => {
                       let vst = @expr {
                           id: self.get_id(),
-                          callee_id: self.get_id(),
                           node: expr_vstore(e, expr_vstore_slice),
                           span: mk_sp(lo, hi)
                       };
