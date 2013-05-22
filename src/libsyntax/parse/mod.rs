@@ -385,7 +385,6 @@ mod test {
     #[test] fn path_exprs_1 () {
         assert_eq!(string_to_expr(@~"a"),
                    @ast::expr{id:1,
-                              callee_id:2,
                               node:ast::expr_path(@ast::Path {span:sp(0,1),
                                                               global:false,
                                                               idents:~[intern("a")],
@@ -397,7 +396,6 @@ mod test {
     #[test] fn path_exprs_2 () {
         assert_eq!(string_to_expr(@~"::a::b"),
                    @ast::expr{id:1,
-                               callee_id:2,
                                node:ast::expr_path(
                                    @ast::Path {span:sp(0,6),
                                                global:true,
@@ -446,9 +444,8 @@ mod test {
     #[test] fn ret_expr() {
         assert_eq!(string_to_expr(@~"return d"),
                    @ast::expr{id:3,
-                              callee_id:4,
                               node:ast::expr_ret(
-                                  Some(@ast::expr{id:1,callee_id:2,
+                                  Some(@ast::expr{id:1,
                                                   node:ast::expr_path(
                                                       @ast::Path{span:sp(7,8),
                                                                  global:false,
@@ -465,7 +462,6 @@ mod test {
                    @spanned{
                        node: ast::stmt_expr(@ast::expr{
                            id: 1,
-                           callee_id: 2,
                            node: ast::expr_path(
                                @ast::Path{
                                    span:sp(0,1),
@@ -583,7 +579,6 @@ mod test {
                                             stmts: ~[@spanned{
                                                 node: ast::stmt_semi(@ast::expr{
                                                     id: 6,
-                                                    callee_id: 7,
                                                     node: ast::expr_path(
                                                         @ast::Path{
                                                             span:sp(17,18),
