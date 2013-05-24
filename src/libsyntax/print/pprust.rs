@@ -1158,7 +1158,7 @@ pub fn print_expr(s: @ps, expr: @ast::expr) {
         }
         pclose(s);
       }
-      ast::expr_call(_, func, ref args, sugar) => {
+      ast::expr_call(func, ref args, sugar) => {
         let mut base_args = copy *args;
         let blk = print_call_pre(s, sugar, &mut base_args);
         print_expr(s, func);

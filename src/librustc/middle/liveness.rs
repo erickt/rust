@@ -1156,7 +1156,7 @@ pub impl Liveness {
             }
           }
 
-          expr_call(_, f, ref args, _) => {
+          expr_call(f, ref args, _) => {
             // calling a fn with bot return type means that the fn
             // will fail, and hence the successors can be ignored
             let t_ret = ty::ty_fn_ret(ty::expr_ty(self.tcx, f));

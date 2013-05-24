@@ -553,7 +553,7 @@ fn const_expr_unadjusted(cx: @CrateContext, e: @ast::expr) -> ValueRef {
                 }
             }
           }
-          ast::expr_call(_, callee, ref args, _) => {
+          ast::expr_call(callee, ref args, _) => {
               match cx.tcx.def_map.find(&callee.id) {
                   Some(&ast::def_struct(_)) => {
                       let ety = ty::expr_ty(cx.tcx, e);

@@ -461,11 +461,11 @@ impl AstBuilder for @ExtCtxt {
     }
 
     fn expr_call(&self, span: span, expr: @ast::expr, args: ~[@ast::expr]) -> @ast::expr {
-        self.expr(span, ast::expr_call(self.next_id(), expr, args, ast::NoSugar))
+        self.expr(span, ast::expr_call(expr, args, ast::NoSugar))
     }
     fn expr_call_ident(&self, span: span, id: ast::ident, args: ~[@ast::expr]) -> @ast::expr {
         self.expr(span,
-                  ast::expr_call(self.next_id(), self.expr_ident(span, id), args, ast::NoSugar))
+                  ast::expr_call(self.expr_ident(span, id), args, ast::NoSugar))
     }
     fn expr_call_global(&self, sp: span, fn_path: ~[ast::ident],
                       args: ~[@ast::expr]) -> @ast::expr {

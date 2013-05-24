@@ -305,12 +305,9 @@ fn visit_expr(expr: @ast::expr, rcx: @mut Rcx, v: rvt) {
     }
 
     match expr.node {
-        ast::expr_call(_, callee, ref args, _) => {
-            // XXX: Huh? Why don't we use the expr_call callee_id?
-            //let callee_id = callee.get_callee_id().get();
-            let callee_id = callee.id;
-            constrain_callee(rcx, callee_id, expr, callee);
-            constrain_call(rcx, callee_id, expr, None, *args, false);
+        ast::expr_call(callee, ref args, _) => {
+            constrain_callee(rcx, callee.id, expr, callee);
+            constrain_call(rcx, callee.id, expr, None, *args, false);
         }
 
         ast::expr_method_call(callee_id, arg0, _, _, ref args, _) => {

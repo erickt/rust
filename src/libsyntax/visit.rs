@@ -467,7 +467,7 @@ pub fn visit_expr<E: Copy>(ex: @expr, e: E, v: vt<E>) {
         expr_tup(ref elts) => {
             for elts.each |el| { (v.visit_expr)(*el, e, v) }
         }
-        expr_call(_, callee, ref args, _) => {
+        expr_call(callee, ref args, _) => {
             visit_exprs(*args, e, v);
             (v.visit_expr)(callee, e, v);
         }

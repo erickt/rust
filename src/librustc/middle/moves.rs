@@ -343,9 +343,8 @@ pub impl VisitContext {
                 }
             }
 
-            expr_call(_, callee, ref args, _) => {    // callee(args)
+            expr_call(callee, ref args, _) => {    // callee(args)
                 self.use_expr(callee, Read, visitor);
-                // XXX: Should this use callee_id?
                 self.use_fn_args(callee.id, *args, visitor);
             }
 

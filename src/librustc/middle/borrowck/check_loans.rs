@@ -710,8 +710,7 @@ fn check_loans_in_expr<'a>(expr: @ast::expr,
       ast::expr_assign_op(_, _, dest, _) => {
         this.check_assignment(dest);
       }
-      ast::expr_call(_, f, ref args, _) => {
-        // XXX: Should this be callee_id?
+      ast::expr_call(f, ref args, _) => {
         this.check_call(expr, Some(f), f.id, f.span, *args);
       }
       ast::expr_method_call(callee_id, _, _, _, ref args, _) => {

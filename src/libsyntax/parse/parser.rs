@@ -1185,7 +1185,7 @@ pub impl Parser {
     }
 
     fn mk_call(&self, f: @expr, args: ~[@expr], sugar: CallSugar) -> ast::expr_ {
-        expr_call(self.get_id(), f, args, sugar)
+        expr_call(f, args, sugar)
     }
 
     fn mk_method_call(&self,
@@ -2022,7 +2022,7 @@ pub impl Parser {
         // them as the lambda arguments
         let e = self.parse_expr_res(RESTRICT_NO_BAR_OR_DOUBLEBAR_OP);
         match e.node {
-            expr_call(_, f, /*bad*/ copy args, NoSugar) => {
+            expr_call(f, /*bad*/ copy args, NoSugar) => {
                 let block = self.parse_lambda_block_expr();
                 let last_arg = self.mk_expr(block.span.lo, block.span.hi,
                                             ctor(block));
