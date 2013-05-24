@@ -164,7 +164,7 @@ fn run(repl: Repl, input: ~str) -> Repl {
 
     let e = opt.unwrap();
     let blk = match e.node {
-        ast::expr_call(_, ref exprs, _) => {
+        ast::expr_call(_, _, ref exprs, _) => {
             match exprs[0].node {
                 ast::expr_block(ref blk) => blk,
                 _ => fail!()
