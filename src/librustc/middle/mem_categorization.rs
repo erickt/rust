@@ -382,7 +382,7 @@ pub impl mem_categorization_ctxt {
 
         let expr_ty = self.expr_ty(expr);
         match expr.node {
-          ast::expr_unary(ast::deref, e_base) => {
+          ast::expr_unary(_, ast::deref, e_base) => {
             if self.method_map.contains_key(&expr.id) {
                 return self.cat_rvalue(expr, expr_ty);
             }
@@ -391,7 +391,7 @@ pub impl mem_categorization_ctxt {
             self.cat_deref(expr, base_cmt, 0)
           }
 
-          ast::expr_field(base, f_name, _) => {
+          ast::expr_field(_, base, f_name, _) => {
             // Method calls are now a special syntactic form,
             // so `a.b` should always be a field.
             assert!(!self.method_map.contains_key(&expr.id));
@@ -400,7 +400,7 @@ pub impl mem_categorization_ctxt {
             self.cat_field(expr, base_cmt, f_name, self.expr_ty(expr))
           }
 
-          ast::expr_index(base, _) => {
+          ast::expr_index(_, base, _) => {
             if self.method_map.contains_key(&expr.id) {
                 return self.cat_rvalue(expr, expr_ty);
             }

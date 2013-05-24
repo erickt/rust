@@ -606,7 +606,7 @@ fn lint_type_limits(cx: @mut Context) -> visit::vt<()> {
 
     let visit_expr: @fn(@ast::expr) = |e| {
         match e.node {
-            ast::expr_binary(ref binop, @ref l, @ref r) => {
+            ast::expr_binary(_, ref binop, @ref l, @ref r) => {
                 if is_comparison(*binop)
                     && !check_limits(cx, *binop, l, r) {
                     cx.span_lint(type_limits, e.span,
@@ -928,15 +928,16 @@ fn lint_unnecessary_allocations(cx: @mut Context) -> visit::vt<()> {
 
     let visit_expr: @fn(@ast::expr) = |e| {
         match e.node {
-            ast::expr_call(c, ref args, _) => {
+            ast::expr_call(_, c, ref args, _) => {
+                // XXX:
                 let t = ty::node_id_to_type(cx.tcx, c.id);
                 let s = ty::ty_fn_sig(t);
                 for vec::each2(*args, s.inputs) |e, t| {
                     check(cx, *e, *t);
                 }
             }
-            ast::expr_method_call(_, _, _, ref args, _) => {
-                let t = ty::node_id_to_type(cx.tcx, e.callee_id);
+            ast::expr_method_call(callee_id, _, _, _, ref args, _) => {
+                let t = ty::node_id_to_type(cx.tcx, callee_id);
                 let s = ty::ty_fn_sig(t);
                 for vec::each2(*args, s.inputs) |e, t| {
                     check(cx, *e, *t);
