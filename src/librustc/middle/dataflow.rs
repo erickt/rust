@@ -657,8 +657,8 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
                 }
             }
 
-            ast::expr_call(callee_id, f, ref args, _) => {
-                self.walk_call(callee_id, expr.id,
+            ast::expr_call(f, ref args, _) => {
+                self.walk_call(f.id, expr.id,
                                f, *args, in_out, loop_scopes);
             }
 

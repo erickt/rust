@@ -455,9 +455,8 @@ pub fn noop_fold_expr(e: &expr_, fld: @ast_fold) -> expr_ {
             expr_repeat(fld.fold_expr(expr), fld.fold_expr(count), mutt)
         }
         expr_tup(ref elts) => expr_tup(elts.map(|x| fld.fold_expr(*x))),
-        expr_call(callee_id, f, ref args, blk) => {
+        expr_call(f, ref args, blk) => {
             expr_call(
-                fld.new_id(callee_id),
                 fld.fold_expr(f),
                 fld.map_exprs(|x| fld.fold_expr(x), *args),
                 blk

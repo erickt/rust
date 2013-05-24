@@ -330,7 +330,7 @@ pub fn mark_for_expr(cx: Context, e: @expr) {
       expr_log(_, val) => {
         node_type_needs(cx, use_tydesc, val.id);
       }
-      expr_call(_, f, _, _) => {
+      expr_call(f, _, _) => {
           for ty::ty_fn_args(ty::node_id_to_type(cx.ccx.tcx, f.id)).each |a| {
               type_needs(cx, use_repr, *a);
           }

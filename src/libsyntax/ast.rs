@@ -445,7 +445,6 @@ pub struct expr {
 pub impl expr {
     fn get_callee_id(&self) -> Option<node_id> {
         match self.node {
-            expr_call(callee_id, _, _, _) |
             expr_method_call(callee_id, _, _, _, _, _) |
             expr_index(callee_id, _, _) |
             expr_binary(callee_id, _, _, _) |
@@ -467,7 +466,7 @@ pub enum CallSugar {
 pub enum expr_ {
     expr_vstore(@expr, expr_vstore),
     expr_vec(~[@expr], mutability),
-    expr_call(node_id, @expr, ~[@expr], CallSugar),
+    expr_call(@expr, ~[@expr], CallSugar),
     expr_method_call(node_id, @expr, ident, ~[@Ty], ~[@expr], CallSugar),
     expr_tup(~[@expr]),
     expr_binary(node_id, binop, @expr, @expr),

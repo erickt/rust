@@ -928,8 +928,7 @@ fn lint_unnecessary_allocations(cx: @mut Context) -> visit::vt<()> {
 
     let visit_expr: @fn(@ast::expr) = |e| {
         match e.node {
-            ast::expr_call(_, c, ref args, _) => {
-                // XXX:
+            ast::expr_call(c, ref args, _) => {
                 let t = ty::node_id_to_type(cx.tcx, c.id);
                 let s = ty::ty_fn_sig(t);
                 for vec::each2(*args, s.inputs) |e, t| {
