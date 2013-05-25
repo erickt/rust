@@ -1342,7 +1342,7 @@ pub fn print_expr(s: @ps, expr: @ast::expr) {
         word_space(s, "=");
         print_expr(s, rhs);
       }
-      ast::expr_field(_, expr, id, ref tys) => {
+      ast::expr_field(expr, id, ref tys) => {
         print_expr(s, expr);
         word(s.s, ".");
         print_ident(s, id);

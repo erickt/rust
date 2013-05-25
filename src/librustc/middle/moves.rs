@@ -329,7 +329,7 @@ pub impl VisitContext {
                 }
             }
 
-            expr_field(_, base, _, _) => {        // base.f
+            expr_field(base, _, _) => {        // base.f
                 // Moving out of base.f moves out of base.
                 self.use_expr(base, comp_mode, visitor);
             }

@@ -451,7 +451,7 @@ impl AstBuilder for @ExtCtxt {
     }
 
     fn expr_field_access(&self, sp: span, expr: @ast::expr, ident: ast::ident) -> @ast::expr {
-        self.expr(sp, ast::expr_field(self.next_id(), expr, ident, ~[]))
+        self.expr(sp, ast::expr_field(expr, ident, ~[]))
     }
     fn expr_addr_of(&self, sp: span, e: @ast::expr) -> @ast::expr {
         self.expr(sp, ast::expr_addr_of(ast::m_imm, e))

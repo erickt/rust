@@ -534,9 +534,8 @@ pub fn noop_fold_expr(e: &expr_, fld: @ast_fold) -> expr_ {
                 fld.fold_expr(er)
             )
         }
-        expr_field(callee_id, el, id, ref tys) => {
+        expr_field(el, id, ref tys) => {
             expr_field(
-                fld.new_id(callee_id),
                 fld.fold_expr(el), fld.fold_ident(id),
                 tys.map(|x| fld.fold_ty(*x))
             )

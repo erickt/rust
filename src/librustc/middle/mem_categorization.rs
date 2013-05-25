@@ -399,7 +399,7 @@ pub impl mem_categorization_ctxt {
             self.cat_deref(expr, base_cmt, 0)
           }
 
-          ast::expr_field(_, base, f_name, _) => {
+          ast::expr_field(base, f_name, _) => {
             // Method calls are now a special syntactic form,
             // so `a.b` should always be a field.
             assert!(!self.method_map.contains_key(&expr.id));

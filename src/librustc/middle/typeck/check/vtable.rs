@@ -522,11 +522,6 @@ pub fn early_resolve_expr(ex: @ast::expr,
             debug!("vtable resolution on parameter bounds for method call %s",
                    ex.repr(fcx.tcx()));
             if has_trait_bounds(*type_param_defs) {
-                let callee_id = match ex.node {
-                  ast::expr_field(*) => ex.id,
-                  _ => callee_id
-                };
-
                 let substs = fcx.node_ty_substs(callee_id);
                 let vcx = VtableContext { ccx: fcx.ccx, infcx: fcx.infcx() };
                 let vtbls = lookup_vtables(&vcx, &location_info_for_expr(ex),

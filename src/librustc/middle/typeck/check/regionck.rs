@@ -970,7 +970,7 @@ pub mod guarantor {
                 let cat = categorize(rcx, b);
                 guarantor_of_deref(&cat)
             }
-            ast::expr_field(_, b, _, _) => {
+            ast::expr_field(b, _, _) => {
                 categorize(rcx, b).guarantor
             }
             ast::expr_index(_, b, _) => {

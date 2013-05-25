@@ -321,12 +321,20 @@ pub fn mark_for_expr(cx: Context, e: @expr) {
       expr_ret(Some(val)) => {
         node_type_needs(cx, use_repr, val.id);
       }
-      expr_index(callee_id, base, _) | expr_field(callee_id, base, _, _) => {
+      expr_index(callee_id, base, _) => {
         // FIXME (#2537): could be more careful and not count fields after
         // the chosen field.
         let base_ty = ty::node_id_to_type(cx.ccx.tcx, base.id);
         type_needs(cx, use_repr, ty::type_autoderef(cx.ccx.tcx, base_ty));
         mark_for_method_call(cx, e.id, callee_id);
+      }
+      expr_field(base, _, _) => {
+        // Method calls are now a special syntactic form,
+        // so `a.b` should always be a field.
+        assert!(!cx.ccx.maps.method_map.contains_key(&e.id));
+
+        let base_ty = ty::node_id_to_type(cx.ccx.tcx, base.id);
+        type_needs(cx, use_repr, ty::type_autoderef(cx.ccx.tcx, base_ty));
       }
       expr_log(_, val) => {
         node_type_needs(cx, use_tydesc, val.id);
