@@ -823,7 +823,7 @@ fn trans_lvalue_unadjusted(bcx: block, expr: @ast::expr) -> DatumBlock {
         ast::expr_path(_) | ast::expr_self => {
             trans_def_lvalue(bcx, expr, bcx.def(expr.id))
         }
-        ast::expr_field(_, base, ident, _) => {
+        ast::expr_field(base, ident, _) => {
             trans_rec_field(bcx, base, ident)
         }
         ast::expr_index(_, base, idx) => {

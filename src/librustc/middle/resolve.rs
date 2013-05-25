@@ -4963,7 +4963,11 @@ pub impl Resolver {
 
     fn record_candidate_traits_for_expr_if_necessary(@mut self, expr: @expr) {
         match expr.node {
-            expr_field(_, _, ident, _) => {
+            expr_field(_, ident, _) => {
+                // XXX: Even though you can't treat a method like a field, we
+                // need to add any trait methods we find that match the field
+                // name so that we can do some nice error reporting later on in
+                // typeck.
                 let traits = self.search_for_traits_containing_method(ident);
                 self.trait_map.insert(expr.id, @mut traits);
             }

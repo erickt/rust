@@ -361,7 +361,7 @@ fn const_expr_unadjusted(cx: @CrateContext, e: @ast::expr) -> ValueRef {
               }
             }
           }
-          ast::expr_field(_, base, field, _) => {
+          ast::expr_field(base, field, _) => {
               let bt = ty::expr_ty_adjusted(cx.tcx, base);
               let brepr = adt::represent_type(cx, bt);
               let bv = const_expr(cx, base);

@@ -1198,7 +1198,7 @@ pub impl Parser {
     }
 
     fn mk_field(&self, expr: @expr, ident: ident, tys: ~[@Ty]) -> ast::expr_ {
-        expr_field(self.get_id(), expr, ident, tys)
+        expr_field(expr, ident, tys)
     }
 
     fn mk_assign_op(&self, binop: ast::binop, lhs: @expr, rhs: @expr) -> ast::expr_ {
@@ -2041,7 +2041,7 @@ pub impl Parser {
                     self.mk_method_call(f, i, tps, args, sugar)
                 )
             }
-            expr_field(_, f, i, /*bad*/ copy tps) => {
+            expr_field(f, i, /*bad*/ copy tps) => {
                 let block = self.parse_lambda_block_expr();
                 let last_arg = self.mk_expr(block.span.lo, block.span.hi,
                                             ctor(block));

@@ -997,7 +997,7 @@ pub impl Liveness {
               self.access_path(expr, succ, ACC_READ | ACC_USE)
           }
 
-          expr_field(_, e, _, _) => {
+          expr_field(e, _, _) => {
               self.propagate_through_expr(e, succ)
           }
 
@@ -1284,7 +1284,7 @@ pub impl Liveness {
 
         match expr.node {
             expr_path(_) => succ,
-            expr_field(_, e, _, _) => self.propagate_through_expr(e, succ),
+            expr_field(e, _, _) => self.propagate_through_expr(e, succ),
             _ => self.propagate_through_expr(expr, succ)
         }
     }

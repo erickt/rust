@@ -708,7 +708,7 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
             ast::expr_unary(_, _, e) |
             ast::expr_paren(e) |
             ast::expr_vstore(e, _) |
-            ast::expr_field(_, e, _, _) => {
+            ast::expr_field(e, _, _) => {
                 self.walk_expr(e, in_out, loop_scopes);
             }
 

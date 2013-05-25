@@ -139,7 +139,7 @@ pub fn classify(e: @expr,
                 }
               }
 
-              ast::expr_field(_, base, _, _) => {
+              ast::expr_field(base, _, _) => {
                 classify(base, tcx)
               }
 

@@ -2777,7 +2777,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
             }
         }
       }
-      ast::expr_field(_, base, field, ref tys) => {
+      ast::expr_field(base, field, ref tys) => {
         check_field(fcx, expr, base, field, *tys);
       }
       ast::expr_index(callee_id, base, idx) => {

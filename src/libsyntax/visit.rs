@@ -522,7 +522,7 @@ pub fn visit_expr<E: Copy>(ex: @expr, e: E, v: vt<E>) {
             (v.visit_expr)(b, e, v);
             (v.visit_expr)(a, e, v);
         }
-        expr_field(_, x, _, ref tys) => {
+        expr_field(x, _, ref tys) => {
             (v.visit_expr)(x, e, v);
             for tys.each |tp| { (v.visit_ty)(*tp, e, v); }
         }

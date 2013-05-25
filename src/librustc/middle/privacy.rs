@@ -431,28 +431,19 @@ pub fn check_crate(tcx: ty::ctxt,
         },
         visit_expr: |expr, method_map: &method_map, visitor| {
             match expr.node {
-                expr_field(_, base, ident, _) => {
+                expr_field(base, ident, _) => {
+                    // Method calls are now a special syntactic form,
+                    // so `a.b` should always be a field.
+                    assert!(!method_map.contains_key(&expr.id));
+
                     // With type_autoderef, make sure we don't
                     // allow pointers to violate privacy
                     match ty::get(ty::type_autoderef(tcx, ty::expr_ty(tcx,
                                                           base))).sty {
                         ty_struct(id, _)
-                        if id.crate != local_crate ||
-                           !privileged_items.contains(&(id.node)) => {
-                            match method_map.find(&expr.id) {
-                                None => {
-                                    debug!("(privacy checking) checking \
-                                            field access");
-                                    check_field(expr.span, id, ident);
-                                }
-                                Some(ref entry) => {
-                                    debug!("(privacy checking) checking \
-                                            impl method");
-                                    check_method(expr.span,
-                                                 &entry.origin,
-                                                 ident);
-                                }
-                            }
+                        if id.crate != local_crate || !privileged_items.contains(&(id.node)) => {
+                            debug!("(privacy checking) checking field access");
+                            check_field(expr.span, id, ident);
                         }
                         _ => {}
                     }

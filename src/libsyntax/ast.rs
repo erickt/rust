@@ -492,7 +492,7 @@ pub enum expr_ {
     expr_copy(@expr),
     expr_assign(@expr, @expr),
     expr_assign_op(node_id, binop, @expr, @expr),
-    expr_field(node_id, @expr, ident, ~[@Ty]),
+    expr_field(@expr, ident, ~[@Ty]),
     expr_index(node_id, @expr, @expr),
     expr_path(@Path),
 
