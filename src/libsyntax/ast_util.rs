@@ -437,8 +437,9 @@ pub fn id_visitor(vfn: @fn(node_id)) -> visit::vt<()> {
         visit_decl: |_| {},
 
         visit_expr: |e| {
-            for e.get_callee_id().each |callee_id| {
-                vfn(*callee_id);
+            match e.node {
+                expr_call(ref call) => vfn(call.get_id()),
+                _ => (),
             }
             vfn(e.id);
         },

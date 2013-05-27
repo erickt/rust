@@ -23,12 +23,12 @@ use ast::{blk_check_mode, box};
 use ast::{crate, crate_cfg, decl, decl_item};
 use ast::{decl_local, default_blk, deref, div, enum_def, explicit_self};
 use ast::{expr, expr_, expr_addr_of, expr_match, expr_again};
-use ast::{expr_assign, expr_assign_op, expr_binary, expr_block};
+use ast::{expr_assign, expr_block};
 use ast::{expr_break, expr_call, expr_cast, expr_copy, expr_do_body};
-use ast::{expr_field, expr_fn_block, expr_if, expr_index};
+use ast::{expr_field, expr_fn_block, expr_if};
 use ast::{expr_lit, expr_log, expr_loop, expr_loop_body, expr_mac};
-use ast::{expr_method_call, expr_paren, expr_path, expr_repeat};
-use ast::{expr_ret, expr_self, expr_struct, expr_tup, expr_unary};
+use ast::{expr_paren, expr_path, expr_repeat};
+use ast::{expr_ret, expr_self, expr_struct, expr_tup};
 use ast::{expr_vec, expr_vstore, expr_vstore_mut_box};
 use ast::{expr_vstore_slice, expr_vstore_box};
 use ast::{expr_vstore_mut_slice, expr_while, extern_fn, field, fn_decl};
@@ -1173,15 +1173,15 @@ pub impl Parser {
     }
 
     fn mk_unary(&self, unop: ast::unop, expr: @expr) -> ast::expr_ {
-        expr_unary(self.get_id(), unop, expr)
+        expr_call(ast::CallUnary(self.get_id(), unop, expr))
     }
 
     fn mk_binary(&self, binop: ast::binop, lhs: @expr, rhs: @expr) -> ast::expr_ {
-        expr_binary(self.get_id(), binop, lhs, rhs)
+        expr_call(ast::CallBinary(self.get_id(), binop, lhs, rhs))
     }
 
     fn mk_call(&self, f: @expr, args: ~[@expr], sugar: CallSugar) -> ast::expr_ {
-        expr_call(f, args, sugar)
+        expr_call(ast::CallFn(f, args, sugar))
     }
 
     fn mk_method_call(&self,
@@ -1190,11 +1190,11 @@ pub impl Parser {
                       tps: ~[@Ty],
                       args: ~[@expr],
                       sugar: CallSugar) -> ast::expr_ {
-        expr_method_call(self.get_id(), rcvr, ident, tps, args, sugar)
+        expr_call(ast::CallMethod(self.get_id(), rcvr, ident, tps, args, sugar))
     }
 
     fn mk_index(&self, expr: @expr, idx: @expr) -> ast::expr_ {
-        expr_index(self.get_id(), expr, idx)
+        expr_call(ast::CallIndex(self.get_id(), expr, idx))
     }
 
     fn mk_field(&self, expr: @expr, ident: ident, tys: ~[@Ty]) -> ast::expr_ {
@@ -1202,7 +1202,7 @@ pub impl Parser {
     }
 
     fn mk_assign_op(&self, binop: ast::binop, lhs: @expr, rhs: @expr) -> ast::expr_ {
-        expr_assign_op(self.get_id(), binop, lhs, rhs)
+        expr_call(ast::CallAssignOp(self.get_id(), binop, lhs, rhs))
     }
 
     fn mk_mac_expr(&self, lo: BytePos, hi: BytePos, m: mac_) -> @expr {
@@ -2018,7 +2018,7 @@ pub impl Parser {
         // them as the lambda arguments
         let e = self.parse_expr_res(RESTRICT_NO_BAR_OR_DOUBLEBAR_OP);
         match e.node {
-            expr_call(f, /*bad*/ copy args, NoSugar) => {
+            expr_call(ast::CallFn(f, copy args, NoSugar)) => {
                 let block = self.parse_lambda_block_expr();
                 let last_arg = self.mk_expr(block.span.lo, block.span.hi,
                                             ctor(block));
@@ -2029,8 +2029,7 @@ pub impl Parser {
                     self.mk_call(f, args, sugar)
                 )
             }
-            expr_method_call(_, f, i, /*bad*/ copy tps,
-                             /*bad*/ copy args, NoSugar) => {
+            expr_call(ast::CallMethod(_, f, i, copy tps, copy args, NoSugar)) => {
                 let block = self.parse_lambda_block_expr();
                 let last_arg = self.mk_expr(block.span.lo, block.span.hi,
                                             ctor(block));
@@ -2041,7 +2040,7 @@ pub impl Parser {
                     self.mk_method_call(f, i, tps, args, sugar)
                 )
             }
-            expr_field(f, i, /*bad*/ copy tps) => {
+            expr_field(f, i, copy tps) => {
                 let block = self.parse_lambda_block_expr();
                 let last_arg = self.mk_expr(block.span.lo, block.span.hi,
                                             ctor(block));
@@ -2050,7 +2049,7 @@ pub impl Parser {
                     block.span.hi,
                     self.mk_method_call(f, i, tps, ~[last_arg], sugar))
             }
-            expr_path(*) | expr_call(*) | expr_method_call(*) |
+            expr_path(*) | expr_call(ast::CallFn(*)) | expr_call(ast::CallMethod(*)) |
                 expr_paren(*) => {
                 let block = self.parse_lambda_block_expr();
                 let last_arg = self.mk_expr(block.span.lo, block.span.hi,

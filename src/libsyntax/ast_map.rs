@@ -315,8 +315,11 @@ pub fn map_struct_def(
 pub fn map_expr(ex: @expr, cx: @mut Ctx, v: visit::vt<@mut Ctx>) {
     cx.map.insert(ex.id, node_expr(ex));
     // Expressions which are or might be calls:
-    for ex.get_callee_id().each |callee_id| {
-        cx.map.insert(*callee_id, node_callee_scope(ex));
+    match ex.node {
+        expr_call(ref call) => {
+            cx.map.insert(call.get_id(), node_callee_scope(ex));
+        }
+        _ => {},
     }
     visit::visit_expr(ex, cx, v);
 }

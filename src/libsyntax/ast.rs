@@ -442,19 +442,6 @@ pub struct expr {
     span: span,
 }
 
-pub impl expr {
-    fn get_callee_id(&self) -> Option<node_id> {
-        match self.node {
-            expr_method_call(callee_id, _, _, _, _, _) |
-            expr_index(callee_id, _, _) |
-            expr_binary(callee_id, _, _, _) |
-            expr_assign_op(callee_id, _, _, _) |
-            expr_unary(callee_id, _, _) => Some(callee_id),
-            _ => None,
-        }
-    }
-}
-
 #[deriving(Eq, Encodable, Decodable)]
 pub enum CallSugar {
     NoSugar,
@@ -463,14 +450,34 @@ pub enum CallSugar {
 }
 
 #[deriving(Eq, Encodable, Decodable)]
+pub enum Call {
+    CallFn(@expr, ~[@expr], CallSugar),
+    CallMethod(node_id, @expr, ident, ~[@Ty], ~[@expr], CallSugar),
+    CallUnary(node_id, unop, @expr),
+    CallBinary(node_id, binop, @expr, @expr),
+    CallAssignOp(node_id, binop, @expr, @expr),
+    CallIndex(node_id, @expr, @expr),
+}
+
+pub impl Call {
+    fn get_id(&self) -> node_id {
+        match *self {
+            CallFn(callee, _, _) => callee.id,
+            CallMethod(callee_id, _, _, _, _, _) |
+            CallUnary(callee_id, _, _) |
+            CallBinary(callee_id, _, _, _) |
+            CallAssignOp(callee_id, _, _, _) |
+            CallIndex(callee_id, _, _) => callee_id,
+        }
+    }
+}
+
+#[deriving(Eq, Encodable, Decodable)]
 pub enum expr_ {
     expr_vstore(@expr, expr_vstore),
     expr_vec(~[@expr], mutability),
-    expr_call(@expr, ~[@expr], CallSugar),
-    expr_method_call(node_id, @expr, ident, ~[@Ty], ~[@expr], CallSugar),
+    expr_call(Call),
     expr_tup(~[@expr]),
-    expr_binary(node_id, binop, @expr, @expr),
-    expr_unary(node_id, unop, @expr),
     expr_lit(@lit),
     expr_cast(@expr, @Ty),
     expr_if(@expr, blk, Option<@expr>),
@@ -491,9 +498,7 @@ pub enum expr_ {
 
     expr_copy(@expr),
     expr_assign(@expr, @expr),
-    expr_assign_op(node_id, binop, @expr, @expr),
     expr_field(@expr, ident, ~[@Ty]),
-    expr_index(node_id, @expr, @expr),
     expr_path(@Path),
 
     /// The special identifier `self`.
