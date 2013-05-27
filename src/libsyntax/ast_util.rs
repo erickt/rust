@@ -458,8 +458,9 @@ pub fn id_visitor<T: Copy>(vfn: @fn(node_id, T)) -> visit::vt<T> {
         },
 
         visit_expr: |e, t, vt| {
-            for e.get_callee_id().each |callee_id| {
-                vfn(*callee_id, t);
+            match e.node {
+                expr_call(ref call) => vfn(call.get_id(), t),
+                _ => (),
             }
             vfn(e.id, t);
             visit::visit_expr(e, t, vt);

@@ -432,7 +432,7 @@ impl AstBuilder for @ExtCtxt {
 
     fn expr_binary(&self, sp: span, op: ast::binop,
                    lhs: @ast::expr, rhs: @ast::expr) -> @ast::expr {
-        self.expr(sp, ast::expr_binary(self.next_id(), op, lhs, rhs))
+        self.expr(sp, ast::expr_call(ast::CallBinary(self.next_id(), op, lhs, rhs)))
     }
 
     fn expr_deref(&self, sp: span, e: @ast::expr) -> @ast::expr {
@@ -440,7 +440,7 @@ impl AstBuilder for @ExtCtxt {
     }
     fn expr_unary(&self, sp: span, op: ast::unop, e: @ast::expr)
         -> @ast::expr {
-        self.expr(sp, ast::expr_unary(self.next_id(), op, e))
+        self.expr(sp, ast::expr_call(ast::CallUnary(self.next_id(), op, e)))
     }
 
     fn expr_copy(&self, sp: span, e: @ast::expr) -> @ast::expr {
@@ -461,11 +461,10 @@ impl AstBuilder for @ExtCtxt {
     }
 
     fn expr_call(&self, span: span, expr: @ast::expr, args: ~[@ast::expr]) -> @ast::expr {
-        self.expr(span, ast::expr_call(expr, args, ast::NoSugar))
+        self.expr(span, ast::expr_call(ast::CallFn(expr, args, ast::NoSugar)))
     }
     fn expr_call_ident(&self, span: span, id: ast::ident, args: ~[@ast::expr]) -> @ast::expr {
-        self.expr(span,
-                  ast::expr_call(self.expr_ident(span, id), args, ast::NoSugar))
+        self.expr_call(span, self.expr_ident(span, id), args)
     }
     fn expr_call_global(&self, sp: span, fn_path: ~[ast::ident],
                       args: ~[@ast::expr]) -> @ast::expr {
@@ -476,8 +475,8 @@ impl AstBuilder for @ExtCtxt {
                         expr: @ast::expr,
                         ident: ast::ident,
                         args: ~[@ast::expr]) -> @ast::expr {
-        self.expr(span,
-                  ast::expr_method_call(self.next_id(), expr, ident, ~[], args, ast::NoSugar))
+        let call = ast::CallMethod(self.next_id(), expr, ident, ~[], args, ast::NoSugar);
+        self.expr(span, ast::expr_call(call))
     }
     fn expr_blk(&self, b: ast::blk) -> @ast::expr {
         self.expr(b.span, ast::expr_block(b))

@@ -451,6 +451,33 @@ pub fn visit_mac<E>(_m: &mac, _e: E, _v: vt<E>) {
     /* no user-serviceable parts inside */
 }
 
+pub fn visit_call<E: Copy>(call: &ast::Call, e: E, v: vt<E>) {
+    match *call {
+        ast::CallFn(callee, ref args, _) => {
+            visit_exprs(*args, e, v);
+            (v.visit_expr)(callee, e, v);
+        }
+        ast::CallMethod(_, callee, _, ref tys, ref args, _) => {
+            visit_exprs(*args, e, v);
+            for tys.each |tp| { (v.visit_ty)(*tp, e, v); }
+            (v.visit_expr)(callee, e, v);
+        }
+        ast::CallBinary(_, _, a, b) => {
+            (v.visit_expr)(a, e, v);
+            (v.visit_expr)(b, e, v);
+        }
+        ast::CallUnary(_, _, x) => (v.visit_expr)(x, e, v),
+        ast::CallAssignOp(_, _, a, b) => {
+            (v.visit_expr)(b, e, v);
+            (v.visit_expr)(a, e, v);
+        }
+        ast::CallIndex(_, a, b) => {
+            (v.visit_expr)(a, e, v);
+            (v.visit_expr)(b, e, v);
+        }
+    }
+}
+
 pub fn visit_expr<E: Copy>(ex: @expr, e: E, v: vt<E>) {
     match ex.node {
         expr_vstore(x, _) => (v.visit_expr)(x, e, v),
@@ -467,21 +494,8 @@ pub fn visit_expr<E: Copy>(ex: @expr, e: E, v: vt<E>) {
         expr_tup(ref elts) => {
             for elts.each |el| { (v.visit_expr)(*el, e, v) }
         }
-        expr_call(callee, ref args, _) => {
-            visit_exprs(*args, e, v);
-            (v.visit_expr)(callee, e, v);
-        }
-        expr_method_call(_, callee, _, ref tys, ref args, _) => {
-            visit_exprs(*args, e, v);
-            for tys.each |tp| { (v.visit_ty)(*tp, e, v); }
-            (v.visit_expr)(callee, e, v);
-        }
-        expr_binary(_, _, a, b) => {
-            (v.visit_expr)(a, e, v);
-            (v.visit_expr)(b, e, v);
-        }
-        expr_addr_of(_, x) | expr_unary(_, _, x) |
-        expr_loop_body(x) | expr_do_body(x) => (v.visit_expr)(x, e, v),
+        expr_call(ref call) => visit_call(call, e, v),
+        expr_addr_of(_, x) | expr_loop_body(x) | expr_do_body(x) => (v.visit_expr)(x, e, v),
         expr_lit(_) => (),
         expr_cast(x, t) => {
             (v.visit_expr)(x, e, v);
@@ -518,18 +532,12 @@ pub fn visit_expr<E: Copy>(ex: @expr, e: E, v: vt<E>) {
             (v.visit_expr)(a, e, v);
         }
         expr_copy(a) => (v.visit_expr)(a, e, v),
-        expr_assign_op(_, _, a, b) => {
-            (v.visit_expr)(b, e, v);
-            (v.visit_expr)(a, e, v);
-        }
+
         expr_field(x, _, ref tys) => {
             (v.visit_expr)(x, e, v);
             for tys.each |tp| { (v.visit_ty)(*tp, e, v); }
         }
-        expr_index(_, a, b) => {
-            (v.visit_expr)(a, e, v);
-            (v.visit_expr)(b, e, v);
-        }
+
         expr_path(p) => visit_path(p, e, v),
         expr_self => (),
         expr_break(_) => (),

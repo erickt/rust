@@ -431,6 +431,58 @@ pub fn wrap<T>(f: @fn(&T, @ast_fold) -> T)
     result
 }
 
+pub fn noop_fold_call(call: &ast::Call, fld: @ast_fold) -> ast::Call {
+    match *call {
+        ast::CallFn(f, ref args, blk) => {
+            ast::CallFn(
+                fld.fold_expr(f),
+                fld.map_exprs(|x| fld.fold_expr(x), *args),
+                blk
+            )
+        }
+        ast::CallMethod(callee_id, f, i, ref tps, ref args, blk) => {
+            ast::CallMethod(
+                fld.new_id(callee_id),
+                fld.fold_expr(f),
+                fld.fold_ident(i),
+                tps.map(|x| fld.fold_ty(*x)),
+                fld.map_exprs(|x| fld.fold_expr(x), *args),
+                blk
+            )
+        }
+        ast::CallBinary(callee_id, binop, lhs, rhs) => {
+            ast::CallBinary(
+                fld.new_id(callee_id),
+                binop,
+                fld.fold_expr(lhs),
+                fld.fold_expr(rhs)
+            )
+        }
+        ast::CallUnary(callee_id, binop, ohs) => {
+            ast::CallUnary(
+                fld.new_id(callee_id),
+                binop,
+                fld.fold_expr(ohs)
+            )
+        }
+        ast::CallAssignOp(callee_id, op, el, er) => {
+            ast::CallAssignOp(
+                fld.new_id(callee_id),
+                op,
+                fld.fold_expr(el),
+                fld.fold_expr(er)
+            )
+        }
+        ast::CallIndex(callee_id, el, er) => {
+            ast::CallIndex(
+                fld.new_id(callee_id),
+                fld.fold_expr(el),
+                fld.fold_expr(er)
+            )
+        }
+    }
+}
+
 pub fn noop_fold_expr(e: &expr_, fld: @ast_fold) -> expr_ {
     fn fold_field_(field: field, fld: @ast_fold) -> field {
         spanned {
@@ -456,38 +508,7 @@ pub fn noop_fold_expr(e: &expr_, fld: @ast_fold) -> expr_ {
             expr_repeat(fld.fold_expr(expr), fld.fold_expr(count), mutt)
         }
         expr_tup(ref elts) => expr_tup(elts.map(|x| fld.fold_expr(*x))),
-        expr_call(f, ref args, blk) => {
-            expr_call(
-                fld.fold_expr(f),
-                fld.map_exprs(|x| fld.fold_expr(x), *args),
-                blk
-            )
-        }
-        expr_method_call(callee_id, f, i, ref tps, ref args, blk) => {
-            expr_method_call(
-                fld.new_id(callee_id),
-                fld.fold_expr(f),
-                fld.fold_ident(i),
-                tps.map(|x| fld.fold_ty(*x)),
-                fld.map_exprs(|x| fld.fold_expr(x), *args),
-                blk
-            )
-        }
-        expr_binary(callee_id, binop, lhs, rhs) => {
-            expr_binary(
-                fld.new_id(callee_id),
-                binop,
-                fld.fold_expr(lhs),
-                fld.fold_expr(rhs)
-            )
-        }
-        expr_unary(callee_id, binop, ohs) => {
-            expr_unary(
-                fld.new_id(callee_id),
-                binop,
-                fld.fold_expr(ohs)
-            )
-        }
+        expr_call(ref call) => expr_call(noop_fold_call(call, fld)),
         expr_loop_body(f) => expr_loop_body(fld.fold_expr(f)),
         expr_do_body(f) => expr_do_body(fld.fold_expr(f)),
         expr_lit(_) => copy *e,
@@ -526,27 +547,14 @@ pub fn noop_fold_expr(e: &expr_, fld: @ast_fold) -> expr_ {
         expr_assign(el, er) => {
             expr_assign(fld.fold_expr(el), fld.fold_expr(er))
         }
-        expr_assign_op(callee_id, op, el, er) => {
-            expr_assign_op(
-                fld.new_id(callee_id),
-                op,
-                fld.fold_expr(el),
-                fld.fold_expr(er)
-            )
-        }
+
         expr_field(el, id, ref tys) => {
             expr_field(
                 fld.fold_expr(el), fld.fold_ident(id),
                 tys.map(|x| fld.fold_ty(*x))
             )
         }
-        expr_index(callee_id, el, er) => {
-            expr_index(
-                fld.new_id(callee_id),
-                fld.fold_expr(el),
-                fld.fold_expr(er)
-            )
-        }
+
         expr_path(pth) => expr_path(fld.fold_path(pth)),
         expr_self => expr_self,
         expr_break(ref opt_ident) => {
