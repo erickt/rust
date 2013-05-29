@@ -4961,6 +4961,60 @@ pub impl Resolver {
         }
     }
 
+    fn search_candidate_traits_for_call(@mut self, call: &ast::Call) -> ~[def_id] {
+        match *call {
+            CallMethod(_, _, ident, _, _, _) => {
+                self.search_for_traits_containing_method(ident)
+            }
+            CallBinary(_, add, _, _) | CallAssignOp(_, add, _, _) => {
+                ~[self.lang_items.add_trait()]
+            }
+            CallBinary(_, subtract, _, _) | CallAssignOp(_, subtract, _, _) => {
+                ~[self.lang_items.sub_trait()]
+            }
+            CallBinary(_, mul, _, _) | CallAssignOp(_, mul, _, _) => {
+                ~[self.lang_items.mul_trait()]
+            }
+            CallBinary(_, div, _, _) | CallAssignOp(_, div, _, _) => {
+                ~[self.lang_items.div_trait()]
+            }
+            CallBinary(_, rem, _, _) | CallAssignOp(_, rem, _, _) => {
+                ~[self.lang_itesdms.rem_trait()]
+            }
+            CallBinary(_, bitxor, _, _) | CallAssignOp(_, bitxor, _, _) => {
+                ~[self.lang_items.bitxor_trait()]
+            }
+            CallBinary(_, bitand, _, _) | CallAssignOp(_, bitand, _, _) => {
+                ~[self.lang_items.bitand_trait()]
+            }
+            CallBinary(_, bitor, _, _) | CallAssignOp(_, bitor, _, _) => {
+                ~[self.lang_items.bitor_trait()]
+            }
+            CallBinary(_, shl, _, _) | CallAssignOp(_, shl, _, _) => {
+                ~[self.lang_items.shl_trait()]
+            }
+            CallBinary(_, shr, _, _) | CallAssignOp(_, shr, _, _) => {
+                ~[self.lang_items.shr_trait()]
+            }
+            CallBinary(_, lt, _, _) | CallBinary(_, le, _, _) |
+            CallBinary(_, ge, _, _) | CallBinary(_, gt, _, _) => {
+                ~[self.lang_items.ord_trait()]
+            }
+            CallBinary(_, eq, _, _) | CallBinary(_, ne, _, _) => {
+                ~[self.lang_items.eq_trait()]
+            }
+            CallUnary(_, neg, _) => {
+                ~[self.lang_items.neg_trait()]
+            }
+            CallUnary(_, not, _) => {
+                ~[self.lang_items.not_trait()]
+            }
+            CallIndex(*) => {
+                ~[self.lang_items.index_trait()]
+            }
+        }
+    }
+
     fn record_candidate_traits_for_expr_if_necessary(@mut self, expr: @expr) {
         match expr.node {
             expr_field(_, ident, _) => {
@@ -4971,70 +5025,9 @@ pub impl Resolver {
                 let traits = self.search_for_traits_containing_method(ident);
                 self.trait_map.insert(expr.id, @mut traits);
             }
-            expr_method_call(_, _, ident, _, _, _) => {
-                let traits = self.search_for_traits_containing_method(ident);
+            expr_call(ref call) => {
+                let traits = self.search_candidate_traits_for_call(call);
                 self.trait_map.insert(expr.id, @mut traits);
-            }
-            expr_binary(_, add, _, _) | expr_assign_op(_, add, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.add_trait());
-            }
-            expr_binary(_, subtract, _, _) | expr_assign_op(_, subtract, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.sub_trait());
-            }
-            expr_binary(_, mul, _, _) | expr_assign_op(_, mul, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.mul_trait());
-            }
-            expr_binary(_, div, _, _) | expr_assign_op(_, div, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.div_trait());
-            }
-            expr_binary(_, rem, _, _) | expr_assign_op(_, rem, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.rem_trait());
-            }
-            expr_binary(_, bitxor, _, _) | expr_assign_op(_, bitxor, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.bitxor_trait());
-            }
-            expr_binary(_, bitand, _, _) | expr_assign_op(_, bitand, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.bitand_trait());
-            }
-            expr_binary(_, bitor, _, _) | expr_assign_op(_, bitor, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.bitor_trait());
-            }
-            expr_binary(_, shl, _, _) | expr_assign_op(_, shl, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.shl_trait());
-            }
-            expr_binary(_, shr, _, _) | expr_assign_op(_, shr, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.shr_trait());
-            }
-            expr_binary(_, lt, _, _) | expr_binary(_, le, _, _) |
-            expr_binary(_, ge, _, _) | expr_binary(_, gt, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.ord_trait());
-            }
-            expr_binary(_, eq, _, _) | expr_binary(_, ne, _, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.eq_trait());
-            }
-            expr_unary(_, neg, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.neg_trait());
-            }
-            expr_unary(_, not, _) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.not_trait());
-            }
-            expr_index(*) => {
-                self.add_fixed_trait_for_expr(expr.id,
-                                              self.lang_items.index_trait());
             }
             _ => {
                 // Nothing to do.

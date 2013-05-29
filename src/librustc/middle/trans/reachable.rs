@@ -192,7 +192,7 @@ fn traverse_inline_body(cx: @mut ctx, body: &blk) {
                          expr_to_str(e, cx.tcx.sess.intr())))
             }
           }
-          expr_method_call(*) => {
+          expr_call(ast::CallMethod(*)) => {
             match cx.method_map.find(&e.id) {
               Some(&typeck::method_map_entry {
                   origin: typeck::method_static(did),
@@ -202,8 +202,7 @@ fn traverse_inline_body(cx: @mut ctx, body: &blk) {
               }
               Some(_) => {}
               None => {
-                cx.tcx.sess.span_bug(e.span, "expr_method_call not in \
-                                              method map");
+                cx.tcx.sess.span_bug(e.span, "method call not in method map");
               }
             }
           }

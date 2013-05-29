@@ -510,11 +510,11 @@ pub fn early_resolve_expr(ex: @ast::expr,
       }
 
       // Must resolve bounds on methods with bounded params
-      ast::expr_binary(callee_id, _, _, _) |
-      ast::expr_unary(callee_id, _, _) |
-      ast::expr_assign_op(callee_id, _, _, _) |
-      ast::expr_index(callee_id, _, _) |
-      ast::expr_method_call(callee_id, _, _, _, _, _) => {
+      ast::expr_call(ast::CallBinary(callee_id, _, _, _)) |
+      ast::expr_call(ast::CallUnary(callee_id, _, _)) |
+      ast::expr_call(ast::CallAssignOp(callee_id, _, _, _)) |
+      ast::expr_call(ast::CallIndex(callee_id, _, _)) |
+      ast::expr_call(ast::CallMethod(callee_id, _, _, _, _, _)) => {
         match ty::method_call_type_param_defs(cx.tcx, fcx.inh.method_map, ex.id) {
           Some(type_param_defs) => {
             debug!("vtable resolution on parameter bounds for method call %s",

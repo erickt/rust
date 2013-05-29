@@ -2238,7 +2238,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
         let typ = check_lit(fcx, lit);
         fcx.write_ty(id, typ);
       }
-      ast::expr_binary(callee_id, op, lhs, rhs) => {
+      ast::expr_call(ast::CallBinary(callee_id, op, lhs, rhs)) => {
         check_binop(fcx, callee_id, expr, op, lhs, rhs, expected);
         let lhs_ty = fcx.expr_ty(lhs);
         let rhs_ty = fcx.expr_ty(rhs);
@@ -2251,7 +2251,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
             fcx.write_bot(id);
         }
       }
-      ast::expr_assign_op(callee_id, op, lhs, rhs) => {
+      ast::expr_call(ast::CallAssignOp(callee_id, op, lhs, rhs)) => {
         check_binop(fcx, callee_id, expr, op, lhs, rhs, expected);
         let lhs_t = fcx.expr_ty(lhs);
         let result_t = fcx.expr_ty(expr);
@@ -2265,7 +2265,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
             fcx.write_nil(expr.id);
         }
       }
-      ast::expr_unary(callee_id, unop, oprnd) => {
+      ast::expr_call(ast::CallUnary(callee_id, unop, oprnd)) => {
         let exp_inner = do unpack_expected(fcx, expected) |sty| {
             match unop {
               ast::box(_) | ast::uniq(_) => match *sty {
@@ -2597,7 +2597,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
               fcx.write_bot(id);
           }
       }
-      ast::expr_method_call(callee_id, rcvr, ident, ref tps, ref args, sugar) => {
+      ast::expr_call(ast::CallMethod(callee_id, rcvr, ident, ref tps, ref args, sugar)) => {
         check_method_call(fcx, callee_id, expr, rcvr, ident, *args, *tps, sugar);
         let f_ty = fcx.expr_ty(rcvr);
         let arg_tys = args.map(|a| fcx.expr_ty(*a));
@@ -2780,7 +2780,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
       ast::expr_field(base, field, ref tys) => {
         check_field(fcx, expr, base, field, *tys);
       }
-      ast::expr_index(callee_id, base, idx) => {
+      ast::expr_call(ast::CallIndex(callee_id, base, idx)) => {
           check_expr(fcx, base);
           check_expr(fcx, idx);
           let raw_base_t = fcx.expr_ty(base);

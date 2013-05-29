@@ -469,13 +469,13 @@ fn trans_rvalue_datum_unadjusted(bcx: block, expr: @ast::expr) -> DatumBlock {
         ast::expr_lit(lit) => {
             return trans_immediate_lit(bcx, expr, *lit);
         }
-        ast::expr_binary(_, op, lhs, rhs) => {
+        ast::expr_call(ast::CallBinary(_, op, lhs, rhs)) => {
             // if overloaded, would be RvalueDpsExpr
             assert!(!bcx.ccx().maps.method_map.contains_key(&expr.id));
 
             return trans_binary(bcx, expr, op, lhs, rhs);
         }
-        ast::expr_unary(_, op, x) => {
+        ast::expr_call(ast::CallUnary(_, op, x)) => {
             return trans_unary_datum(bcx, expr, op, x);
         }
         ast::expr_addr_of(_, x) => {
@@ -534,7 +534,7 @@ fn trans_rvalue_stmt_unadjusted(bcx: block, expr: @ast::expr) -> block {
             return src_datum.store_to_datum(
                 bcx, src.id, DROP_EXISTING, dst_datum);
         }
-        ast::expr_assign_op(callee_id, op, dst, src) => {
+        ast::expr_call(ast::CallAssignOp(callee_id, op, dst, src)) => {
             return trans_assign_op(bcx, expr, callee_id, op, dst, src);
         }
         ast::expr_paren(a) => {
@@ -636,11 +636,11 @@ fn trans_rvalue_dps_unadjusted(bcx: block, expr: @ast::expr,
         ast::expr_copy(a) => {
             return trans_into(bcx, a, dest);
         }
-        ast::expr_call(f, ref args, _) => {
+        ast::expr_call(ast::CallFn(f, ref args, _)) => {
             return callee::trans_call(
                 bcx, expr, f, callee::ArgExprs(*args), expr.id, dest);
         }
-        ast::expr_method_call(callee_id, rcvr, _, _, ref args, _) => {
+        ast::expr_call(ast::CallMethod(callee_id, rcvr, _, _, ref args, _)) => {
             return callee::trans_method_call(bcx,
                                              expr,
                                              callee_id,
@@ -648,7 +648,7 @@ fn trans_rvalue_dps_unadjusted(bcx: block, expr: @ast::expr,
                                              callee::ArgExprs(*args),
                                              dest);
         }
-        ast::expr_binary(callee_id, _, lhs, rhs) => {
+        ast::expr_call(ast::CallBinary(callee_id, _, lhs, rhs)) => {
             // if not overloaded, would be RvalueDatumExpr
             return trans_overloaded_op(bcx,
                                        expr,
@@ -658,7 +658,7 @@ fn trans_rvalue_dps_unadjusted(bcx: block, expr: @ast::expr,
                                        expr_ty(bcx, expr),
                                        dest);
         }
-        ast::expr_unary(callee_id, _, subexpr) => {
+        ast::expr_call(ast::CallUnary(callee_id, _, subexpr)) => {
             // if not overloaded, would be RvalueDatumExpr
             return trans_overloaded_op(bcx,
                                        expr,
@@ -668,7 +668,7 @@ fn trans_rvalue_dps_unadjusted(bcx: block, expr: @ast::expr,
                                        expr_ty(bcx, expr),
                                        dest);
         }
-        ast::expr_index(callee_id, base, idx) => {
+        ast::expr_call(ast::CallIndex(callee_id, base, idx)) => {
             // if not overloaded, would be RvalueDatumExpr
             return trans_overloaded_op(bcx,
                                        expr,
@@ -690,7 +690,7 @@ fn trans_rvalue_dps_unadjusted(bcx: block, expr: @ast::expr,
                 }
             }
         }
-        ast::expr_assign_op(callee_id, op, dst, src) => {
+        ast::expr_call(ast::CallAssignOp(callee_id, op, dst, src)) => {
             return trans_assign_op(bcx, expr, callee_id, op, dst, src);
         }
         _ => {
@@ -826,10 +826,10 @@ fn trans_lvalue_unadjusted(bcx: block, expr: @ast::expr) -> DatumBlock {
         ast::expr_field(base, ident, _) => {
             trans_rec_field(bcx, base, ident)
         }
-        ast::expr_index(_, base, idx) => {
+        ast::expr_call(ast::CallIndex(_, base, idx)) => {
             trans_index(bcx, expr, base, idx)
         }
-        ast::expr_unary(_, ast::deref, base) => {
+        ast::expr_call(ast::CallUnary(_, ast::deref, base)) => {
             let basedatum = unpack_datum!(bcx, trans_to_datum(bcx, base));
             basedatum.deref(bcx, expr, 0)
         }

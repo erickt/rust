@@ -250,7 +250,7 @@ fn const_expr_unadjusted(cx: @CrateContext, e: @ast::expr) -> ValueRef {
         let _icx = cx.insn_ctxt("const_expr");
         return match e.node {
           ast::expr_lit(lit) => consts::const_lit(cx, e, *lit),
-          ast::expr_binary(_, b, e1, e2) => {
+          ast::expr_call(ast::CallBinary(_, b, e1, e2)) => {
             let te1 = const_expr(cx, e1);
             let te2 = const_expr(cx, e2);
 
@@ -332,7 +332,7 @@ fn const_expr_unadjusted(cx: @CrateContext, e: @ast::expr) -> ValueRef {
               },
             };
           },
-          ast::expr_unary(_, u, e) => {
+          ast::expr_call(ast::CallUnary(_, u, e)) => {
             let te = const_expr(cx, e);
             let ty = ty::expr_ty(cx.tcx, e);
             let is_float = ty::type_is_fp(ty);
@@ -371,7 +371,7 @@ fn const_expr_unadjusted(cx: @CrateContext, e: @ast::expr) -> ValueRef {
               }
           }
 
-          ast::expr_index(_, base, index) => {
+          ast::expr_call(ast::CallIndex(_, base, index)) => {
               let bt = ty::expr_ty_adjusted(cx.tcx, base);
               let bv = const_expr(cx, base);
               let iv = match const_eval::eval_const_expr(cx.tcx, index) {
@@ -552,7 +552,7 @@ fn const_expr_unadjusted(cx: @CrateContext, e: @ast::expr) -> ValueRef {
                 }
             }
           }
-          ast::expr_call(callee, ref args, _) => {
+          ast::expr_call(ast::CallFn(callee, ref args, _)) => {
               match cx.tcx.def_map.find(&callee.id) {
                   Some(&ast::def_struct(_)) => {
                       let ety = ty::expr_ty(cx.tcx, e);

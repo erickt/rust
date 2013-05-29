@@ -393,8 +393,7 @@ pub fn resolve_expr(expr: @ast::expr, cx: Context, visitor: visit::vt<Context>) 
     let mut new_cx = cx;
     new_cx.parent = Some(expr.id);
     match expr.node {
-        ast::expr_assign_op(*) | ast::expr_index(*) | ast::expr_binary(*) |
-        ast::expr_unary(*) | ast::expr_call(*) | ast::expr_method_call(*) => {
+        ast::expr_call(*) => {
             // FIXME(#6268) Nested method calls
             //
             // The lifetimes for a call or method call look as follows:

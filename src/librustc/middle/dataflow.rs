@@ -636,7 +636,7 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
             }
 
             ast::expr_assign(l, r) |
-            ast::expr_assign_op(_, _, l, r) => {
+            ast::expr_call(ast::CallAssignOp(_, _, l, r)) => {
                 self.walk_expr(r, in_out, loop_scopes);
                 self.walk_expr(l, in_out, loop_scopes);
             }
@@ -657,23 +657,23 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
                 }
             }
 
-            ast::expr_call(f, ref args, _) => {
+            ast::expr_call(ast::CallFn(f, ref args, _)) => {
                 self.walk_call(f.id, expr.id,
                                f, *args, in_out, loop_scopes);
             }
 
-            ast::expr_method_call(callee_id, rcvr, _, _, ref args, _) => {
+            ast::expr_call(ast::CallMethod(callee_id, rcvr, _, _, ref args, _)) => {
                 self.walk_call(callee_id, expr.id,
                                rcvr, *args, in_out, loop_scopes);
             }
 
-            ast::expr_index(callee_id, l, r) |
-            ast::expr_binary(callee_id, _, l, r) if self.is_method_call(expr) => {
+            ast::expr_call(ast::CallIndex(callee_id, l, r)) |
+            ast::expr_call(ast::CallBinary(callee_id, _, l, r)) if self.is_method_call(expr) => {
                 self.walk_call(callee_id, expr.id,
                                l, [r], in_out, loop_scopes);
             }
 
-            ast::expr_unary(callee_id, _, e) if self.is_method_call(expr) => {
+            ast::expr_call(ast::CallUnary(callee_id, _, e)) if self.is_method_call(expr) => {
                 self.walk_call(callee_id, expr.id,
                                e, [], in_out, loop_scopes);
             }
@@ -682,7 +682,7 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
                 self.walk_exprs(*exprs, in_out, loop_scopes);
             }
 
-            ast::expr_binary(_, op, l, r) if ast_util::lazy_binop(op) => {
+            ast::expr_call(ast::CallBinary(_, op, l, r)) if ast_util::lazy_binop(op) => {
                 self.walk_expr(l, in_out, loop_scopes);
                 let temp = reslice(in_out).to_vec();
                 self.walk_expr(r, in_out, loop_scopes);
@@ -690,8 +690,8 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
             }
 
             ast::expr_log(l, r) |
-            ast::expr_index(_, l, r) |
-            ast::expr_binary(_, _, l, r) => {
+            ast::expr_call(ast::CallIndex(_, l, r)) |
+            ast::expr_call(ast::CallBinary(_, _, l, r)) => {
                 self.walk_exprs([l, r], in_out, loop_scopes);
             }
 
@@ -705,7 +705,7 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
             ast::expr_loop_body(e) |
             ast::expr_do_body(e) |
             ast::expr_cast(e, _) |
-            ast::expr_unary(_, _, e) |
+            ast::expr_call(ast::CallUnary(_, _, e)) |
             ast::expr_paren(e) |
             ast::expr_vstore(e, _) |
             ast::expr_field(e, _, _) => {
