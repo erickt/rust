@@ -2557,7 +2557,7 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
         check_block_with_expected(fcx, b, expected);
         fcx.write_ty(id, fcx.node_ty(b.node.id));
       }
-      ast::expr_call(f, ref args, sugar) => {
+      ast::expr_call(ast::CallFn(f, ref args, sugar)) => {
           check_call(fcx, expr.id, expr, f, *args, sugar);
           let f_ty = fcx.expr_ty(f);
           let (args_bot, args_err) = args.foldl((false, false),

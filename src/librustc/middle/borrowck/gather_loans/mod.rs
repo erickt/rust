@@ -176,8 +176,11 @@ fn gather_loans_in_expr(ex: @ast::expr,
 
     this.id_range.add(ex.id);
 
-    for ex.get_callee_id().each |callee_id| {
-        this.id_range.add(*callee_id);
+    match ex.node {
+        ast::expr_call(ref call) => {
+            this.id_range.add(call.get_id());
+        }
+        _ => {}
     }
 
     // If this expression is borrowed, have to ensure it remains valid:

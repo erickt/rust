@@ -219,13 +219,21 @@ fn visit_expr(e: @ast::expr, wbcx: @mut WbCtxt, v: wb_vt) {
     resolve_type_vars_for_node(wbcx, e.span, e.id);
 
     resolve_method_map_entry(wbcx.fcx, e.span, e.id);
-    for e.get_callee_id().each |callee_id| {
-        resolve_method_map_entry(wbcx.fcx, e.span, *callee_id);
+
+    match e.node {
+        ast::expr_call(ref call) => {
+            resolve_method_map_entry(wbcx.fcx, e.span, call.get_id());
+        }
+        _ => {}
     }
 
     resolve_vtable_map_entry(wbcx.fcx, e.span, e.id);
-    for e.get_callee_id().each |callee_id| {
-        resolve_vtable_map_entry(wbcx.fcx, e.span, *callee_id);
+
+    match e.node {
+        ast::expr_call(ref call) => {
+            resolve_vtable_map_entry(wbcx.fcx, e.span, call.get_id());
+        }
+        _ => {}
     }
 
     match e.node {
