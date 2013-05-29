@@ -5014,20 +5014,7 @@ pub impl Resolver {
             CallIndex(*) => {
                 Some(~[self.lang_items.index_trait()])
             }
-            CallFn(*) |
-            CallBinary(_, and, _, _) | CallAssignOp(_, and, _, _) |
-            CallBinary(_, or, _, _) | CallAssignOp(_, or, _, _) |
-            CallAssignOp(_, eq, _, _) |
-            CallAssignOp(_, lt, _, _) |
-            CallAssignOp(_, le, _, _) |
-            CallAssignOp(_, gt, _, _) |
-            CallAssignOp(_, ge, _, _) |
-            CallAssignOp(_, ne, _, _) |
-            CallUnary(_, box(*), _) |
-            CallUnary(_, uniq(*), _) |
-            CallUnary(_, deref, _) => {
-                None
-            }
+            CallFn(*) | CallBinary(*) | CallAssignOp(*) | CallUnary(*) => None,
         }
     }
 
