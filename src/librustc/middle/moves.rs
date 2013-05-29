@@ -138,6 +138,7 @@ use util::common::indenter;
 
 use core::at_vec;
 use core::hashmap::{HashSet, HashMap};
+use syntax::ast;
 use syntax::ast::*;
 use syntax::ast_util;
 use syntax::visit;
@@ -320,7 +321,7 @@ pub impl VisitContext {
                 }
             }
 
-            expr_unary(_, deref, base) => {       // *base
+            expr_call(ast::CallUnary(_, deref, base)) => {       // *base
                 if !self.use_overloaded_operator(
                     expr, base, [], visitor)
                 {
@@ -334,21 +335,19 @@ pub impl VisitContext {
                 self.use_expr(base, comp_mode, visitor);
             }
 
-            expr_index(_, lhs, rhs) => {          // lhs[rhs]
-                if !self.use_overloaded_operator(
-                    expr, lhs, [rhs], visitor)
-                {
+            expr_call(ast::CallIndex(_, lhs, rhs)) => {          // lhs[rhs]
+                if !self.use_overloaded_operator(expr, lhs, [rhs], visitor) {
                     self.use_expr(lhs, comp_mode, visitor);
                     self.consume_expr(rhs, visitor);
                 }
             }
 
-            expr_call(callee, ref args, _) => {    // callee(args)
+            expr_call(ast::CallFn(callee, ref args, _)) => {    // callee(args)
                 self.use_expr(callee, Read, visitor);
                 self.use_fn_args(callee.id, *args, visitor);
             }
 
-            expr_method_call(callee_id, rcvr, _, _, ref args, _) => { // callee.m(args)
+            expr_call(ast::CallMethod(callee_id, rcvr, _, _, ref args, _)) => { // callee.m(args)
                 // Implicit self is equivalent to & mode, but every
                 // other kind should be + mode.
                 self.use_receiver(rcvr, visitor);
@@ -454,18 +453,14 @@ pub impl VisitContext {
                 self.consume_block(blk, visitor);
             }
 
-            expr_unary(_, _, lhs) => {
-                if !self.use_overloaded_operator(
-                    expr, lhs, [], visitor)
-                {
+            expr_call(ast::CallUnary(_, _, lhs)) => {
+                if !self.use_overloaded_operator(expr, lhs, [], visitor) {
                     self.consume_expr(lhs, visitor);
                 }
             }
 
-            expr_binary(_, _, lhs, rhs) => {
-                if !self.use_overloaded_operator(
-                    expr, lhs, [rhs], visitor)
-                {
+            expr_call(ast::CallBinary(_, _, lhs, rhs)) => {
+                if !self.use_overloaded_operator(expr, lhs, [rhs], visitor) {
                     self.consume_expr(lhs, visitor);
                     self.consume_expr(rhs, visitor);
                 }
@@ -490,7 +485,7 @@ pub impl VisitContext {
                 self.consume_expr(base, visitor);
             }
 
-            expr_assign_op(_, _, lhs, rhs) => {
+            expr_call(ast::CallAssignOp(_, _, lhs, rhs)) => {
                 // FIXME(#4712) --- Overloaded operators?
                 //
                 // if !self.use_overloaded_operator(

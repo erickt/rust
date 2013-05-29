@@ -16,6 +16,7 @@ use middle::ty;
 use middle::typeck;
 use util::ppaux;
 
+use syntax::ast;
 use syntax::ast::*;
 use syntax::codemap;
 use syntax::{visit, ast_util, ast_map};
@@ -91,14 +92,16 @@ pub fn check_expr(sess: Session,
                   v: visit::vt<bool>) {
     if is_const {
         match e.node {
-          expr_unary(_, deref, _) => { }
-          expr_unary(_, box(_), _) | expr_unary(_, uniq(_), _) => {
+          expr_call(ast::CallUnary(_, deref, _)) => { }
+          expr_call(ast::CallUnary(_, box(_), _)) |
+          expr_call(ast::CallUnary(_, uniq(_), _)) => {
             sess.span_err(e.span,
                           "disallowed operator in constant expression");
             return;
           }
           expr_lit(@codemap::spanned {node: lit_str(_), _}) => { }
-          expr_binary(_, _, _, _) | expr_unary(_, _, _) => {
+          expr_call(ast::CallBinary(_, _, _, _)) |
+          expr_call(ast::CallUnary(_, _, _)) => {
             if method_map.contains_key(&e.id) {
                 sess.span_err(e.span, "user-defined operators are not \
                                        allowed in constant expressions");
@@ -141,7 +144,7 @@ pub fn check_expr(sess: Session,
               }
             }
           }
-          expr_call(callee, _, NoSugar) => {
+          expr_call(ast::CallFn(callee, _, NoSugar)) => {
             match def_map.find(&callee.id) {
                 Some(&def_struct(*)) => {}    // OK.
                 Some(&def_variant(*)) => {}    // OK.
@@ -159,7 +162,7 @@ pub fn check_expr(sess: Session,
           expr_vec(_, m_imm) |
           expr_addr_of(m_imm, _) |
           expr_field(*) |
-          expr_index(*) |
+          expr_call(ast::CallIndex(*)) |
           expr_tup(*) |
           expr_struct(_, _, None) => { }
           expr_addr_of(*) => {

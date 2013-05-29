@@ -612,8 +612,12 @@ pub trait get_node_info {
 
 impl get_node_info for @ast::expr {
     fn info(&self) -> Option<NodeInfo> {
+        let callee_id = match self.node {
+            ast::expr_call(ref call) => Some(call.get_id()),
+            _ => None,
+        };
         Some(NodeInfo {id: self.id,
-                       callee_id: self.get_callee_id(),
+                       callee_id: callee_id,
                        span: self.span})
     }
 }

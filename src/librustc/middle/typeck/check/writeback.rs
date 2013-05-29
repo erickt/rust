@@ -235,14 +235,14 @@ fn visit_expr(e: @ast::expr, wbcx: @mut WbCtxt, v: wb_vt) {
             }
         }
 
-        ast::expr_binary(callee_id, _, _, _) |
-        ast::expr_unary(callee_id, _, _) |
-        ast::expr_assign_op(callee_id, _, _, _) |
-        ast::expr_index(callee_id, _, _) => {
+        ast::expr_call(ast::CallBinary(callee_id, _, _, _)) |
+        ast::expr_call(ast::CallUnary(callee_id, _, _)) |
+        ast::expr_call(ast::CallAssignOp(callee_id, _, _, _)) |
+        ast::expr_call(ast::CallIndex(callee_id, _, _)) => {
             maybe_resolve_type_vars_for_node(wbcx, e.span, callee_id);
         }
 
-        ast::expr_method_call(callee_id, _, _, _, _, _) => {
+        ast::expr_call(ast::CallMethod(callee_id, _, _, _, _, _)) => {
             // We must always have written in a callee ID type for these.
             resolve_type_vars_for_node(wbcx, e.span, callee_id);
         }

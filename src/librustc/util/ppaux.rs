@@ -82,8 +82,8 @@ pub fn explain_region_and_span(cx: ctxt, region: ty::Region)
           }
           Some(&ast_map::node_expr(expr)) => {
             match expr.node {
-              ast::expr_call(*) => explain_span(cx, "call", expr.span),
-              ast::expr_method_call(*) => {
+              ast::expr_call(ast::CallFn(*)) => explain_span(cx, "call", expr.span),
+              ast::expr_call(ast::CallMethod(*)) => {
                 explain_span(cx, "method call", expr.span)
               },
               ast::expr_match(*) => explain_span(cx, "match", expr.span),
@@ -173,7 +173,7 @@ pub fn re_scope_id_to_str(cx: ctxt, node_id: ast::node_id) -> ~str {
       }
       Some(&ast_map::node_expr(expr)) => {
         match expr.node {
-          ast::expr_call(*) => {
+          ast::expr_call(ast::CallFn(*)) => {
             fmt!("<call at %s>",
                  cx.sess.codemap.span_to_str(expr.span))
           }
@@ -181,10 +181,10 @@ pub fn re_scope_id_to_str(cx: ctxt, node_id: ast::node_id) -> ~str {
             fmt!("<match at %s>",
                  cx.sess.codemap.span_to_str(expr.span))
           }
-          ast::expr_assign_op(*) |
-          ast::expr_unary(*) |
-          ast::expr_binary(*) |
-          ast::expr_index(*) => {
+          ast::expr_call(ast::CallAssignOp(*)) |
+          ast::expr_call(ast::CallUnary(*)) |
+          ast::expr_call(ast::CallBinary(*)) |
+          ast::expr_call(ast::CallIndex(*)) => {
             fmt!("<method at %s>",
                  cx.sess.codemap.span_to_str(expr.span))
           }

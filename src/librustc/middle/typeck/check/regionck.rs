@@ -249,20 +249,20 @@ fn visit_expr(expr: @ast::expr, rcx: @mut Rcx, v: rvt) {
         // operators is a hopeless mess and I can't figure out how to
         // represent it. - ndm
         //
-        // ast::expr_assign_op(*) |
+        // ast::expr_call(ast::CallAssignOp(*)) |
 
-        ast::expr_index(*) |
-        ast::expr_binary(*) |
-        ast::expr_unary(*) if has_method_map => {
+        ast::expr_call(ast::CallIndex(*)) |
+        ast::expr_call(ast::CallBinary(*)) |
+        ast::expr_call(ast::CallUnary(*)) if has_method_map => {
             tcx.region_maps.record_cleanup_scope(expr.id);
         }
-        ast::expr_binary(_, ast::and, lhs, rhs) |
-        ast::expr_binary(_, ast::or, lhs, rhs) => {
+        ast::expr_call(ast::CallBinary(_, ast::and, lhs, rhs)) |
+        ast::expr_call(ast::CallBinary(_, ast::or, lhs, rhs)) => {
             tcx.region_maps.record_cleanup_scope(lhs.id);
             tcx.region_maps.record_cleanup_scope(rhs.id);
         }
-        ast::expr_call(*) |
-        ast::expr_method_call(*) => {
+        ast::expr_call(ast::CallFn(*)) |
+        ast::expr_call(ast::CallMethod(*)) => {
             tcx.region_maps.record_cleanup_scope(expr.id);
         }
         ast::expr_match(_, ref arms) => {
@@ -305,37 +305,37 @@ fn visit_expr(expr: @ast::expr, rcx: @mut Rcx, v: rvt) {
     }
 
     match expr.node {
-        ast::expr_call(callee, ref args, _) => {
+        ast::expr_call(ast::CallFn(callee, ref args, _)) => {
             constrain_callee(rcx, callee.id, expr, callee);
             constrain_call(rcx, callee.id, expr, None, *args, false);
         }
 
-        ast::expr_method_call(callee_id, arg0, _, _, ref args, _) => {
+        ast::expr_call(ast::CallMethod(callee_id, arg0, _, _, ref args, _)) => {
             constrain_call(rcx, callee_id, expr, Some(arg0), *args, false);
         }
 
-        ast::expr_index(callee_id, lhs, rhs) |
-        ast::expr_assign_op(callee_id, _, lhs, rhs) |
-        ast::expr_binary(callee_id, _, lhs, rhs) if has_method_map => {
-            // As `expr_method_call`, but the call is via an
+        ast::expr_call(ast::CallIndex(callee_id, lhs, rhs)) |
+        ast::expr_call(ast::CallAssignOp(callee_id, _, lhs, rhs)) |
+        ast::expr_call(ast::CallBinary(callee_id, _, lhs, rhs)) if has_method_map => {
+            // As `CallMethod`, but the call is via an
             // overloaded op.  Note that we (sadly) currently use an
             // implicit "by ref" sort of passing style here.  This
             // should be converted to an adjustment!
             constrain_call(rcx, callee_id, expr, Some(lhs), [rhs], true);
         }
 
-        ast::expr_unary(callee_id, _, lhs) if has_method_map => {
+        ast::expr_call(ast::CallUnary(callee_id, _, lhs)) if has_method_map => {
             // As above.
             constrain_call(rcx, callee_id, expr, Some(lhs), [], true);
         }
 
-        ast::expr_unary(_, ast::deref, base) => {
+        ast::expr_call(ast::CallUnary(_, ast::deref, base)) => {
             // For *a, the lifetime of a must enclose the deref
             let base_ty = rcx.resolve_node_type(base.id);
             constrain_derefs(rcx, expr, 1, base_ty);
         }
 
-        ast::expr_index(_, vec_expr, _) => {
+        ast::expr_call(ast::CallIndex(_, vec_expr, _)) => {
             // For a[b], the lifetime of a must enclose the deref
             let vec_type = rcx.resolve_expr_type_adjusted(vec_expr);
             constrain_index(rcx, expr, vec_type);
@@ -443,8 +443,7 @@ fn constrain_callee(rcx: @mut Rcx,
 }
 
 fn constrain_call(rcx: @mut Rcx,
-                  // might be expr_call, expr_method_call, or an overloaded
-                  // operator
+                  // might be CallFn, CallMethod, or an overloaded operator
                   callee_id: ast::node_id,
                   call_expr: @ast::expr,
                   receiver: Option<@ast::expr>,
@@ -966,14 +965,14 @@ pub mod guarantor {
 
         debug!("guarantor(expr=%s)", rcx.fcx.expr_to_str(expr));
         match expr.node {
-            ast::expr_unary(_, ast::deref, b) => {
+            ast::expr_call(ast::CallUnary(_, ast::deref, b)) => {
                 let cat = categorize(rcx, b);
                 guarantor_of_deref(&cat)
             }
             ast::expr_field(b, _, _) => {
                 categorize(rcx, b).guarantor
             }
-            ast::expr_index(_, b, _) => {
+            ast::expr_call(ast::CallIndex(_, b, _)) => {
                 let cat = categorize(rcx, b);
                 guarantor_of_deref(&cat)
             }
@@ -994,9 +993,7 @@ pub mod guarantor {
             ast::expr_inline_asm(*) |
             ast::expr_mac(*) |
             ast::expr_lit(_) |
-            ast::expr_unary(*) |
             ast::expr_addr_of(*) |
-            ast::expr_binary(*) |
             ast::expr_vstore(*) |
             ast::expr_break(*) |
             ast::expr_again(*) |
@@ -1005,10 +1002,8 @@ pub mod guarantor {
             ast::expr_while(*) |
             ast::expr_loop(*) |
             ast::expr_assign(*) |
-            ast::expr_assign_op(*) |
             ast::expr_cast(*) |
             ast::expr_call(*) |
-            ast::expr_method_call(*) |
             ast::expr_struct(*) |
             ast::expr_tup(*) |
             ast::expr_if(*) |

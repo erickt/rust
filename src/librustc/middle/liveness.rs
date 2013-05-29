@@ -117,6 +117,7 @@ use core::old_iter;
 use core::to_str;
 use core::uint;
 use core::vec;
+use syntax::ast;
 use syntax::ast::*;
 use syntax::codemap::span;
 use syntax::parse::token::special_idents;
@@ -497,18 +498,18 @@ fn visit_expr(expr: @expr, this: @mut IrMaps, vt: vt<@mut IrMaps>) {
         this.add_live_node_for_node(expr.id, ExprNode(expr.span));
         visit::visit_expr(expr, this, vt);
       }
-      expr_binary(_, op, _, _) if ast_util::lazy_binop(op) => {
+      ast::expr_call(ast::CallBinary(_, op, _, _)) if ast_util::lazy_binop(op) => {
         this.add_live_node_for_node(expr.id, ExprNode(expr.span));
         visit::visit_expr(expr, this, vt);
       }
 
       // otherwise, live nodes are not required:
-      expr_index(*) | expr_field(*) | expr_vstore(*) | expr_vec(*) |
-      expr_call(*) | expr_method_call(*) | expr_tup(*) | expr_log(*) |
-      expr_binary(*) | expr_addr_of(*) | expr_copy(*) | expr_loop_body(*) |
-      expr_do_body(*) | expr_cast(*) | expr_unary(*) | expr_break(_) |
+      expr_field(*) | expr_vstore(*) | expr_vec(*) |
+      expr_call(*) | expr_tup(*) | expr_log(*) |
+      expr_addr_of(*) | expr_copy(*) | expr_loop_body(*) |
+      expr_do_body(*) | expr_cast(*) | expr_break(_) |
       expr_again(_) | expr_lit(_) | expr_ret(*) | expr_block(*) |
-      expr_assign(*) | expr_assign_op(*) | expr_mac(*) |
+      expr_assign(*) | expr_mac(*) |
       expr_struct(*) | expr_repeat(*) | expr_paren(*) |
       expr_inline_asm(*) => {
           visit::visit_expr(expr, this, vt);
@@ -1126,7 +1127,7 @@ pub impl Liveness {
             self.propagate_through_expr(r, succ)
           }
 
-          expr_assign_op(_, _, l, r) => {
+          expr_call(ast::CallAssignOp(_, _, l, r)) => {
             // see comment on lvalues in
             // propagate_through_lvalue_components()
             let succ = self.write_lvalue(l, succ, ACC_WRITE|ACC_READ);
@@ -1156,7 +1157,7 @@ pub impl Liveness {
             }
           }
 
-          expr_call(f, ref args, _) => {
+          expr_call(ast::CallFn(f, ref args, _)) => {
             // calling a fn with bot return type means that the fn
             // will fail, and hence the successors can be ignored
             let t_ret = ty::ty_fn_ret(ty::expr_ty(self.tcx, f));
@@ -1166,7 +1167,7 @@ pub impl Liveness {
             self.propagate_through_expr(f, succ)
           }
 
-          expr_method_call(callee_id, rcvr, _, _, ref args, _) => {
+          expr_call(ast::CallMethod(callee_id, rcvr, _, _, ref args, _)) => {
             // calling a method with bot return type means that the method
             // will fail, and hence the successors can be ignored
             let t_ret = ty::ty_fn_ret(ty::node_id_to_type(self.tcx, callee_id));
@@ -1180,7 +1181,7 @@ pub impl Liveness {
             self.propagate_through_exprs(*exprs, succ)
           }
 
-          expr_binary(_, op, l, r) if ast_util::lazy_binop(op) => {
+          expr_call(ast::CallBinary(_, op, l, r)) if ast_util::lazy_binop(op) => {
             let r_succ = self.propagate_through_expr(r, succ);
 
             let ln = self.live_node(expr.id, expr.span);
@@ -1191,8 +1192,8 @@ pub impl Liveness {
           }
 
           expr_log(l, r) |
-          expr_index(_, l, r) |
-          expr_binary(_, _, l, r) => {
+          expr_call(ast::CallIndex(_, l, r)) |
+          expr_call(ast::CallBinary(_, _, l, r)) => {
             self.propagate_through_exprs([l, r], succ)
           }
 
@@ -1201,7 +1202,7 @@ pub impl Liveness {
           expr_loop_body(e) |
           expr_do_body(e) |
           expr_cast(e, _) |
-          expr_unary(_, _, e) |
+          expr_call(ast::CallUnary(_, _, e)) |
           expr_paren(e) => {
             self.propagate_through_expr(e, succ)
           }
@@ -1438,7 +1439,7 @@ fn check_expr(expr: @expr, this: @Liveness, vt: vt<@Liveness>) {
         visit::visit_expr(expr, this, vt);
       }
 
-      expr_assign_op(_, _, l, _) => {
+      expr_call(ast::CallAssignOp(_, _, l, _)) => {
         this.check_lvalue(l, vt);
 
         visit::visit_expr(expr, this, vt);
@@ -1464,11 +1465,11 @@ fn check_expr(expr: @expr, this: @Liveness, vt: vt<@Liveness>) {
       }
 
       // no correctness conditions related to liveness
-      expr_call(*) | expr_method_call(*) | expr_if(*) | expr_match(*) |
-      expr_while(*) | expr_loop(*) | expr_index(*) | expr_field(*) |
+      expr_call(*) | expr_if(*) | expr_match(*) |
+      expr_while(*) | expr_loop(*) | expr_field(*) |
       expr_vstore(*) | expr_vec(*) | expr_tup(*) | expr_log(*) |
-      expr_binary(*) | expr_copy(*) | expr_loop_body(*) | expr_do_body(*) |
-      expr_cast(*) | expr_unary(*) | expr_ret(*) | expr_break(*) |
+      expr_copy(*) | expr_loop_body(*) | expr_do_body(*) |
+      expr_cast(*) | expr_ret(*) | expr_break(*) |
       expr_again(*) | expr_lit(_) | expr_block(*) |
       expr_mac(*) | expr_addr_of(*) | expr_struct(*) | expr_repeat(*) |
       expr_paren(*) | expr_fn_block(*) | expr_path(*) | expr_self(*) => {

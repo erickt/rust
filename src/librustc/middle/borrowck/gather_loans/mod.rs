@@ -231,8 +231,8 @@ fn gather_loans_in_expr(ex: @ast::expr,
         visit::visit_expr(ex, this, vt);
       }
 
-      ast::expr_index(_, _, arg) |
-      ast::expr_binary(_, _, _, arg)
+      ast::expr_call(ast::CallIndex(_, _, arg)) |
+      ast::expr_call(ast::CallBinary(_, _, _, arg))
       if this.bccx.method_map.contains_key(&ex.id) => {
           // Arguments in method calls are always passed by ref.
           //

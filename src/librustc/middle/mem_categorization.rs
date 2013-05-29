@@ -390,7 +390,7 @@ pub impl mem_categorization_ctxt {
 
         let expr_ty = self.expr_ty(expr);
         match expr.node {
-          ast::expr_unary(_, ast::deref, e_base) => {
+          ast::expr_call(ast::CallUnary(_, ast::deref, e_base)) => {
             if self.method_map.contains_key(&expr.id) {
                 return self.cat_rvalue(expr, expr_ty);
             }
@@ -408,7 +408,7 @@ pub impl mem_categorization_ctxt {
             self.cat_field(expr, base_cmt, f_name, self.expr_ty(expr))
           }
 
-          ast::expr_index(_, base, _) => {
+          ast::expr_call(ast::CallIndex(_, base, _)) => {
             if self.method_map.contains_key(&expr.id) {
                 return self.cat_rvalue(expr, expr_ty);
             }
@@ -425,12 +425,12 @@ pub impl mem_categorization_ctxt {
           ast::expr_paren(e) => self.cat_expr_unadjusted(e),
 
           ast::expr_addr_of(*) | ast::expr_call(*) |
-          ast::expr_assign(*) | ast::expr_assign_op(*) |
+          ast::expr_assign(*) |
           ast::expr_fn_block(*) | ast::expr_ret(*) | ast::expr_loop_body(*) |
-          ast::expr_do_body(*) | ast::expr_unary(*) |
-          ast::expr_method_call(*) | ast::expr_copy(*) | ast::expr_cast(*) |
+          ast::expr_do_body(*) | 
+          ast::expr_copy(*) | ast::expr_cast(*) |
           ast::expr_vstore(*) | ast::expr_vec(*) | ast::expr_tup(*) |
-          ast::expr_if(*) | ast::expr_log(*) | ast::expr_binary(*) |
+          ast::expr_if(*) | ast::expr_log(*) |
           ast::expr_while(*) | ast::expr_block(*) | ast::expr_loop(*) |
           ast::expr_match(*) | ast::expr_lit(*) | ast::expr_break(*) |
           ast::expr_mac(*) | ast::expr_again(*) | ast::expr_struct(*) |

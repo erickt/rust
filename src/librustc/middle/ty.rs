@@ -3176,7 +3176,7 @@ pub fn expr_kind(tcx: ctxt,
         // generated via DPS.  However, assign_op (e.g., `x += y`) is an
         // exception, as its result is always unit.
         return match expr.node {
-            ast::expr_assign_op(*) => RvalueStmtExpr,
+            ast::expr_call(ast::CallAssignOp(*)) => RvalueStmtExpr,
             _ => RvalueDpsExpr
         };
     }
@@ -3207,14 +3207,14 @@ pub fn expr_kind(tcx: ctxt,
             }
         }
 
-        ast::expr_unary(_, ast::deref, _) |
+        ast::expr_call(ast::CallUnary(_, ast::deref, _)) |
         ast::expr_field(*) |
-        ast::expr_index(*) => {
+        ast::expr_call(ast::CallIndex(*)) => {
             LvalueExpr
         }
 
-        ast::expr_call(*) |
-        ast::expr_method_call(*) |
+        ast::expr_call(ast::CallFn(*)) |
+        ast::expr_call(ast::CallMethod(*)) |
         ast::expr_struct(*) |
         ast::expr_tup(*) |
         ast::expr_if(*) |
@@ -3266,14 +3266,14 @@ pub fn expr_kind(tcx: ctxt,
         ast::expr_loop(*) |
         ast::expr_assign(*) |
         ast::expr_inline_asm(*) |
-        ast::expr_assign_op(*) => {
+        ast::expr_call(ast::CallAssignOp(*)) => {
             RvalueStmtExpr
         }
 
         ast::expr_lit(_) | // Note: lit_str is carved out above
-        ast::expr_unary(*) |
+        ast::expr_call(ast::CallUnary(*)) |
         ast::expr_addr_of(*) |
-        ast::expr_binary(*) |
+        ast::expr_call(ast::CallBinary(*)) |
         ast::expr_vstore(_, ast::expr_vstore_box) |
         ast::expr_vstore(_, ast::expr_vstore_mut_box) |
         ast::expr_vstore(_, ast::expr_vstore_uniq) => {

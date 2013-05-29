@@ -22,8 +22,8 @@ use middle::typeck::{method_static, method_trait};
 
 use core::util::ignore;
 use syntax::ast::{decl_item, def, def_fn, def_id, def_static_method};
-use syntax::ast::{def_variant, expr_field, expr_method_call, expr_path};
-use syntax::ast::{expr_struct, expr_unary, ident, inherited, item_enum};
+use syntax::ast::{def_variant, expr_call, expr_field, expr_path};
+use syntax::ast::{expr_struct, ident, inherited, item_enum};
 use syntax::ast::{item_foreign_mod, item_fn, item_impl, item_struct};
 use syntax::ast::{item_trait, local_crate, node_id, pat_struct, Path};
 use syntax::ast::{private, provided, public, required, stmt_decl, visibility};
@@ -448,7 +448,7 @@ pub fn check_crate(tcx: ty::ctxt,
                         _ => {}
                     }
                 }
-                expr_method_call(_, base, ident, _, _, _) => {
+                expr_call(ast::CallMethod(_, base, ident, _, _, _)) => {
                     // Ditto
                     match ty::get(ty::type_autoderef(tcx, ty::expr_ty(tcx,
                                                           base))).sty {
@@ -520,7 +520,7 @@ pub fn check_crate(tcx: ty::ctxt,
                         }
                     }
                 }
-                expr_unary(_, ast::deref, operand) => {
+                expr_call(ast::CallUnary(_, ast::deref, operand)) => {
                     // In *e, we need to check that if e's type is an
                     // enum type t, then t's first variant is public or
                     // privileged. (We can assume it has only one variant
