@@ -41,7 +41,8 @@ use vec::{OwnedVector, OwnedCopyableVector, ImmutableVector};
 Section: Conditions
 */
 condition! {
-    not_utf8: (~str) -> ~str;
+    // FIXME (#6009): uncomment `pub` after expansion support lands.
+    /*pub*/ not_utf8: (&'static str, uint) -> ~str;
 }
 
 /*
@@ -59,9 +60,8 @@ pub fn from_utf8(v: ~[u8]) -> ~str {
     use str::not_utf8::cond;
 
     if !is_utf8(v) {
-        let first_bad_byte = vec::find(v, |b| !is_utf8([*b])).get();
-        cond.raise(fmt!("from_utf8: input is not UTF-8; first bad byte is %u",
-                        first_bad_byte as uint))
+        let first_bad_byte = v.position(|b| !is_utf8([*b])).unwrap();
+        cond.raise(("input is not UTF-8", first_bad_byte))
     }
     else {
         return unsafe { raw::from_utf8(v) }
@@ -2793,8 +2793,9 @@ mod tests {
         use str::not_utf8::cond;
 
         let mut error_happened = false;
-        let _x = do cond.trap(|err| {
-            assert_eq!(err, ~"from_utf8: input is not UTF-8; first bad byte is 255");
+        let _x = do cond.trap(|(err, pos)| {
+            assert_eq!(err, "input is not UTF-8");
+            assert_eq!(pos, 0);
             error_happened = true;
             ~""
         }).in {
