@@ -1146,11 +1146,6 @@ pub mod raw {
         from_utf8_buf(::cast::transmute(c_str))
     }
 
-    /// Create a Rust string from a `*c_char` buffer of the given length
-    pub unsafe fn from_c_str_len(c_str: *libc::c_char, len: uint) -> ~str {
-        from_utf8_buf_len(::cast::transmute(c_str), len)
-    }
-
     /// Converts a vector of bytes to a new owned string.
     pub unsafe fn from_utf8(mut v: ~[u8]) -> ~str {
         // Make sure the string is NULL terminated.
