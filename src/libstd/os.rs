@@ -192,13 +192,10 @@ pub fn env() -> ~[(~str,~str)] {
             }
             let mut curr_ptr: uint = ch as uint;
             let mut result = ~[];
-            while(*(curr_ptr as *libc::c_char) != 0 as libc::c_char) {
-                let env_pair = str::raw::from_c_str(
-                    curr_ptr as *libc::c_char);
+            while *(curr_ptr as *libc::c_char) != 0 as libc::c_char {
+                let env_pair = str::raw::from_c_str(curr_ptr as *libc::c_char);
                 result.push(env_pair);
-                curr_ptr +=
-                    libc::strlen(curr_ptr as *libc::c_char) as uint
-                    + 1;
+                curr_ptr += libc::strlen(curr_ptr as *libc::c_char) as uint + 1;
             }
             FreeEnvironmentStringsA(ch);
             result
@@ -209,16 +206,15 @@ pub fn env() -> ~[(~str,~str)] {
                 unsafe fn rust_env_pairs() -> **libc::c_char;
             }
             let environ = rust_env_pairs();
-            if (environ as uint == 0) {
+            if environ.is_null() {
                 fail!("os::env() failure getting env string from OS: %s", os::last_os_error());
             }
             let mut result = ~[];
-            ptr::array_each(environ, |e| {
+            for ptr::array_each(environ) |e| {
                 let env_pair = str::raw::from_c_str(e);
-                debug!("get_env_pairs: %s",
-                       env_pair);
+                debug!("get_env_pairs: %s", env_pair);
                 result.push(env_pair);
-            });
+            }
             result
         }
 
@@ -226,8 +222,7 @@ pub fn env() -> ~[(~str,~str)] {
             let mut pairs = ~[];
             for input.each |p| {
                 let vs: ~[&str] = p.splitn_iter('=', 1).collect();
-                debug!("splitting: len: %u",
-                    vs.len());
+                debug!("splitting: len: %u", vs.len());
                 assert_eq!(vs.len(), 2);
                 pairs.push((vs[0].to_owned(), vs[1].to_owned()));
             }
