@@ -197,8 +197,8 @@ pub fn begin_unwind_(msg: *c_char, file: *c_char, line: size_t) -> ! {
         _ => {
             unsafe {
                 // XXX: Bad re-allocations. fail! needs some refactoring
-                let msg = str::raw::from_c_str(msg);
-                let file = str::raw::from_c_str(file);
+                let msg = str::from_c_str(msg);
+                let file = str::from_c_str(file);
 
                 let outmsg = fmt!("%s at line %i of file %s", msg, line as int, file);
 

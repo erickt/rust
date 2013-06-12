@@ -63,7 +63,7 @@ pub unsafe fn read(prompt: &str) -> Option<~str> {
         let line = rustrt::linenoise(buf);
 
         if line.is_null() { None }
-        else { Some(str::raw::from_c_str(line)) }
+        else { Some(str::from_c_str(line)) }
     }
 }
 
@@ -80,7 +80,7 @@ pub unsafe fn complete(cb: CompletionCb) {
             let cb = *local_data::local_data_get(complete_key)
                 .get();
 
-            do cb(str::raw::from_c_str(line)) |suggestion| {
+            do cb(str::from_c_str(line)) |suggestion| {
                 do str::as_c_str(suggestion) |buf| {
                     rustrt::linenoiseAddCompletion(completions, buf);
                 }

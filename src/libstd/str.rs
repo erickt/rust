@@ -152,6 +152,30 @@ pub fn from_utf8_slice_with_null<'a>(v: &'a [u8]) -> &'a str {
     unsafe { raw::from_utf8_slice_with_null(v) }
 }
 
+/**
+ * Convert a raw `*u8` pointer to a UTF-8 string.
+ *
+ * # Failure
+ *
+ * Fails if invalid UTF-8
+ */
+pub unsafe fn from_utf8_buf(buf: *u8) -> ~str {
+    let len = raw::buf_len(buf);
+    assert!(is_utf8(cast::transmute((buf, len))));
+    raw::from_utf8_buf_len(buf, len)
+}
+
+/**
+ * Convert a raw C string to a UTF-8 string.
+ *
+ * # Failure
+ *
+ * Fails if invalid UTF-8
+ */
+pub unsafe fn from_c_str(c_str: *libc::c_char) -> ~str {
+    from_utf8_buf(cast::transmute(c_str))
+}
+
 impl ToStr for ~str {
     #[inline(always)]
     fn to_str(&self) -> ~str { self.to_owned() }
@@ -1088,7 +1112,8 @@ pub mod raw {
         from_utf8_buf_len(buf, buf_len(buf))
     }
 
-    /// Create a Rust string from a *u8 buffer of the given length
+    /// Create a Rust string from a *u8 buffer of the given length.
+    /// This does not check if there are null characters in the buffer.
     pub unsafe fn from_utf8_buf_len(buf: *const u8, len: uint) -> ~str {
         let mut v = vec::with_capacity(len + 1);
         vec::as_mut_buf(v, |vbuf, _len| {
@@ -1097,8 +1122,7 @@ pub mod raw {
         vec::raw::set_len(&mut v, len);
         v.push(0u8);
 
-        assert!(is_utf8(v));
-        return ::cast::transmute(v);
+        cast::transmute(v)
     }
 
     /// Create a Rust string from a null-terminated C string
@@ -3074,7 +3098,7 @@ mod tests {
         unsafe {
             let a = ~[65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 0u8];
             let b = vec::raw::to_ptr(a);
-            let c = raw::from_utf8_buf(b);
+            let c = from_utf8_buf(b);
             assert_eq!(c, ~"AAAAAAA");
         }
     }
@@ -3176,7 +3200,7 @@ mod tests {
         unsafe {
             let s = ~"hello";
             let sb = as_buf(s, |b, _l| b);
-            let s_cstr = raw::from_utf8_buf(sb);
+            let s_cstr = from_utf8_buf(sb);
             assert_eq!(s_cstr, s);
         }
     }
