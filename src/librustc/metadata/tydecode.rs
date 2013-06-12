@@ -99,7 +99,7 @@ pub fn parse_ident(st: &mut PState, last: char) -> ast::ident {
 
 fn parse_ident_(st: &mut PState, is_last: @fn(char) -> bool) -> ast::ident {
     do scan(st, is_last) |v| {
-        st.tcx.sess.ident_of(str::from_utf8_slice(v))
+        st.tcx.sess.ident_of(str::utf8_as_slice(v))
     }
 }
 
@@ -453,7 +453,7 @@ fn parse_abi_set(st: &mut PState) -> AbiSet {
     let mut abis = AbiSet::empty();
     while peek(st) != ']' {
         let abi = do scan(st, |c| c == ',') |v| {
-            let abi_str = str::from_utf8_slice(v);
+            let abi_str = str::utf8_as_slice(v);
             abi::lookup(abi_str).expect(abi_str)
         };
         abis.add(abi);

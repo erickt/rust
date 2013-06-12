@@ -137,7 +137,7 @@ unsafe fn fail_borrowed(box: *mut BoxRepr, file: *c_char, line: size_t) {
             for borrow_list.rev_iter().advance |entry| {
                 if entry.box == box {
                     msg.push_str(sep);
-                    let filename = str::from_c_str(entry.file);
+                    let filename = str::c_str_as_slice(entry.file);
                     msg.push_str(filename);
                     msg.push_str(fmt!(":%u", entry.line as uint));
                     sep = " and at ";

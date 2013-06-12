@@ -95,7 +95,7 @@ pub mod reader {
         }
 
         pub fn as_str_slice<'a>(&'a self) -> &'a str {
-            str::from_utf8_slice(self.data.slice(self.start, self.end))
+            str::utf8_as_slice(self.data.slice(self.start, self.end))
         }
 
         pub fn as_str(&self) -> ~str {

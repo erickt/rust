@@ -204,7 +204,7 @@ fn get_metadata_section(os: os,
         let si = mk_section_iter(of.llof);
         while llvm::LLVMIsSectionIteratorAtEnd(of.llof, si.llsi) == False {
             let name_buf = llvm::LLVMGetSectionName(si.llsi);
-            let name = unsafe { str::from_c_str(name_buf) };
+            let name = unsafe { str::c_str_as_slice(name_buf) };
             debug!("get_metadata_section: name %s", name);
             if name == read_meta_section_name(os) {
                 let cbuf = llvm::LLVMGetSectionContents(si.llsi);
