@@ -66,7 +66,7 @@ pub fn run(lib_path: &str,
 
     Result {
         status: status,
-        out: str::from_bytes(output),
-        err: str::from_bytes(error)
+        out: str::from_utf8(output),
+        err: str::from_utf8(error)
     }
 }
