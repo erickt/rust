@@ -95,7 +95,7 @@ pub fn fill_charp_buf(f: &fn(*mut c_char, size_t) -> bool)
     do vec::as_mut_buf(buf) |b, sz| {
         if f(b, sz as size_t) {
             unsafe {
-                Some(str::raw::from_buf(b as *u8))
+                Some(str::raw::from_utf8_buf(b as *u8))
             }
         } else {
             None
@@ -243,10 +243,10 @@ pub fn getenv(n: &str) -> Option<~str> {
         do with_env_lock {
             let s = str::as_c_str(n, |s| libc::getenv(s));
             if ptr::null::<u8>() == cast::transmute(s) {
-                option::None::<~str>
+                option::None
             } else {
                 let s = cast::transmute(s);
-                option::Some::<~str>(str::raw::from_buf(s))
+                option::Some(str::raw::from_utf8_buf(s))
             }
         }
     }
