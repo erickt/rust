@@ -1266,17 +1266,6 @@ pub mod raw {
                                    new_len);
         *null = 0u8;
     }
-
-    #[test]
-    fn test_from_utf8_buf_len() {
-        unsafe {
-            let a = ~[65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 0u8];
-            let b = vec::raw::to_ptr(a);
-            let c = from_utf8_buf_len(b, 3u);
-            assert_eq!(c, ~"AAA");
-        }
-    }
-
 }
 
 #[cfg(not(test))]
@@ -3140,6 +3129,16 @@ mod tests {
         assert_eq!((~"abc").as_bytes_with_null_consume(),
                    ~['a' as u8, 'b' as u8, 'c' as u8, 0]);
         assert_eq!(s.as_bytes_with_null_consume(), v);
+    }
+
+    #[test]
+    fn test_raw_from_utf8_buf_len() {
+        unsafe {
+            let a = ~[65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 0u8];
+            let b = vec::raw::to_ptr(a);
+            let c = unsafe { raw::from_utf8_buf_len(b, 3u) };
+            assert_eq!(c, ~"AAA");
+        }
     }
 
     #[test]
