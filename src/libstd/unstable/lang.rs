@@ -380,7 +380,7 @@ pub unsafe fn check_not_borrowed(a: *u8,
 #[lang="strdup_uniq"]
 #[inline(always)]
 pub unsafe fn strdup_uniq(ptr: *c_uchar, len: uint) -> ~str {
-    str::from_utf8_buf_len(ptr, len)
+    str::raw::utf8_buf_len_as_slice(ptr, len).to_owned()
 }
 
 #[lang="start"]
