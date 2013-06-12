@@ -1073,23 +1073,30 @@ pub mod raw {
     use cast;
     use libc;
     use ptr;
+    use str;
     use str::raw;
     use str::{as_buf, is_utf8};
     use vec;
 
-    /// Create a Rust string from a null-terminated *u8 buffer
-    pub unsafe fn from_buf(buf: *u8) -> ~str {
-        let mut (curr, i) = (buf, 0u);
-        while *curr != 0u8 {
-            i += 1u;
+    /// Count the number of bytes in a null-terminated *u8 buffer
+    pub unsafe fn buf_len(buf: *u8) -> uint {
+        let mut curr = buf;
+        let mut i = 0;
+        while *curr != 0 {
+            i += 1;
             curr = ptr::offset(buf, i);
         }
-        return from_buf_len(buf, i);
+        i
+    }
+
+    /// Create a Rust string from a null-terminated *u8 buffer
+    pub unsafe fn from_buf(buf: *u8) -> ~str {
+        from_buf_len(buf, buf_len(buf))
     }
 
     /// Create a Rust string from a *u8 buffer of the given length
     pub unsafe fn from_buf_len(buf: *const u8, len: uint) -> ~str {
-        let mut v: ~[u8] = vec::with_capacity(len + 1);
+        let mut v = vec::with_capacity(len + 1);
         vec::as_mut_buf(v, |vbuf, _len| {
             ptr::copy_memory(vbuf, buf as *u8, len)
         });
@@ -1143,15 +1150,24 @@ pub mod raw {
     /// C string has the static lifetime, or else the return value may be
     /// invalidated later.
     pub unsafe fn c_str_to_static_slice(s: *libc::c_char) -> &'static str {
-        let s = s as *u8;
-        let mut (curr, len) = (s, 0u);
-        while *curr != 0u8 {
-            len += 1u;
-            curr = ptr::offset(s, len);
-        }
-        let v = (s, len + 1);
+        c_str_as_slice(s, |d| cast::transmute(d))
+    }
+
+    /// Form a slice from a null terminated *u8 buffer without copying.
+    pub unsafe fn buf_as_slice<T>(buf: *u8, f: &fn(v: &str) -> T) -> T {
+        buf_len_as_slice(buf, buf_len(buf), f)
+    }
+
+    /// Form a slice from a *u8 buffer of the given length without copying.
+    pub unsafe fn buf_len_as_slice<T>(buf: *u8, len: uint, f: &fn(v: &str) -> T) -> T {
+        let v = (buf, len + 1);
         assert!(is_utf8(::cast::transmute(v)));
-        ::cast::transmute(v)
+        f(::cast::transmute(v))
+    }
+
+    /// Form a slice from a *u8 buffer of the given length without copying.
+    pub unsafe fn c_str_as_slice<T>(buf: *libc::c_char, f: &fn(v: &str) -> T) -> T {
+        buf_as_slice(cast::transmute(buf), f)
     }
 
     /**
