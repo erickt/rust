@@ -253,18 +253,17 @@ pub fn to_mut_unsafe_ptr<T>(thing: &mut T) -> *mut T {
 
   SAFETY NOTE: Pointer-arithmetic. Dragons be here.
 */
-pub unsafe fn array_each_with_len<T>(arr: **T, len: uint, cb: &fn(*T)) {
+pub unsafe fn array_each_with_len<T>(arr: **T, len: uint, cb: &fn(*T) -> bool) -> bool {
     debug!("array_each_with_len: before iterate");
-    if (arr as uint == 0) {
+    if arr.is_null() {
         fail!("ptr::array_each_with_len failure: arr input is null pointer");
     }
-    //let start_ptr = *arr;
-    uint::iterate(0, len, |e| {
+    for uint::iterate(0, len) |e| {
         let n = offset(arr, e);
-        cb(*n);
-        true
-    });
+        if !cb(*n) { return false; }
+    }
     debug!("array_each_with_len: after iterate");
+    true
 }
 
 /**
@@ -276,14 +275,13 @@ pub unsafe fn array_each_with_len<T>(arr: **T, len: uint, cb: &fn(*T)) {
   pointer array. Barely less-dodgey Pointer Arithmetic.
   Dragons be here.
 */
-pub unsafe fn array_each<T>(arr: **T, cb: &fn(*T)) {
-    if (arr as uint == 0) {
+pub unsafe fn array_each<T>(arr: **T, cb: &fn(*T) -> bool) -> bool {
+    if arr.is_null() {
         fail!("ptr::array_each_with_len failure: arr input is null pointer");
     }
     let len = buf_len(arr);
-    debug!("array_each inferred len: %u",
-                    len);
-    array_each_with_len(arr, len, cb);
+    debug!("array_each inferred len: %u", len);
+    array_each_with_len(arr, len, cb)
 }
 
 #[allow(missing_doc)]
@@ -524,17 +522,14 @@ pub mod ptr_tests {
             let arr_ptr = &arr[0];
             let mut ctr = 0;
             let mut iteration_count = 0;
-            array_each_with_len(arr_ptr, arr.len(),
-                                |e| {
-                                         let actual = str::raw::from_c_str(e);
-                                         let expected = copy expected_arr[ctr];
-                                         debug!(
-                                             "test_ptr_array_each e: %s, a: %s",
-                                             expected, actual);
-                                         assert_eq!(actual, expected);
-                                         ctr += 1;
-                                         iteration_count += 1;
-                                     });
+            for array_each_with_len(arr_ptr, arr.len()) |e| {
+                let actual = str::raw::from_c_str(e);
+                let expected = copy expected_arr[ctr];
+                debug!("test_ptr_array_each e: %s, a: %s", expected, actual);
+                assert_eq!(actual, expected);
+                ctr += 1;
+                iteration_count += 1;
+            }
             assert_eq!(iteration_count, 3u);
         }
     }
@@ -557,7 +552,7 @@ pub mod ptr_tests {
             let arr_ptr = &arr[0];
             let mut ctr = 0;
             let mut iteration_count = 0;
-            array_each(arr_ptr, |e| {
+            for array_each(arr_ptr) |e| {
                 let actual = str::raw::from_c_str(e);
                 let expected = copy expected_arr[ctr];
                 debug!(
@@ -566,7 +561,7 @@ pub mod ptr_tests {
                 assert_eq!(actual, expected);
                 ctr += 1;
                 iteration_count += 1;
-            });
+            }
             assert_eq!(iteration_count, 3);
         }
     }
@@ -575,9 +570,9 @@ pub mod ptr_tests {
     #[ignore(cfg(windows))]
     fn test_ptr_array_each_with_len_null_ptr() {
         unsafe {
-            array_each_with_len(0 as **libc::c_char, 1, |e| {
+            for array_each_with_len(0 as **libc::c_char, 1) |e| {
                 str::raw::from_c_str(e);
-            });
+            }
         }
     }
     #[test]
@@ -585,9 +580,9 @@ pub mod ptr_tests {
     #[ignore(cfg(windows))]
     fn test_ptr_array_each_null_ptr() {
         unsafe {
-            array_each(0 as **libc::c_char, |e| {
+            for array_each(0 as **libc::c_char) |e| {
                 str::raw::from_c_str(e);
-            });
+            }
         }
     }
 
