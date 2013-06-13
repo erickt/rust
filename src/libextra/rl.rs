@@ -63,11 +63,11 @@ pub unsafe fn read(prompt: &str) -> Option<~str> {
         let line = rustrt::linenoise(buf);
 
         if line.is_null() { None }
-        else { Some(str::c_str_as_slice(line)) }
+        else { Some(str::c_str_as_slice(line).to_owned()) }
     }
 }
 
-pub type CompletionCb<'self> = @fn(~str, &'self fn(~str));
+pub type CompletionCb<'self> = @fn(&str, &'self fn(&str));
 
 fn complete_key(_v: @CompletionCb) {}
 
@@ -77,8 +77,7 @@ pub unsafe fn complete(cb: CompletionCb) {
 
     extern fn callback(line: *c_char, completions: *()) {
         unsafe {
-            let cb = *local_data::local_data_get(complete_key)
-                .get();
+            let cb = *local_data::local_data_get(complete_key).get();
 
             do cb(str::c_str_as_slice(line)) |suggestion| {
                 do str::as_c_str(suggestion) |buf| {

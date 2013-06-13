@@ -16,9 +16,9 @@ static b: *u8 = c as *u8;
 
 pub fn main() {
     let foo = &a as *u8;
-    assert_eq!(unsafe { str::raw::from_utf8_slice(a) }, "hi\x00");
-    assert_eq!(unsafe { str::raw::from_utf8_buf(foo) }, ~"hi");
-    assert_eq!(unsafe { str::raw::from_utf8_buf(b) }, ~"hi");
+    assert_eq!(unsafe { str::raw::utf8_as_slice(a) }, "hi\x00");
+    assert_eq!(unsafe { str::raw::utf8_buf_as_slice(foo) }, ~"hi");
+    assert_eq!(unsafe { str::raw::utf8_buf_as_slice(b) }, ~"hi");
     assert!(unsafe { *b == a[0] });
     assert!(unsafe { *(&c[0] as *u8) == a[0] });
 }

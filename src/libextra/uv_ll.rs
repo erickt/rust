@@ -1046,18 +1046,18 @@ pub unsafe fn ip6_addr(ip: &str, port: int) -> sockaddr_in6 {
 pub unsafe fn ip4_name(src: &sockaddr_in) -> ~str {
     // ipv4 addr max size: 15 + 1 trailing null byte
     let dst: ~[u8] = ~[0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8,
-                     0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
+                       0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8];
     do vec::as_imm_buf(dst) |dst_buf, size| {
-        rust_uv_ip4_name(to_unsafe_ptr(src),
-                                 dst_buf, size as libc::size_t);
-        // seems that checking the result of uv_ip4_name
-        // doesn't work too well..
-        // you're stuck looking at the value of dst_buf
-        // to see if it is the string representation of
-        // INADDR_NONE (0xffffffff or 255.255.255.255 on
-        // many platforms)
-        str::from_utf8_buf(dst_buf)
+        rust_uv_ip4_name(to_unsafe_ptr(src), dst_buf, size as libc::size_t);
     }
+
+    // seems that checking the result of uv_ip4_name
+    // doesn't work too well..
+    // you're stuck looking at the value of dst_buf
+    // to see if it is the string representation of
+    // INADDR_NONE (0xffffffff or 255.255.255.255 on
+    // many platforms)
+    str::from_utf8_with_null(dst)
 }
 pub unsafe fn ip6_name(src: &sockaddr_in6) -> ~str {
     // ipv6 addr max size: 45 + 1 trailing null byte
@@ -1067,14 +1067,14 @@ pub unsafe fn ip6_name(src: &sockaddr_in6) -> ~str {
                        0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8,
                        0u8,0u8,0u8,0u8,0u8,0u8,0u8,0u8,
                        0u8,0u8,0u8,0u8,0u8,0u8];
-    do vec::as_imm_buf(dst) |dst_buf, size| {
+    let result = do vec::as_imm_buf(dst) |dst_buf, size| {
         let src_unsafe_ptr = to_unsafe_ptr(src);
-        let result = rust_uv_ip6_name(src_unsafe_ptr,
-                                              dst_buf, size as libc::size_t);
-        match result {
-          0i32 => str::from_utf8_buf(dst_buf),
-          _ => ~""
-        }
+        rust_uv_ip6_name(src_unsafe_ptr, dst_buf, size as libc::size_t)
+    };
+
+    match result {
+      0i32 => str::from_utf8_with_null(dst),
+      _ => ~""
     }
 }
 pub unsafe fn ip4_port(src: &sockaddr_in) -> uint {
@@ -1197,8 +1197,8 @@ pub unsafe fn get_last_err_info(uv_loop: *libc::c_void) -> ~str {
 pub unsafe fn get_last_err_data(uv_loop: *libc::c_void) -> uv_err_data {
     let err = last_error(uv_loop);
     let err_ptr: *uv_err_t = &err;
-    let err_name = str::c_str_as_slice(err_name(err_ptr));
-    let err_msg = str::c_str_as_slice(strerror(err_ptr));
+    let err_name = str::c_str_as_slice(err_name(err_ptr)).to_owned();
+    let err_msg = str::c_str_as_slice(strerror(err_ptr)).to_owned();
     uv_err_data { err_name: err_name, err_msg: err_msg }
 }
 
