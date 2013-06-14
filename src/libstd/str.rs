@@ -126,13 +126,9 @@ pub fn from_utf8_with_null(v: ~[u8]) -> ~str {
  *
  * Fails if invalid UTF-8
  */
-pub fn from_utf8_slice<'a>(v: &'a [u8]) -> &'a str {
+pub fn utf8_as_slice<'a>(v: &'a [u8]) -> &'a str {
     assert!(is_utf8(v));
-    unsafe {
-        let (ptr, len): (*u8, uint) = ::cast::transmute(v);
-        let s: &'a str = ::cast::transmute((ptr, len + 1));
-        s
-    }
+    unsafe { raw::utf8_as_slice(v) }
 }
 
 /**
@@ -146,10 +142,10 @@ pub fn from_utf8_slice<'a>(v: &'a [u8]) -> &'a str {
  * Fails if not NULL terminated
  * Fails if invalid UTF-8
  */
-pub fn from_utf8_slice_with_null<'a>(v: &'a [u8]) -> &'a str {
+pub fn utf8_with_null_as_slice<'a>(v: &'a [u8]) -> &'a str {
     assert_eq!(v[v.len() - 1], 0);
     assert!(is_utf8(v));
-    unsafe { raw::from_utf8_slice_with_null(v) }
+    unsafe { raw::utf8_with_null_as_slice(v) }
 }
 
 /**
@@ -159,8 +155,8 @@ pub fn from_utf8_slice_with_null<'a>(v: &'a [u8]) -> &'a str {
  *
  * Fails if invalid UTF-8
  */
-pub unsafe fn from_utf8_buf(buf: *u8) -> ~str {
-    from_utf8_buf_len(buf, raw::buf_len(buf))
+pub unsafe fn utf8_buf_as_slice(buf: *u8) -> &str {
+    utf8_buf_len_as_slice(buf, raw::buf_len(buf))
 }
 
 /**
@@ -170,9 +166,8 @@ pub unsafe fn from_utf8_buf(buf: *u8) -> ~str {
  *
  * Fails if invalid UTF-8
  */
-pub unsafe fn from_utf8_buf_len(buf: *u8, len: uint) -> ~str {
-    assert!(is_utf8(cast::transmute((buf, len))));
-    raw::from_utf8_buf_len(buf, len)
+pub unsafe fn utf8_buf_len_as_slice(buf: *u8, len: uint) -> &str {
+    utf8_as_slice(cast::transmute((buf, len)))
 }
 
 /**
@@ -182,8 +177,8 @@ pub unsafe fn from_utf8_buf_len(buf: *u8, len: uint) -> ~str {
  *
  * Fails if invalid UTF-8
  */
-pub unsafe fn from_c_str(c_str: *libc::c_char) -> ~str {
-    from_utf8_buf(cast::transmute(c_str))
+pub unsafe fn c_str_as_slice(c_str: *libc::c_char) -> &str {
+    utf8_buf_as_slice(cast::transmute(c_str))
 }
 
 /// Copy a slice into a new unique str
@@ -1158,9 +1153,14 @@ pub mod raw {
         cast::transmute(v)
     }
 
+    /// Converts a byte to a string.
+    pub unsafe fn from_byte(u: u8) -> ~str {
+        raw::from_utf8_with_null(~[u, 0])
+    }
+
     /// Converts a vector of bytes to a string slice.
     /// The byte slice needs to contain valid utf8.
-    pub unsafe fn from_utf8_slice<'a>(v: &'a [u8]) -> &'a str {
+    pub unsafe fn utf8_as_slice<'a>(v: &'a [u8]) -> &'a str {
         let (ptr, len): (*u8, uint) = ::cast::transmute(v);
         cast::transmute((ptr, len + 1))
     }
@@ -1168,37 +1168,32 @@ pub mod raw {
     /// Converts a vector of bytes to a string.
     /// The byte slice needs to contain valid utf8 and needs to be one byte longer than
     /// the string, if possible ending in a 0 byte.
-    pub unsafe fn from_utf8_slice_with_null<'a>(v: &'a [u8]) -> &'a str {
+    pub unsafe fn utf8_with_null_as_slice<'a>(v: &'a [u8]) -> &'a str {
         cast::transmute(v)
-    }
-
-    /// Converts a byte to a string.
-    pub unsafe fn from_byte(u: u8) -> ~str {
-        raw::from_utf8_with_null(~[u, 0])
     }
 
     /// Form a slice from a C string. Unsafe because the caller must ensure the
     /// C string has the static lifetime, or else the return value may be
     /// invalidated later.
     pub unsafe fn c_str_to_static_slice(s: *libc::c_char) -> &'static str {
-        c_str_as_slice(s, |d| cast::transmute(d))
+        cast::transmute(::str::c_str_as_slice(s))
     }
 
     /// Form a slice from a null terminated *u8 buffer without copying.
-    pub unsafe fn utf8_buf_as_slice<T>(buf: *u8, f: &fn(v: &str) -> T) -> T {
-        utf8_buf_len_as_slice(buf, buf_len(buf), f)
+    pub unsafe fn utf8_buf_as_slice(buf: *u8) -> &str {
+        utf8_buf_len_as_slice(buf, buf_len(buf))
     }
 
     /// Form a slice from a *u8 buffer of the given length without copying.
-    pub unsafe fn utf8_buf_len_as_slice<T>(buf: *u8, len: uint, f: &fn(v: &str) -> T) -> T {
-        let v = (buf, len + 1);
-        assert!(is_utf8(::cast::transmute(v)));
-        f(::cast::transmute(v))
+    pub unsafe fn utf8_buf_len_as_slice(buf: *u8, len: uint) -> &str {
+        let v = cast::transmute((buf, len + 1));
+        assert!(is_utf8(v));
+        cast::transmute(v)
     }
 
     /// Form a slice from a *u8 buffer of the given length without copying.
-    pub unsafe fn c_str_as_slice<T>(buf: *libc::c_char, f: &fn(v: &str) -> T) -> T {
-        utf8_buf_as_slice(cast::transmute(buf), f)
+    pub unsafe fn c_str_as_slice(buf: *libc::c_char) -> &str {
+        utf8_buf_as_slice(cast::transmute(buf))
     }
 
     /**
@@ -2998,14 +2993,14 @@ mod tests {
     }
 
     #[test]
-    fn test_unsafe_from_utf8_slice() {
+    fn test_unsafe_utf8_as_slice() {
         let a = [65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 65u8];
-        let b = unsafe { raw::from_utf8_slice(a) };
+        let b = unsafe { raw::utf8_as_slice(a) };
         assert_eq!(b, "AAAAAAA");
     }
 
     #[test]
-    fn test_from_utf8_slice() {
+    fn test_utf8_as_slice() {
         let ss = "ศไทย中华Việt Nam";
         let bb = [0xe0_u8, 0xb8_u8, 0xa8_u8,
                   0xe0_u8, 0xb9_u8, 0x84_u8,
@@ -3018,13 +3013,13 @@ mod tests {
                   0x20_u8, 0x4e_u8, 0x61_u8,
                   0x6d_u8];
 
-        assert_eq!(ss, from_utf8_slice(bb));
+        assert_eq!(ss, utf8_as_slice(bb));
     }
 
     #[test]
     #[should_fail]
     #[ignore(cfg(windows))]
-    fn test_from_utf8_slice_fail() {
+    fn test_utf8_as_slice_fail() {
         let bb = [0xff_u8, 0xb8_u8, 0xa8_u8,
                   0xe0_u8, 0xb9_u8, 0x84_u8,
                   0xe0_u8, 0xb8_u8, 0x97_u8,
@@ -3036,18 +3031,18 @@ mod tests {
                   0x20_u8, 0x4e_u8, 0x61_u8,
                   0x6d_u8];
 
-        let _x = from_utf8_slice(bb);
+        let _x = utf8_as_slice(bb);
     }
 
     #[test]
-    fn test_unsafe_from_utf8_slice_with_null() {
+    fn test_unsafe_utf8_with_null_as_slice() {
         let a = [65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 0u8];
-        let b = unsafe { raw::from_utf8_slice_with_null(a) };
+        let b = unsafe { raw::utf8_with_null_as_slice(a) };
         assert_eq!(b, "AAAAAAA");
     }
 
     #[test]
-    fn test_from_utf8_slice_with_null() {
+    fn test_utf8_with_null_as_slice() {
         let ss = "ศไทย中华Việt Nam";
         let bb = [0xe0_u8, 0xb8_u8, 0xa8_u8,
                   0xe0_u8, 0xb9_u8, 0x84_u8,
@@ -3060,13 +3055,13 @@ mod tests {
                   0x20_u8, 0x4e_u8, 0x61_u8,
                   0x6d_u8, 0x0_u8];
 
-        assert_eq!(ss, from_utf8_slice_with_null(bb));
+        assert_eq!(ss, utf8_with_null_as_slice(bb));
     }
 
     #[test]
     #[should_fail]
     #[ignore(cfg(windows))]
-    fn test_from_utf8_slice_with_null_fail() {
+    fn test_utf8_with_null_as_slice_fail() {
         let bb = [0xff_u8, 0xb8_u8, 0xa8_u8,
                   0xe0_u8, 0xb9_u8, 0x84_u8,
                   0xe0_u8, 0xb8_u8, 0x97_u8,
@@ -3078,13 +3073,13 @@ mod tests {
                   0x20_u8, 0x4e_u8, 0x61_u8,
                   0x6d_u8, 0x0_u8];
 
-         let _x = from_utf8_slice_with_null(bb);
+         let _x = utf8_with_null_as_slice(bb);
     }
 
     #[test]
     #[should_fail]
     #[ignore(cfg(windows))]
-    fn test_from_utf8_slice_with_null_fail_2() {
+    fn test_utf8_with_null_as_slice_fail_2() {
         let bb = [0xff_u8, 0xb8_u8, 0xa8_u8,
                   0xe0_u8, 0xb9_u8, 0x84_u8,
                   0xe0_u8, 0xb8_u8, 0x97_u8,
@@ -3096,15 +3091,15 @@ mod tests {
                   0x20_u8, 0x4e_u8, 0x61_u8,
                   0x6d_u8, 0x60_u8];
 
-         let _x = from_utf8_slice_with_null(bb);
+         let _x = utf8_with_null_as_slice(bb);
     }
 
     #[test]
-    fn test_from_utf8_buf() {
+    fn test_raw_from_utf8_buf() {
         unsafe {
             let a = ~[65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 0u8];
             let b = vec::raw::to_ptr(a);
-            let c = from_utf8_buf(b);
+            let c = raw::from_utf8_buf(b);
             assert_eq!(c, ~"AAAAAAA");
         }
     }
@@ -3204,9 +3199,9 @@ mod tests {
     #[test]
     fn test_as_buf2() {
         unsafe {
-            let s = ~"hello";
+            let s = "hello";
             let sb = as_buf(s, |b, _l| b);
-            let s_cstr = from_utf8_buf(sb);
+            let s_cstr = utf8_buf_as_slice(sb);
             assert_eq!(s_cstr, s);
         }
     }

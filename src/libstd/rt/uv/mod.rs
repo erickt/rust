@@ -36,7 +36,8 @@ via `close` and `delete` methods.
 
 use container::Container;
 use option::*;
-use str::from_c_str;
+use str::StrSlice;
+use str;
 use to_str::ToStr;
 use ptr::RawPtr;
 use vec;
@@ -197,7 +198,7 @@ impl UvError {
             let inner = match self { &UvError(ref a) => a };
             let name_str = uvll::err_name(inner);
             assert!(name_str.is_not_null());
-            from_c_str(name_str)
+            str::c_str_as_slice(name_str).to_owned()
         }
     }
 
@@ -206,7 +207,7 @@ impl UvError {
             let inner = match self { &UvError(ref a) => a };
             let desc_str = uvll::strerror(inner);
             assert!(desc_str.is_not_null());
-            from_c_str(desc_str)
+            str::c_str_as_slice(desc_str).to_owned()
         }
     }
 

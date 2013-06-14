@@ -59,7 +59,7 @@ pub fn llvm_err(sess: Session, msg: ~str) -> ! {
         if cstr == ptr::null() {
             sess.fatal(msg);
         } else {
-            sess.fatal(msg + ": " + str::from_c_str(cstr));
+            sess.fatal(msg + ": " + str::c_str_as_slice(cstr));
         }
     }
 }

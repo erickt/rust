@@ -485,10 +485,10 @@ pub fn main() {
         unsafe {
             do rl::complete |line, suggest| {
                 if line.starts_with(":") {
-                    suggest(~":clear");
-                    suggest(~":exit");
-                    suggest(~":help");
-                    suggest(~":load");
+                    suggest(":clear");
+                    suggest(":exit");
+                    suggest(":help");
+                    suggest(":load");
                 }
             }
         }

@@ -79,7 +79,7 @@ pub fn getcwd() -> Path {
             BUF_BYTES as libc::size_t)) {
             fail!();
         }
-        Path(str::from_c_str(&buf[0]))
+        Path(str::c_str_as_slice(&buf[0]))
     }
 }
 
@@ -93,7 +93,7 @@ pub fn fill_charp_buf(f: &fn(*mut c_char, size_t) -> bool) -> Option<~str> {
     let mut buf = vec::from_elem(TMPBUF_SZ, 0u8 as c_char);
     do vec::as_mut_buf(buf) |b, sz| {
         if f(b, sz as size_t) {
-            unsafe { Some(str::from_utf8_buf(b as *u8)) }
+            unsafe { Some(str::utf8_buf_as_slice(b as *u8).to_owned()) }
         } else {
             None
         }
@@ -190,7 +190,7 @@ pub fn env() -> ~[(~str,~str)] {
             let mut curr_ptr: uint = ch as uint;
             let mut result = ~[];
             while *(curr_ptr as *libc::c_char) != 0 as libc::c_char {
-                let env_pair = str::from_c_str(curr_ptr as *libc::c_char);
+                let env_pair = str::c_str_as_slice(curr_ptr as *libc::c_char);
                 result.push(env_pair);
                 curr_ptr += libc::strlen(curr_ptr as *libc::c_char) as uint + 1;
             }
@@ -208,7 +208,7 @@ pub fn env() -> ~[(~str,~str)] {
             }
             let mut result = ~[];
             for ptr::array_each(environ) |e| {
-                let env_pair = str::from_c_str(e);
+                let env_pair = str::c_str_as_slice(e).to_owned();
                 debug!("get_env_pairs: %s", env_pair);
                 result.push(env_pair);
             }
@@ -243,7 +243,7 @@ pub fn getenv(n: &str) -> Option<~str> {
                 option::None
             } else {
                 let s = cast::transmute(s);
-                option::Some(str::from_utf8_buf(s))
+                option::Some(str::utf8_buf_as_slice(s).to_owned())
             }
         }
     }
@@ -704,21 +704,19 @@ pub fn list_dir(p: &Path) -> ~[~str] {
             debug!("os::list_dir -- BEFORE OPENDIR");
             let dir_ptr = opendir(input_ptr);
             if (dir_ptr as uint != 0) {
-        debug!("os::list_dir -- opendir() SUCCESS");
+                debug!("os::list_dir -- opendir() SUCCESS");
                 let mut entry_ptr = readdir(dir_ptr);
                 while (entry_ptr as uint != 0) {
-                    strings.push(str::from_c_str(rust_list_dir_val(
-                        entry_ptr)));
+                    let string = str::c_str_as_slice(rust_list_dir_val(entry_ptr));
+                    strings.push(string.to_owned());
                     entry_ptr = readdir(dir_ptr);
                 }
                 closedir(dir_ptr);
             }
             else {
-        debug!("os::list_dir -- opendir() FAILURE");
+                debug!("os::list_dir -- opendir() FAILURE");
             }
-            debug!(
-                "os::list_dir -- AFTER -- #: %?",
-                     strings.len());
+            debug!("os::list_dir -- AFTER -- #: %?", strings.len());
             strings
         }
         #[cfg(windows)]
@@ -1076,7 +1074,7 @@ pub fn last_os_error() -> ~str {
                 fail!("strerror_r failure");
             }
 
-            str::from_c_str(&buf[0])
+            str::c_str_as_slice(&buf[0]).to_owned()
         }
     }
 
@@ -1114,7 +1112,7 @@ pub fn last_os_error() -> ~str {
                 fail!("[%?] FormatMessage failure", errno());
             }
 
-            str::from_c_str(&buf[0])
+            str::c_str_as_slice(&buf[0])
         }
     }
 
@@ -1138,7 +1136,7 @@ pub fn set_exit_status(code: int) {
 unsafe fn load_argc_and_argv(argc: c_int, argv: **c_char) -> ~[~str] {
     let mut args = ~[];
     for uint::range(0, argc as uint) |i| {
-        vec::push(&mut args, str::from_c_str(*argv.offset(i)));
+        args.push(str::c_str_as_slice(*argv.offset(i)).to_owned());
     }
     args
 }
@@ -1313,7 +1311,7 @@ pub fn glob(pattern: &str) -> ~[Path] {
             vec::raw::from_buf_raw(g.gl_pathv, g.gl_pathc as uint)
         };
         do paths.map |&c_str| {
-            Path(unsafe { str::from_c_str(c_str) })
+            Path(unsafe { str::c_str_as_slice(c_str) })
         }
     }).finally {
         unsafe { libc::globfree(&mut g) };

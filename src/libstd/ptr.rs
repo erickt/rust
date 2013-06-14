@@ -511,7 +511,7 @@ pub mod ptr_tests {
             let one = ~"oneOne";
             let two = ~"twoTwo";
             let three = ~"threeThree";
-            let arr: ~[*i8] = ~[
+            let arr: ~[*libc::c_char] = ~[
                 ::cast::transmute(&one[0]),
                 ::cast::transmute(&two[0]),
                 ::cast::transmute(&three[0]),
@@ -523,7 +523,7 @@ pub mod ptr_tests {
             let mut ctr = 0;
             let mut iteration_count = 0;
             for array_each_with_len(arr_ptr, arr.len()) |e| {
-                let actual = str::from_c_str(e);
+                let actual = str::c_str_as_slice(e).to_owned();
                 let expected = copy expected_arr[ctr];
                 debug!("test_ptr_array_each e: %s, a: %s", expected, actual);
                 assert_eq!(actual, expected);
@@ -553,7 +553,7 @@ pub mod ptr_tests {
             let mut ctr = 0;
             let mut iteration_count = 0;
             for array_each(arr_ptr) |e| {
-                let actual = str::from_c_str(e);
+                let actual = str::c_str_as_slice(e).to_owned();
                 let expected = copy expected_arr[ctr];
                 debug!(
                     "test_ptr_array_each e: %s, a: %s",
@@ -571,7 +571,7 @@ pub mod ptr_tests {
     fn test_ptr_array_each_with_len_null_ptr() {
         unsafe {
             for array_each_with_len(0 as **libc::c_char, 1) |e| {
-                str::from_c_str(e);
+                str::c_str_as_slice(e);
             }
         }
     }
@@ -581,7 +581,7 @@ pub mod ptr_tests {
     fn test_ptr_array_each_null_ptr() {
         unsafe {
             for array_each(0 as **libc::c_char) |e| {
-                str::from_c_str(e);
+                str::c_str_as_slice(e);
             }
         }
     }
