@@ -36,7 +36,7 @@ via `close` and `delete` methods.
 
 use container::Container;
 use option::*;
-use str::raw::from_c_str;
+use str::from_c_str;
 use to_str::ToStr;
 use ptr::RawPtr;
 use vec;

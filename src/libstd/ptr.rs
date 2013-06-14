@@ -523,7 +523,7 @@ pub mod ptr_tests {
             let mut ctr = 0;
             let mut iteration_count = 0;
             for array_each_with_len(arr_ptr, arr.len()) |e| {
-                let actual = str::raw::from_c_str(e);
+                let actual = str::from_c_str(e);
                 let expected = copy expected_arr[ctr];
                 debug!("test_ptr_array_each e: %s, a: %s", expected, actual);
                 assert_eq!(actual, expected);
@@ -553,7 +553,7 @@ pub mod ptr_tests {
             let mut ctr = 0;
             let mut iteration_count = 0;
             for array_each(arr_ptr) |e| {
-                let actual = str::raw::from_c_str(e);
+                let actual = str::from_c_str(e);
                 let expected = copy expected_arr[ctr];
                 debug!(
                     "test_ptr_array_each e: %s, a: %s",
@@ -571,7 +571,7 @@ pub mod ptr_tests {
     fn test_ptr_array_each_with_len_null_ptr() {
         unsafe {
             for array_each_with_len(0 as **libc::c_char, 1) |e| {
-                str::raw::from_c_str(e);
+                str::from_c_str(e);
             }
         }
     }
@@ -581,7 +581,7 @@ pub mod ptr_tests {
     fn test_ptr_array_each_null_ptr() {
         unsafe {
             for array_each(0 as **libc::c_char) |e| {
-                str::raw::from_c_str(e);
+                str::from_c_str(e);
             }
         }
     }
