@@ -1056,7 +1056,7 @@ pub unsafe fn ip4_name(src: &sockaddr_in) -> ~str {
         // to see if it is the string representation of
         // INADDR_NONE (0xffffffff or 255.255.255.255 on
         // many platforms)
-        str::raw::from_buf(dst_buf)
+        str::raw::from_utf8_buf(dst_buf).to_owned()
     }
 }
 pub unsafe fn ip6_name(src: &sockaddr_in6) -> ~str {
@@ -1072,7 +1072,7 @@ pub unsafe fn ip6_name(src: &sockaddr_in6) -> ~str {
         let result = rust_uv_ip6_name(src_unsafe_ptr,
                                               dst_buf, size as libc::size_t);
         match result {
-          0i32 => str::raw::from_buf(dst_buf),
+          0i32 => str::raw::from_utf8_buf(dst_buf).to_owned(),
           _ => ~""
         }
     }
@@ -1197,8 +1197,8 @@ pub unsafe fn get_last_err_info(uv_loop: *libc::c_void) -> ~str {
 pub unsafe fn get_last_err_data(uv_loop: *libc::c_void) -> uv_err_data {
     let err = last_error(uv_loop);
     let err_ptr: *uv_err_t = &err;
-    let err_name = str::raw::from_c_str(err_name(err_ptr));
-    let err_msg = str::raw::from_c_str(strerror(err_ptr));
+    let err_name = str::raw::from_c_str(err_name(err_ptr)).to_owned();
+    let err_msg = str::raw::from_c_str(strerror(err_ptr)).to_owned();
     uv_err_data { err_name: err_name, err_msg: err_msg }
 }
 

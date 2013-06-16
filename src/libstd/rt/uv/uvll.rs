@@ -353,8 +353,8 @@ pub unsafe fn get_last_err_info(uv_loop: *c_void) -> ~str {
 pub unsafe fn get_last_err_data(uv_loop: *c_void) -> uv_err_data {
     let err = last_error(uv_loop);
     let err_ptr = ptr::to_unsafe_ptr(&err);
-    let err_name = str::raw::from_c_str(err_name(err_ptr));
-    let err_msg = str::raw::from_c_str(strerror(err_ptr));
+    let err_name = str::raw::from_c_str(err_name(err_ptr)).to_owned();
+    let err_msg = str::raw::from_c_str(strerror(err_ptr)).to_owned();
     uv_err_data { err_name: err_name, err_msg: err_msg }
 }
 

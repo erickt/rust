@@ -63,11 +63,11 @@ pub unsafe fn read(prompt: &str) -> Option<~str> {
         let line = rustrt::linenoise(buf);
 
         if line.is_null() { None }
-        else { Some(str::raw::from_c_str(line)) }
+        else { Some(str::raw::from_c_str(line).to_owned()) }
     }
 }
 
-pub type CompletionCb<'self> = @fn(~str, &'self fn(~str));
+pub type CompletionCb<'self> = @fn(&str, &'self fn(&str));
 
 fn complete_key(_v: @CompletionCb) {}
 

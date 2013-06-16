@@ -742,41 +742,42 @@ pub mod raw {
     use cast;
     use libc;
     use ptr;
+    use str;
     use str::raw;
     use str::{as_buf, is_utf8};
     use vec;
 
-    /// Create a Rust string from a null-terminated *u8 buffer
-    pub unsafe fn from_buf(buf: *u8) -> ~str {
-        let mut (curr, i) = (buf, 0u);
-        while *curr != 0u8 {
-            i += 1u;
+    /// Count the number of bytes in a null-terminated *u8 buffer
+    pub unsafe fn buf_len(buf: *u8) -> uint {
+        let mut curr = buf;
+        let mut i = 0;
+        while *curr != 0 {
+            i += 1;
             curr = ptr::offset(buf, i);
         }
-        return from_buf_len(buf, i);
+        i
     }
 
-    /// Create a Rust string from a *u8 buffer of the given length
-    pub unsafe fn from_buf_len(buf: *const u8, len: uint) -> ~str {
-        let mut v: ~[u8] = vec::with_capacity(len + 1);
-        vec::as_mut_buf(v, |vbuf, _len| {
-            ptr::copy_memory(vbuf, buf as *u8, len)
-        });
-        vec::raw::set_len(&mut v, len);
-        v.push(0u8);
-
-        assert!(is_utf8(v));
-        return ::cast::transmute(v);
+    /// Form a slice from a null terminated *u8 buffer without copying.
+    pub unsafe fn from_utf8_buf(buf: *u8) -> &str {
+        from_utf8_buf_len(buf, buf_len(buf))
     }
 
-    /// Create a Rust string from a null-terminated C string
-    pub unsafe fn from_c_str(c_str: *libc::c_char) -> ~str {
-        from_buf(::cast::transmute(c_str))
+    /// Form a slice from a *u8 buffer of the given length without copying.
+    pub unsafe fn from_utf8_buf_len(buf: *u8, len: uint) -> &str {
+        let v = (buf, len + 1);
+        assert!(is_utf8(::cast::transmute(v)));
+        ::cast::transmute(v)
+    }
+
+    /// Form a slice from a *u8 buffer of the given length without copying.
+    pub unsafe fn from_c_str(buf: *libc::c_char) -> &str {
+        from_utf8_buf(cast::transmute(buf))
     }
 
     /// Create a Rust string from a `*c_char` buffer of the given length
-    pub unsafe fn from_c_str_len(c_str: *libc::c_char, len: uint) -> ~str {
-        from_buf_len(::cast::transmute(c_str), len)
+    pub unsafe fn from_c_str_len(c_str: *libc::c_char, len: uint) -> &str {
+        from_utf8_buf_len(::cast::transmute(c_str), len)
     }
 
     /// Converts a vector of bytes to a new owned string.
@@ -812,15 +813,7 @@ pub mod raw {
     /// C string has the static lifetime, or else the return value may be
     /// invalidated later.
     pub unsafe fn c_str_to_static_slice(s: *libc::c_char) -> &'static str {
-        let s = s as *u8;
-        let mut (curr, len) = (s, 0u);
-        while *curr != 0u8 {
-            len += 1u;
-            curr = ptr::offset(s, len);
-        }
-        let v = (s, len + 1);
-        assert!(is_utf8(::cast::transmute(v)));
-        ::cast::transmute(v)
+        cast::transmute(from_c_str(s))
     }
 
     /**
@@ -917,17 +910,6 @@ pub mod raw {
                                    new_len);
         *null = 0u8;
     }
-
-    #[test]
-    fn test_from_buf_len() {
-        unsafe {
-            let a = ~[65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 0u8];
-            let b = vec::raw::to_ptr(a);
-            let c = from_buf_len(b, 3u);
-            assert_eq!(c, ~"AAA");
-        }
-    }
-
 }
 
 #[cfg(not(test))]
@@ -2978,12 +2960,12 @@ mod tests {
     }
 
     #[test]
-    fn test_from_buf() {
+    fn test_from_utf8_buf() {
         unsafe {
             let a = ~[65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 0u8];
             let b = vec::raw::to_ptr(a);
-            let c = raw::from_buf(b);
-            assert_eq!(c, ~"AAAAAAA");
+            let c = raw::from_utf8_buf(b);
+            assert_eq!(c, "AAAAAAA");
         }
     }
 
@@ -3055,6 +3037,16 @@ mod tests {
     }
 
     #[test]
+    fn test_raw_from_utf8_buf_len() {
+        unsafe {
+            let a = ~[65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 0u8];
+            let b = vec::raw::to_ptr(a);
+            let c = unsafe { raw::from_utf8_buf_len(b, 3u) };
+            assert_eq!(c, "AAA");
+        }
+    }
+
+    #[test]
     #[ignore(cfg(windows))]
     #[should_fail]
     fn test_as_bytes_fail() {
@@ -3088,9 +3080,9 @@ mod tests {
     #[test]
     fn test_as_buf2() {
         unsafe {
-            let s = ~"hello";
+            let s = "hello";
             let sb = as_buf(s, |b, _l| b);
-            let s_cstr = raw::from_buf(sb);
+            let s_cstr = raw::from_utf8_buf(sb);
             assert_eq!(s_cstr, s);
         }
     }

@@ -523,7 +523,7 @@ pub mod ptr_tests {
             let mut ctr = 0;
             let mut iteration_count = 0;
             for array_each_with_len(arr_ptr, arr.len()) |e| {
-                let actual = str::raw::from_c_str(e);
+                let actual = str::raw::from_c_str(e).to_owned();
                 let expected = copy expected_arr[ctr];
                 debug!("test_ptr_array_each e: %s, a: %s", expected, actual);
                 assert_eq!(actual, expected);
@@ -553,7 +553,7 @@ pub mod ptr_tests {
             let mut ctr = 0;
             let mut iteration_count = 0;
             for array_each(arr_ptr) |e| {
-                let actual = str::raw::from_c_str(e);
+                let actual = str::raw::from_c_str(e).to_owned();
                 let expected = copy expected_arr[ctr];
                 debug!(
                     "test_ptr_array_each e: %s, a: %s",

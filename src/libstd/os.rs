@@ -95,7 +95,7 @@ pub fn fill_charp_buf(f: &fn(*mut c_char, size_t) -> bool)
     do vec::as_mut_buf(buf) |b, sz| {
         if f(b, sz as size_t) {
             unsafe {
-                Some(str::raw::from_buf(b as *u8))
+                Some(str::raw::from_utf8_buf(b as *u8).to_owned())
             }
         } else {
             None
@@ -211,7 +211,7 @@ pub fn env() -> ~[(~str,~str)] {
             }
             let mut result = ~[];
             for ptr::array_each(environ) |e| {
-                let env_pair = str::raw::from_c_str(e);
+                let env_pair = str::raw::from_c_str(e).to_owned();
                 debug!("get_env_pairs: %s", env_pair);
                 result.push(env_pair);
             }
@@ -243,10 +243,9 @@ pub fn getenv(n: &str) -> Option<~str> {
         do with_env_lock {
             let s = str::as_c_str(n, |s| libc::getenv(s));
             if ptr::null::<u8>() == cast::transmute(s) {
-                option::None::<~str>
+                option::None
             } else {
-                let s = cast::transmute(s);
-                option::Some::<~str>(str::raw::from_buf(s))
+                option::Some(str::raw::from_c_str(s).to_owned())
             }
         }
     }
@@ -711,7 +710,7 @@ pub fn list_dir(p: &Path) -> ~[~str] {
                 let mut entry_ptr = readdir(dir_ptr);
                 while (entry_ptr as uint != 0) {
                     strings.push(str::raw::from_c_str(rust_list_dir_val(
-                        entry_ptr)));
+                        entry_ptr)).to_owned());
                     entry_ptr = readdir(dir_ptr);
                 }
                 closedir(dir_ptr);
@@ -1077,7 +1076,7 @@ pub fn last_os_error() -> ~str {
                 fail!("strerror_r failure");
             }
 
-            str::raw::from_c_str(&buf[0])
+            str::raw::from_c_str(&buf[0]).to_owned()
         }
     }
 
@@ -1139,7 +1138,7 @@ pub fn set_exit_status(code: int) {
 unsafe fn load_argc_and_argv(argc: c_int, argv: **c_char) -> ~[~str] {
     let mut args = ~[];
     for uint::range(0, argc as uint) |i| {
-        vec::push(&mut args, str::raw::from_c_str(*argv.offset(i)));
+        vec::push(&mut args, str::raw::from_c_str(*argv.offset(i)).to_owned());
     }
     args
 }

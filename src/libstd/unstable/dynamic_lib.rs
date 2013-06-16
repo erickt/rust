@@ -130,7 +130,7 @@ mod dl {
                 if ptr::null() == last_error {
                     Ok(result)
                 } else {
-                    Err(str::raw::from_c_str(last_error))
+                    Err(str::raw::from_c_str(last_error).to_owned())
                 }
             }
         }
