@@ -143,7 +143,7 @@ impl ToStr for @str {
  */
 pub fn from_byte(b: u8) -> ~str {
     assert!(b < 128u8);
-    unsafe { ::cast::transmute(~[b, 0u8]) }
+    unsafe { raw::from_byte(b) }
 }
 
 /// Convert a char to a string
@@ -2984,6 +2984,14 @@ mod tests {
             let b = vec::raw::to_ptr(a);
             let c = raw::from_buf(b);
             assert_eq!(c, ~"AAAAAAA");
+        }
+    }
+
+    #[test]
+    fn test_from_byte() {
+        unsafe {
+            let a = from_byte(65u8);
+            assert_eq!(a, ~"A");
         }
     }
 
