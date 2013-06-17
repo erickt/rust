@@ -2996,6 +2996,14 @@ mod tests {
     }
 
     #[test]
+    fn test_from_char() {
+        unsafe {
+            let a = from_char('A');
+            assert_eq!(a, ~"A");
+        }
+    }
+
+    #[test]
     fn test_as_bytes() {
         // no null
         let v = [
