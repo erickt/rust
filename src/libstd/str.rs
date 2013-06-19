@@ -97,9 +97,9 @@ pub fn from_bytes_with_null<'a>(vv: &'a [u8]) -> &'a str {
  *
  * Fails if invalid UTF-8
  */
-pub fn from_bytes_slice<'a>(vector: &'a [u8]) -> &'a str {
+pub fn from_bytes_slice<'a>(v: &'a [u8]) -> &'a str {
     assert!(is_utf8(v));
-    unsafe { raw::from_utf8_slice(v) }
+    unsafe { cast::transmute(v) }
 }
 
 /// Copy a slice into a new unique str
@@ -128,9 +128,23 @@ impl ToStr for @str {
  *
  * Fails if invalid UTF-8
  */
+#[cfg(stage0)]
 pub fn from_byte(b: u8) -> ~str {
     assert!(b < 128u8);
     unsafe { ::cast::transmute(~[b, 0u8]) }
+}
+
+/**
+ * Convert a byte to a UTF-8 string
+ *
+ * # Failure
+ *
+ * Fails if invalid UTF-8
+ */
+#[cfg(not(stage0))]
+pub fn from_byte(b: u8) -> ~str {
+    assert!(b < 128u8);
+    unsafe { ::cast::transmute(~[b]) }
 }
 
 /// Convert a char to a string
@@ -746,6 +760,7 @@ pub mod raw {
     }
 
     /// Create a Rust string from a *u8 buffer of the given length
+    #[cfg(stage0)]
     pub unsafe fn from_buf_len(buf: *const u8, len: uint) -> ~str {
         let mut v: ~[u8] = vec::with_capacity(len + 1);
         vec::as_mut_buf(v, |vbuf, _len| {
@@ -753,6 +768,19 @@ pub mod raw {
         });
         vec::raw::set_len(&mut v, len);
         v.push(0u8);
+
+        assert!(is_utf8(v));
+        return ::cast::transmute(v);
+    }
+
+    /// Create a Rust string from a *u8 buffer of the given length
+    #[cfg(not(stage0))]
+    pub unsafe fn from_buf_len(buf: *const u8, len: uint) -> ~str {
+        let mut v: ~[u8] = vec::with_capacity(len + 1);
+        vec::as_mut_buf(v, |vbuf, _len| {
+            ptr::copy_memory(vbuf, buf as *u8, len)
+        });
+        vec::raw::set_len(&mut v, len);
 
         assert!(is_utf8(v));
         return ::cast::transmute(v);
@@ -778,6 +806,7 @@ pub mod raw {
     /// Converts a vector of bytes to a string.
     /// The byte slice needs to contain valid utf8 and needs to be one byte longer than
     /// the string, if possible ending in a 0 byte.
+    #[cfg(stage0)]
     pub unsafe fn from_bytes_with_null<'a>(v: &'a [u8]) -> &'a str {
         cast::transmute(v)
     }
@@ -788,6 +817,7 @@ pub mod raw {
     /// Form a slice from a C string. Unsafe because the caller must ensure the
     /// C string has the static lifetime, or else the return value may be
     /// invalidated later.
+    #[cfg(stage0)]
     pub unsafe fn c_str_to_static_slice(s: *libc::c_char) -> &'static str {
         let s = s as *u8;
         let mut (curr, len) = (s, 0u);
@@ -796,6 +826,22 @@ pub mod raw {
             curr = ptr::offset(s, len);
         }
         let v = (s, len + 1);
+        assert!(is_utf8(::cast::transmute(v)));
+        ::cast::transmute(v)
+    }
+
+    /// Form a slice from a C string. Unsafe because the caller must ensure the
+    /// C string has the static lifetime, or else the return value may be
+    /// invalidated later.
+    #[cfg(not(stage0))]
+    pub unsafe fn c_str_to_static_slice(s: *libc::c_char) -> &'static str {
+        let s = s as *u8;
+        let mut (curr, len) = (s, 0u);
+        while *curr != 0u8 {
+            len += 1u;
+            curr = ptr::offset(s, len);
+        }
+        let v = (s, len);
         assert!(is_utf8(::cast::transmute(v)));
         ::cast::transmute(v)
     }
@@ -810,6 +856,7 @@ pub mod raw {
      * If begin is greater than end.
      * If end is greater than the length of the string.
      */
+    #[cfg(stage0)]
     pub unsafe fn slice_bytes_owned(s: &str, begin: uint, end: uint) -> ~str {
         do as_buf(s) |sbuf, n| {
             assert!((begin <= end));
@@ -837,6 +884,34 @@ pub mod raw {
      * If begin is greater than end.
      * If end is greater than the length of the string.
      */
+    #[cfg(not(stage0))]
+    pub unsafe fn slice_bytes_owned(s: &str, begin: uint, end: uint) -> ~str {
+        do as_buf(s) |sbuf, n| {
+            assert!((begin <= end));
+            assert!((end <= n));
+
+            let mut v = vec::with_capacity(end - begin + 1u);
+            do vec::as_imm_buf(v) |vbuf, _vlen| {
+                let vbuf = ::cast::transmute_mut_unsafe(vbuf);
+                let src = ptr::offset(sbuf, begin);
+                ptr::copy_memory(vbuf, src, end - begin);
+            }
+            vec::raw::set_len(&mut v, end - begin);
+            ::cast::transmute(v)
+        }
+    }
+
+    /**
+     * Takes a bytewise (not UTF-8) slice from a string.
+     *
+     * Returns the substring from [`begin`..`end`).
+     *
+     * # Failure
+     *
+     * If begin is greater than end.
+     * If end is greater than the length of the string.
+     */
+    #[cfg(stage0)]
     #[inline]
     pub unsafe fn slice_bytes(s: &str, begin: uint, end: uint) -> &str {
         do as_buf(s) |sbuf, n| {
@@ -844,6 +919,28 @@ pub mod raw {
              assert!((end <= n));
 
              let tuple = (ptr::offset(sbuf, begin), end - begin + 1);
+             ::cast::transmute(tuple)
+        }
+    }
+
+    /**
+     * Takes a bytewise (not UTF-8) slice from a string.
+     *
+     * Returns the substring from [`begin`..`end`).
+     *
+     * # Failure
+     *
+     * If begin is greater than end.
+     * If end is greater than the length of the string.
+     */
+    #[cfg(not(stage0))]
+    #[inline]
+    pub unsafe fn slice_bytes(s: &str, begin: uint, end: uint) -> &str {
+        do as_buf(s) |sbuf, n| {
+             assert!((begin <= end));
+             assert!((end <= n));
+
+             let tuple = (ptr::offset(sbuf, begin), end - begin);
              ::cast::transmute(tuple)
         }
     }
@@ -885,6 +982,7 @@ pub mod raw {
     }
 
     /// Sets the length of the string and adds the null terminator
+    #[cfg(stage0)]
     #[inline]
     pub unsafe fn set_len(v: &mut ~str, new_len: uint) {
         let v: **mut vec::raw::VecRepr = cast::transmute(v);
@@ -893,6 +991,20 @@ pub mod raw {
         let null = ptr::mut_offset(cast::transmute(&((*repr).unboxed.data)),
                                    new_len);
         *null = 0u8;
+    }
+
+    /**
+     * Sets the length of a string
+     *
+     * This will explicitly set the size of the string, without actually
+     * modifing its buffers, so it is up to the caller to ensure that
+     * the string is actually the specified size.
+     */
+    #[cfg(not(stage0))]
+    #[inline]
+    pub unsafe fn set_len(s: &mut ~str, new_len: uint) {
+        let v: &mut ~[u8] = cast::transmute(s);
+        vec::raw::set_len(v, new_len)
     }
 
     #[test]
