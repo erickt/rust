@@ -248,6 +248,45 @@ pub fn trans_slice_vstore(bcx: block,
     return bcx;
 }
 
+#[cfg(stage0)]
+pub fn trans_lit_str(bcx: block,
+                     lit_expr: @ast::expr,
+                     str_lit: @str,
+                     dest: Dest)
+                  -> block {
+    //!
+    //
+    // Literal strings translate to slices into static memory.  This is
+    // different from trans_slice_vstore() above because it does need to copy
+    // the content anywhere.
+
+    debug!("trans_lit_str(lit_expr=%s, dest=%s)",
+           bcx.expr_to_str(lit_expr),
+           dest.to_str(bcx.ccx()));
+    let _indenter = indenter();
+
+    match dest {
+        Ignore => bcx,
+        SaveIn(lldest) => {
+            unsafe {
+                let bytes = str_lit.len() + 1; // count null-terminator too
+                let llbytes = C_uint(bcx.ccx(), bytes);
+                let llcstr = C_cstr(bcx.ccx(), str_lit);
+                let llcstr = llvm::LLVMConstPointerCast(llcstr,
+                                                        T_ptr(T_i8()));
+                Store(bcx,
+                      llcstr,
+                      GEPi(bcx, lldest, [0u, abi::slice_elt_base]));
+                Store(bcx,
+                      llbytes,
+                      GEPi(bcx, lldest, [0u, abi::slice_elt_len]));
+                bcx
+            }
+        }
+    }
+}
+
+#[cfg(not(stage0))]
 pub fn trans_lit_str(bcx: block,
                      lit_expr: @ast::expr,
                      str_lit: @str,
@@ -284,7 +323,6 @@ pub fn trans_lit_str(bcx: block,
         }
     }
 }
-
 
 pub fn trans_uniq_or_managed_vstore(bcx: block,
                                     heap: heap,

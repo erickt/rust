@@ -1096,6 +1096,7 @@ pub fn C_u8(i: uint) -> ValueRef {
 
 // This is a 'c-like' raw string, which differs from
 // our boxed-and-length-annotated strings.
+#[cfg(stage0)]
 pub fn C_cstr(cx: &mut CrateContext, s: @str) -> ValueRef {
     unsafe {
         match cx.const_cstr_cache.find(&s) {
@@ -1119,14 +1120,46 @@ pub fn C_cstr(cx: &mut CrateContext, s: @str) -> ValueRef {
         return g;
     }
 }
+#[cfg(not(stage0))]
+pub fn C_cstr(cx: &mut CrateContext, s: @str) -> ValueRef {
+    unsafe {
+        match cx.const_cstr_cache.find(&s) {
+            Some(&llval) => return llval,
+            None => ()
+        }
+
+        let sc = do str::as_c_str(s) |buf| {
+            llvm::LLVMConstStringInContext(cx.llcx, buf, s.len() as c_uint, True)
+        };
+        let g =
+            str::as_c_str(fmt!("str%u", (cx.names)("str").name),
+                        |buf| llvm::LLVMAddGlobal(cx.llmod, val_ty(sc), buf));
+        llvm::LLVMSetInitializer(g, sc);
+        llvm::LLVMSetGlobalConstant(g, True);
+        lib::llvm::SetLinkage(g, lib::llvm::InternalLinkage);
+
+        cx.const_cstr_cache.insert(s, g);
+
+        return g;
+    }
+}
 
 // NB: Do not use `do_spill_noroot` to make this into a constant string, or
 // you will be kicked off fast isel. See issue #4352 for an example of this.
+#[cfg(stage0)]
 pub fn C_estr_slice(cx: &mut CrateContext, s: @str) -> ValueRef {
     unsafe {
         let len = s.len();
         let cs = llvm::LLVMConstPointerCast(C_cstr(cx, s), T_ptr(T_i8()));
         C_struct([cs, C_uint(cx, len + 1u /* +1 for null */)])
+    }
+}
+#[cfg(not(stage0))]
+pub fn C_estr_slice(cx: &mut CrateContext, s: @str) -> ValueRef {
+    unsafe {
+        let len = s.len();
+        let cs = llvm::LLVMConstPointerCast(C_cstr(cx, s), T_ptr(T_i8()));
+        C_struct([cs, C_uint(cx, len)])
     }
 }
 

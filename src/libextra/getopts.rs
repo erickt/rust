@@ -511,6 +511,9 @@ pub mod groups {
     pub fn optflag(short_name: &str, long_name: &str,
                    desc: &str) -> OptGroup {
         let len = short_name.len();
+        debug!("optflag1: '%?'", len);
+        debug!("optflag2: '%?'", short_name);
+        debug!("optflag3: '%?'", short_name.as_bytes());
         assert!(len == 1 || len == 0);
         return OptGroup {short_name: str::to_owned(short_name),
                 long_name: str::to_owned(long_name),

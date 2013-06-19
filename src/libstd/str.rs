@@ -477,7 +477,6 @@ Section: Comparing strings
 
 /// Bytewise slice equality
 #[cfg(stage0)]
-#[cfg(not(test))]
 #[lang="str_eq"]
 #[inline]
 pub fn eq_slice(a: &str, b: &str) -> bool {
@@ -495,45 +494,9 @@ pub fn eq_slice(a: &str, b: &str) -> bool {
     }
 }
 
+/// Bytewise slice equality
 #[cfg(not(stage0))]
-#[cfg(not(test))]
 #[lang="str_eq"]
-#[inline]
-pub fn eq_slice(a: &str, b: &str) -> bool {
-    do as_buf(a) |ap, alen| {
-        do as_buf(b) |bp, blen| {
-            if (alen != blen) { false }
-            else {
-                unsafe {
-                    libc::memcmp(ap as *libc::c_void,
-                                 bp as *libc::c_void,
-                                 alen as libc::size_t) == 0
-                }
-            }
-        }
-    }
-}
-
-#[cfg(stage0)]
-#[cfg(test)]
-#[inline]
-pub fn eq_slice(a: &str, b: &str) -> bool {
-    do as_buf(a) |ap, alen| {
-        do as_buf(b) |bp, blen| {
-            if (alen != blen) { false }
-            else {
-                unsafe {
-                    libc::memcmp(ap as *libc::c_void,
-                                 bp as *libc::c_void,
-                                 (alen - 1) as libc::size_t) == 0
-                }
-            }
-        }
-    }
-}
-
-#[cfg(not(stage0))]
-#[cfg(test)]
 #[inline]
 pub fn eq_slice(a: &str, b: &str) -> bool {
     do as_buf(a) |ap, alen| {
