@@ -1670,12 +1670,23 @@ impl<'self> StrSlice<'self> for &'self str {
     #[inline]
     fn to_owned(&self) -> ~str { to_owned(*self) }
 
+    #[cfg(stage0)]
+    #[cfg(stage1)]
     #[inline]
     fn to_managed(&self) -> @str {
         let v = at_vec::from_fn(self.len() + 1, |i| {
             if i == self.len() { 0 } else { self[i] }
         });
         unsafe { ::cast::transmute(v) }
+    }
+
+    #[cfg(stage2)]
+    #[inline]
+    fn to_managed(&self) -> @str {
+        unsafe {
+            let v: &[u8] = cast::transmute(self);
+            cast::transmute(at_vec::to_managed(v))
+        }
     }
 
     /// Converts to a vector of `u16` encoded as UTF-16.
