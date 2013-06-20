@@ -64,6 +64,7 @@ pub use ptr::RawPtr;
 pub use ascii::{Ascii, AsciiCast, OwnedAsciiCast, AsciiStr, ToBytesConsume};
 pub use str::{Str, StrVector, StrSlice, OwnedStr, StrUtil};
 #[cfg(stage0)]
+#[cfg(stage1)]
 pub use str::NullTerminatedStr;
 pub use from_str::{FromStr};
 pub use to_bytes::IterBytes;

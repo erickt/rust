@@ -1045,6 +1045,7 @@ pub fn errno() -> uint {
 
 /// Get a string representing the platform-dependent last error
 #[cfg(stage0)]
+#[cfg(stage1)]
 pub fn last_os_error() -> ~str {
     #[cfg(unix)]
     fn strerror() -> ~str {
@@ -1130,7 +1131,7 @@ pub fn last_os_error() -> ~str {
     strerror()
 }
 
-#[cfg(not(stage0))]
+#[cfg(stage2)]
 pub fn last_os_error() -> ~str {
     #[cfg(unix)]
     fn strerror() -> ~str {

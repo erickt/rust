@@ -81,6 +81,7 @@ pub fn from_bytes(vv: &[u8]) -> ~str {
  * Fails if not null terminated
  */
 #[cfg(stage0)]
+#[cfg(stage1)]
 pub fn from_bytes_with_null<'a>(vv: &'a [u8]) -> &'a str {
     assert_eq!(vv[vv.len() - 1], 0);
     assert!(is_utf8(vv));
@@ -97,6 +98,28 @@ pub fn from_bytes_with_null<'a>(vv: &'a [u8]) -> &'a str {
  *
  * Fails if invalid UTF-8
  */
+#[cfg(stage0)]
+#[cfg(stage1)]
+pub fn from_bytes_slice<'a>(vector: &'a [u8]) -> &'a str {
+    unsafe {
+        assert!(is_utf8(vector));
+        let (ptr, len): (*u8, uint) = ::cast::transmute(vector);
+        let string: &'a str = ::cast::transmute((ptr, len + 1));
+        string
+    }
+}
+
+/**
+ * Converts a vector to a string slice without performing any allocations.
+ *
+ * Once the slice has been validated as utf-8, it is transmuted in-place and
+ * returned as a '&str' instead of a '&[u8]'
+ *
+ * # Failure
+ *
+ * Fails if invalid UTF-8
+ */
+#[cfg(stage2)]
 pub fn from_bytes_slice<'a>(v: &'a [u8]) -> &'a str {
     assert!(is_utf8(v));
     unsafe { cast::transmute(v) }
@@ -129,6 +152,7 @@ impl ToStr for @str {
  * Fails if invalid UTF-8
  */
 #[cfg(stage0)]
+#[cfg(stage1)]
 pub fn from_byte(b: u8) -> ~str {
     assert!(b < 128u8);
     unsafe { ::cast::transmute(~[b, 0u8]) }
@@ -141,7 +165,7 @@ pub fn from_byte(b: u8) -> ~str {
  *
  * Fails if invalid UTF-8
  */
-#[cfg(not(stage0))]
+#[cfg(stage2)]
 pub fn from_byte(b: u8) -> ~str {
     assert!(b < 128u8);
     unsafe { ::cast::transmute(~[b]) }
@@ -491,6 +515,7 @@ Section: Comparing strings
 
 /// Bytewise slice equality
 #[cfg(stage0)]
+#[cfg(stage1)]
 #[lang="str_eq"]
 #[inline]
 pub fn eq_slice(a: &str, b: &str) -> bool {
@@ -509,7 +534,7 @@ pub fn eq_slice(a: &str, b: &str) -> bool {
 }
 
 /// Bytewise slice equality
-#[cfg(not(stage0))]
+#[cfg(stage2)]
 #[lang="str_eq"]
 #[inline]
 pub fn eq_slice(a: &str, b: &str) -> bool {
@@ -761,6 +786,7 @@ pub mod raw {
 
     /// Create a Rust string from a *u8 buffer of the given length
     #[cfg(stage0)]
+    #[cfg(stage1)]
     pub unsafe fn from_buf_len(buf: *const u8, len: uint) -> ~str {
         let mut v: ~[u8] = vec::with_capacity(len + 1);
         vec::as_mut_buf(v, |vbuf, _len| {
@@ -774,7 +800,7 @@ pub mod raw {
     }
 
     /// Create a Rust string from a *u8 buffer of the given length
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     pub unsafe fn from_buf_len(buf: *const u8, len: uint) -> ~str {
         let mut v: ~[u8] = vec::with_capacity(len + 1);
         vec::as_mut_buf(v, |vbuf, _len| {
@@ -807,6 +833,7 @@ pub mod raw {
     /// The byte slice needs to contain valid utf8 and needs to be one byte longer than
     /// the string, if possible ending in a 0 byte.
     #[cfg(stage0)]
+    #[cfg(stage1)]
     pub unsafe fn from_bytes_with_null<'a>(v: &'a [u8]) -> &'a str {
         cast::transmute(v)
     }
@@ -818,6 +845,7 @@ pub mod raw {
     /// C string has the static lifetime, or else the return value may be
     /// invalidated later.
     #[cfg(stage0)]
+    #[cfg(stage1)]
     pub unsafe fn c_str_to_static_slice(s: *libc::c_char) -> &'static str {
         let s = s as *u8;
         let mut (curr, len) = (s, 0u);
@@ -833,7 +861,7 @@ pub mod raw {
     /// Form a slice from a C string. Unsafe because the caller must ensure the
     /// C string has the static lifetime, or else the return value may be
     /// invalidated later.
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     pub unsafe fn c_str_to_static_slice(s: *libc::c_char) -> &'static str {
         let s = s as *u8;
         let mut (curr, len) = (s, 0u);
@@ -857,6 +885,7 @@ pub mod raw {
      * If end is greater than the length of the string.
      */
     #[cfg(stage0)]
+    #[cfg(stage1)]
     pub unsafe fn slice_bytes_owned(s: &str, begin: uint, end: uint) -> ~str {
         do as_buf(s) |sbuf, n| {
             assert!((begin <= end));
@@ -884,7 +913,7 @@ pub mod raw {
      * If begin is greater than end.
      * If end is greater than the length of the string.
      */
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     pub unsafe fn slice_bytes_owned(s: &str, begin: uint, end: uint) -> ~str {
         do as_buf(s) |sbuf, n| {
             assert!((begin <= end));
@@ -912,6 +941,7 @@ pub mod raw {
      * If end is greater than the length of the string.
      */
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[inline]
     pub unsafe fn slice_bytes(s: &str, begin: uint, end: uint) -> &str {
         do as_buf(s) |sbuf, n| {
@@ -933,7 +963,7 @@ pub mod raw {
      * If begin is greater than end.
      * If end is greater than the length of the string.
      */
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     #[inline]
     pub unsafe fn slice_bytes(s: &str, begin: uint, end: uint) -> &str {
         do as_buf(s) |sbuf, n| {
@@ -983,6 +1013,7 @@ pub mod raw {
 
     /// Sets the length of the string and adds the null terminator
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[inline]
     pub unsafe fn set_len(v: &mut ~str, new_len: uint) {
         let v: **mut vec::raw::VecRepr = cast::transmute(v);
@@ -1000,7 +1031,7 @@ pub mod raw {
      * modifing its buffers, so it is up to the caller to ensure that
      * the string is actually the specified size.
      */
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     #[inline]
     pub unsafe fn set_len(s: &mut ~str, new_len: uint) {
         let v: &mut ~[u8] = cast::transmute(s);
@@ -1424,10 +1455,11 @@ impl<'self> StrSlice<'self> for &'self str {
     /// Returns the size in bytes not counting the null terminator
     #[inline]
     #[cfg(stage0)]
+    #[cfg(stage1)]
     fn len(&self) -> uint {
         do as_buf(*self) |_p, n| { n - 1u }
     }
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     fn len(&self) -> uint { self.as_bytes().len() }
     /// Returns the number of characters that a string holds
     #[inline]
@@ -1790,6 +1822,7 @@ impl<'self> StrSlice<'self> for &'self str {
      * The byte slice does not include the null terminator.
      */
     #[cfg(stage0)]
+    #[cfg(stage1)]
     fn as_bytes(&self) -> &'self [u8] {
         unsafe {
             let (ptr, len): (*u8, uint) = ::cast::transmute(*self);
@@ -1797,7 +1830,7 @@ impl<'self> StrSlice<'self> for &'self str {
             ::cast::transmute(outgoing_tuple)
         }
     }
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     fn as_bytes(&self) -> &'self [u8] {
         unsafe { cast::transmute(*self) }
     }
@@ -1996,11 +2029,13 @@ impl<'self> StrSlice<'self> for &'self str {
 
 #[allow(missing_doc)]
 #[cfg(stage0)]
+#[cfg(stage1)]
 pub trait NullTerminatedStr {
     fn as_bytes_with_null<'a>(&'a self) -> &'a [u8];
 }
 
 #[cfg(stage0)]
+#[cfg(stage1)]
 impl NullTerminatedStr for ~str {
     /**
      * Work with the byte buffer of a string as a byte slice.
@@ -2015,6 +2050,7 @@ impl NullTerminatedStr for ~str {
     }
 }
 #[cfg(stage0)]
+#[cfg(stage1)]
 impl NullTerminatedStr for @str {
     /**
      * Work with the byte buffer of a string as a byte slice.
@@ -2043,9 +2079,10 @@ pub trait OwnedStr {
     fn capacity(&self) -> uint;
 
     #[cfg(stage0)]
+    #[cfg(stage1)]
     fn as_bytes_with_null_consume(self) -> ~[u8];
 
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     fn to_bytes(self) -> ~[u8];
 }
 
@@ -2205,6 +2242,7 @@ impl OwnedStr for ~str {
      * * n - The number of bytes to reserve space for
      */
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[inline]
     pub fn reserve(&mut self, n: uint) {
         unsafe {
@@ -2227,7 +2265,7 @@ impl OwnedStr for ~str {
      * * s - A string
      * * n - The number of bytes to reserve space for
      */
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     #[inline]
     pub fn reserve(&mut self, n: uint) {
         unsafe {
@@ -2257,6 +2295,7 @@ impl OwnedStr for ~str {
      * * n - The number of bytes to reserve space for
      */
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[inline]
     fn reserve_at_least(&mut self, n: uint) {
         self.reserve(uint::next_power_of_two(n + 1u) - 1u)
@@ -2280,7 +2319,7 @@ impl OwnedStr for ~str {
      * * s - A string
      * * n - The number of bytes to reserve space for
      */
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     #[inline]
     fn reserve_at_least(&mut self, n: uint) {
         self.reserve(uint::next_power_of_two(n))
@@ -2292,6 +2331,7 @@ impl OwnedStr for ~str {
      * reallocating
      */
     #[cfg(stage0)]
+    #[cfg(stage1)]
     fn capacity(&self) -> uint {
         let buf: &const ~[u8] = unsafe { cast::transmute(self) };
         let vcap = vec::capacity(buf);
@@ -2303,7 +2343,7 @@ impl OwnedStr for ~str {
      * Returns the number of single-byte characters the string can hold without
      * reallocating
      */
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     fn capacity(&self) -> uint {
         unsafe {
             let v: &~[u8] = cast::transmute(self);
@@ -2314,6 +2354,7 @@ impl OwnedStr for ~str {
     /// Convert to a vector of bytes. This does not allocate a new
     /// string, and includes the null terminator.
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[inline]
     fn as_bytes_with_null_consume(self) -> ~[u8] {
         unsafe { ::cast::transmute(self) }
@@ -2321,7 +2362,7 @@ impl OwnedStr for ~str {
 
     /// Convert to a vector of bytes. This does not allocate a new
     /// string, and includes the null terminator.
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     #[inline]
     fn to_bytes(self) -> ~[u8] {
         unsafe { ::cast::transmute(self) }
@@ -2989,6 +3030,7 @@ mod tests {
     }
 
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[test]
     fn test_unsafe_from_bytes_with_null() {
         let a = [65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 0u8];
@@ -2997,6 +3039,7 @@ mod tests {
     }
 
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[test]
     fn test_from_bytes_with_null() {
         let ss = "ศไทย中华Việt Nam";
@@ -3015,6 +3058,7 @@ mod tests {
     }
 
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[test]
     #[should_fail]
     #[ignore(cfg(windows))]
@@ -3034,6 +3078,7 @@ mod tests {
     }
 
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[test]
     #[should_fail]
     #[ignore(cfg(windows))]
@@ -3076,6 +3121,7 @@ mod tests {
     }
 
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[test]
     fn test_as_bytes_with_null() {
         // has null
@@ -3101,6 +3147,7 @@ mod tests {
     }
 
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[test]
     fn test_as_bytes_with_null_consume() {
         let s = ~"ศไทย中华Việt Nam";
@@ -3115,7 +3162,7 @@ mod tests {
         assert_eq!(s.as_bytes_with_null_consume(), v);
     }
 
-    #[cfg(not(stage0))]
+    #[cfg(stage0)]
     #[test]
     fn test_to_bytes() {
         let s = ~"ศไทย中华Việt Nam";
@@ -3131,6 +3178,7 @@ mod tests {
     }
 
     #[cfg(stage0)]
+    #[cfg(stage1)]
     #[test]
     #[ignore(cfg(windows))]
     #[should_fail]
@@ -3142,7 +3190,7 @@ mod tests {
         fail!();
     }
 
-    #[cfg(not(stage0))]
+    #[cfg(stage2)]
     #[test]
     #[ignore(cfg(windows))]
     #[should_fail]
