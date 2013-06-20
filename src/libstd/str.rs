@@ -729,12 +729,14 @@ impl<'self> StrUtil for &'self str {
     #[inline]
     fn as_c_str<T>(self, f: &fn(*libc::c_char) -> T) -> T {
         do as_buf(self) |buf, len| {
-            // NB: len includes the trailing null.
-            assert!(len > 0);
-            if unsafe { *(ptr::offset(buf,len-1)) != 0 } {
-                to_owned(self).as_c_str(f)
-            } else {
+            if len == 0 {
+                vec::as_imm_buf([0_u8], |buf, _| f(buf as *libc::c_char))
+            } else if unsafe { *ptr::offset(buf, len - 1) } == 0 {
                 f(buf as *libc::c_char)
+            } else {
+                let mut s = to_owned(self);
+                unsafe { raw::push_byte(&mut s, 0) };
+                as_buf(s, |buf, _| f(buf as *libc::c_char))
             }
         }
     }
@@ -1460,7 +1462,9 @@ impl<'self> StrSlice<'self> for &'self str {
         do as_buf(*self) |_p, n| { n - 1u }
     }
     #[cfg(stage2)]
-    fn len(&self) -> uint { self.as_bytes().len() }
+    fn len(&self) -> uint {
+        do as_buf(*self) |_p, n| { n }
+    }
     /// Returns the number of characters that a string holds
     #[inline]
     fn char_len(&self) -> uint { self.iter().count() }

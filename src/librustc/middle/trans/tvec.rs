@@ -249,7 +249,6 @@ pub fn trans_slice_vstore(bcx: block,
 }
 
 #[cfg(stage0)]
-#[cfg(stage1)]
 pub fn trans_lit_str(bcx: block,
                      lit_expr: @ast::expr,
                      str_lit: @str,
@@ -287,7 +286,7 @@ pub fn trans_lit_str(bcx: block,
     }
 }
 
-#[cfg(stage2)]
+#[cfg(not(stage0))]
 pub fn trans_lit_str(bcx: block,
                      lit_expr: @ast::expr,
                      str_lit: @str,
