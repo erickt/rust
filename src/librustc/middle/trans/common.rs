@@ -763,15 +763,6 @@ pub fn C_estr_slice(cx: &mut CrateContext, s: @str) -> ValueRef {
     }
 }
 
-// Returns a Plain Old LLVM String:
-pub fn C_postr(s: &str) -> ValueRef {
-    unsafe {
-        do s.as_c_str |buf| {
-            llvm::LLVMConstStringInContext(base::task_llcx(), buf, s.len() as c_uint, False)
-        }
-    }
-}
-
 pub fn C_zero_byte_arr(size: uint) -> ValueRef {
     unsafe {
         let mut i = 0u;
@@ -816,27 +807,6 @@ pub fn C_bytes(bytes: &[u8]) -> ValueRef {
     unsafe {
         let ptr = cast::transmute(vec::raw::to_ptr(bytes));
         return llvm::LLVMConstStringInContext(base::task_llcx(), ptr, bytes.len() as c_uint, True);
-    }
-}
-
-pub fn C_bytes_plus_null(bytes: &[u8]) -> ValueRef {
-    unsafe {
-        let ptr = cast::transmute(vec::raw::to_ptr(bytes));
-        return llvm::LLVMConstStringInContext(base::task_llcx(), ptr, bytes.len() as c_uint,False);
-    }
-}
-
-pub fn C_shape(ccx: &CrateContext, bytes: ~[u8]) -> ValueRef {
-    unsafe {
-        let llshape = C_bytes_plus_null(bytes);
-        let name = fmt!("shape%u", token::gensym("shape"));
-        let llglobal = do name.as_c_str |buf| {
-            llvm::LLVMAddGlobal(ccx.llmod, val_ty(llshape).to_ref(), buf)
-        };
-        llvm::LLVMSetInitializer(llglobal, llshape);
-        llvm::LLVMSetGlobalConstant(llglobal, True);
-        lib::llvm::SetLinkage(llglobal, lib::llvm::InternalLinkage);
-        return llvm::LLVMConstPointerCast(llglobal, Type::i8p().to_ref());
     }
 }
 
