@@ -731,7 +731,7 @@ fn with_envp<T>(env: Option<&[(~str, ~str)]>, cb: &fn(*c_void) -> T) -> T {
     }
 }
 
-#[cfg(windows)]
+#[cfg(windows, stage0)]
 fn with_envp<T>(env: Option<&[(~str, ~str)]>, cb: &fn(*mut c_void) -> T) -> T {
     // On win32 we pass an "environment block" which is not a char**, but
     // rather a concatenation of null-terminated k=v\0 sequences, with a final
@@ -742,6 +742,27 @@ fn with_envp<T>(env: Option<&[(~str, ~str)]>, cb: &fn(*mut c_void) -> T) -> T {
         for es.each |&(k, v)| {
             let kv = fmt!("%s=%s", k, v);
             blk.push_all(kv.as_bytes_with_null_consume());
+        }
+        blk.push(0);
+        vec::as_imm_buf(blk, |p, _len|
+            unsafe { cb(::cast::transmute(p)) }
+        )
+      }
+      _ => cb(ptr::mut_null())
+    }
+}
+
+#[cfg(windows, not(stage0))]
+fn with_envp<T>(env: Option<&[(~str, ~str)]>, cb: &fn(*mut c_void) -> T) -> T {
+    // On win32 we pass an "environment block" which is not a char**, but
+    // rather a concatenation of null-terminated k=v\0 sequences, with a final
+    // \0 to terminate.
+    match env {
+      Some(es) => {
+        let mut blk = ~[];
+        for es.each |&(k, v)| {
+            let kv = fmt!("%s=%s", k, v);
+            blk.push_all(kv.to_bytes());
         }
         blk.push(0);
         vec::as_imm_buf(blk, |p, _len|

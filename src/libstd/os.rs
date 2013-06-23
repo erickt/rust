@@ -1042,6 +1042,93 @@ pub fn errno() -> uint {
 }
 
 /// Get a string representing the platform-dependent last error
+#[cfg(stage0)]
+pub fn last_os_error() -> ~str {
+    #[cfg(unix)]
+    fn strerror() -> ~str {
+        #[cfg(target_os = "macos")]
+        #[cfg(target_os = "android")]
+        #[cfg(target_os = "freebsd")]
+        fn strerror_r(errnum: c_int, buf: *mut c_char, buflen: size_t) -> c_int {
+            #[nolink]
+            extern {
+                unsafe fn strerror_r(errnum: c_int, buf: *mut c_char,
+                                     buflen: size_t) -> c_int;
+            }
+            unsafe {
+                strerror_r(errnum, buf, buflen)
+            }
+        }
+
+        // GNU libc provides a non-compliant version of strerror_r by default
+        // and requires macros to instead use the POSIX compliant variant.
+        // So we just use __xpg_strerror_r which is always POSIX compliant
+        #[cfg(target_os = "linux")]
+        fn strerror_r(errnum: c_int, buf: *mut c_char, buflen: size_t) -> c_int {
+            #[nolink]
+            extern {
+                unsafe fn __xpg_strerror_r(errnum: c_int, buf: *mut c_char,
+                                           buflen: size_t) -> c_int;
+            }
+            unsafe {
+                __xpg_strerror_r(errnum, buf, buflen)
+            }
+        }
+
+        let mut buf = [0 as c_char, ..TMPBUF_SZ];
+        unsafe {
+            let err = strerror_r(errno() as c_int, &mut buf[0],
+                                 TMPBUF_SZ as size_t);
+            if err < 0 {
+                fail!("strerror_r failure");
+            }
+
+            str::raw::from_c_str(&buf[0]).to_owned()
+        }
+    }
+
+    #[cfg(windows)]
+    fn strerror() -> ~str {
+        use libc::types::os::arch::extra::DWORD;
+        use libc::types::os::arch::extra::LPSTR;
+        use libc::types::os::arch::extra::LPVOID;
+
+        #[link_name = "kernel32"]
+        #[abi = "stdcall"]
+        extern "stdcall" {
+            unsafe fn FormatMessageA(flags: DWORD, lpSrc: LPVOID,
+                                     msgId: DWORD, langId: DWORD,
+                                     buf: LPSTR, nsize: DWORD,
+                                     args: *c_void) -> DWORD;
+        }
+
+        static FORMAT_MESSAGE_FROM_SYSTEM: DWORD = 0x00001000;
+        static FORMAT_MESSAGE_IGNORE_INSERTS: DWORD = 0x00000200;
+
+        let mut buf = [0 as c_char, ..TMPBUF_SZ];
+
+        // This value is calculated from the macro
+        // MAKELANGID(LANG_SYSTEM_DEFAULT, SUBLANG_SYS_DEFAULT)
+        let langId = 0x0800 as DWORD;
+        let err = errno() as DWORD;
+        unsafe {
+            let res = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM |
+                                     FORMAT_MESSAGE_IGNORE_INSERTS,
+                                     ptr::mut_null(), err, langId,
+                                     &mut buf[0], TMPBUF_SZ as DWORD,
+                                     ptr::null());
+            if res == 0 {
+                fail!("[%?] FormatMessage failure", errno());
+            }
+
+            str::raw::from_c_str(&buf[0])
+        }
+    }
+
+    strerror()
+}
+
+#[cfg(not(stage0))]
 pub fn last_os_error() -> ~str {
     #[cfg(unix)]
     fn strerror() -> ~str {
@@ -1682,11 +1769,11 @@ mod tests {
           };
           assert!((ostream as uint != 0u));
           let s = ~"hello";
-          let mut buf = s.as_bytes_with_null().to_owned();
+          let mut buf = s.as_bytes().to_owned();
           let len = buf.len();
           do vec::as_mut_buf(buf) |b, _len| {
               assert_eq!(libc::fwrite(b as *c_void, 1u as size_t,
-                                      (s.len() + 1u) as size_t, ostream),
+                                      s.len() as size_t, ostream),
                          len as size_t)
           }
           assert_eq!(libc::fclose(ostream), (0u as c_int));
