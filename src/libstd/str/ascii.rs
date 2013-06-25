@@ -216,10 +216,18 @@ pub trait AsciiStr {
 }
 
 impl<'self> AsciiStr for &'self [Ascii] {
+    #[cfg(stage0)]
     #[inline]
     fn to_str_ascii(&self) -> ~str {
         let mut cpy = self.to_owned();
         cpy.push(0u8.to_ascii());
+        unsafe {cast::transmute(cpy)}
+    }
+
+    #[cfg(not(stage0))]
+    #[inline]
+    fn to_str_ascii(&self) -> ~str {
+        let cpy = self.to_owned();
         unsafe {cast::transmute(cpy)}
     }
 
@@ -240,11 +248,18 @@ impl<'self> AsciiStr for &'self [Ascii] {
 }
 
 impl ToStrConsume for ~[Ascii] {
+    #[cfg(stage0)]
     #[inline]
     fn into_str(self) -> ~str {
         let mut cpy = self;
         cpy.push(0u8.to_ascii());
         unsafe {cast::transmute(cpy)}
+    }
+
+    #[cfg(not(stage0))]
+    #[inline]
+    fn into_str(self) -> ~str {
+        unsafe {cast::transmute(self)}
     }
 }
 

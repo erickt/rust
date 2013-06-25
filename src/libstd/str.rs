@@ -298,7 +298,8 @@ impl<'self, S: Str> StrVector for &'self [S] {
         if sep.is_empty() { return self.concat(); }
 
         // this is wrong without the guarantee that `self` is non-empty
-        let len = sep.len() * self.len() + self.iter().transform(|s| s.as_slice().len()).sum();
+        let len = sep.len() * (self.len() - 1)
+            + self.iter().transform(|s| s.as_slice().len()).sum();
         let mut s = ~"";
         let mut first = true;
 

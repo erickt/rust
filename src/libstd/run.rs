@@ -764,7 +764,6 @@ fn with_envp<T>(env: Option<&[(~str, ~str)]>, cb: &fn(*mut c_void) -> T) -> T {
             let kv = fmt!("%s=%s", k, v);
             blk.push_all(kv.to_bytes());
         }
-        blk.push(0);
         vec::as_imm_buf(blk, |p, _len|
             unsafe { cb(::cast::transmute(p)) }
         )
