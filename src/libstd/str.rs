@@ -197,6 +197,7 @@ pub trait StrVector {
 
 impl<'self, S: Str> StrVector for &'self [S] {
     /// Concatenate a vector of strings.
+    #[cfg(stage0)]
     pub fn concat(&self) -> ~str {
         if self.is_empty() { return ~""; }
 
@@ -222,7 +223,33 @@ impl<'self, S: Str> StrVector for &'self [S] {
         s
     }
 
+    #[cfg(not(stage0))]
+    pub fn concat(&self) -> ~str {
+        if self.is_empty() { return ~""; }
+
+        let len = self.iter().transform(|s| s.as_slice().len()).sum();
+
+        let mut s = ~"";
+
+        s.reserve(len);
+
+        unsafe {
+            do as_buf(s) |buf, _| {
+                let mut buf = ::cast::transmute_mut_unsafe(buf);
+                for self.iter().advance |ss| {
+                    do as_buf(ss.as_slice()) |ssbuf, sslen| {
+                        ptr::copy_memory(buf, ssbuf, sslen);
+                        buf = buf.offset(sslen);
+                    }
+                }
+            }
+            raw::set_len(&mut s, len);
+        }
+        s
+    }
+
     /// Concatenate a vector of strings, placing a given separator between each.
+    #[cfg(stage0)]
     pub fn connect(&self, sep: &str) -> ~str {
         if self.is_empty() { return ~""; }
 
@@ -245,6 +272,44 @@ impl<'self, S: Str> StrVector for &'self [S] {
                     for self.iter().advance |ss| {
                         do as_buf(ss.as_slice()) |ssbuf, sslen| {
                             let sslen = sslen - 1;
+                            if first {
+                                first = false;
+                            } else {
+                                ptr::copy_memory(buf, sepbuf, seplen);
+                                buf = buf.offset(seplen);
+                            }
+                            ptr::copy_memory(buf, ssbuf, sslen);
+                            buf = buf.offset(sslen);
+                        }
+                    }
+                }
+            }
+            raw::set_len(&mut s, len);
+        }
+        s
+    }
+
+    /// Concatenate a vector of strings, placing a given separator between each.
+    #[cfg(not(stage0))]
+    pub fn connect(&self, sep: &str) -> ~str {
+        if self.is_empty() { return ~""; }
+
+        // concat is faster
+        if sep.is_empty() { return self.concat(); }
+
+        // this is wrong without the guarantee that `self` is non-empty
+        let len = sep.len() * self.len() + self.iter().transform(|s| s.as_slice().len()).sum();
+        let mut s = ~"";
+        let mut first = true;
+
+        s.reserve(len);
+
+        unsafe {
+            do as_buf(s) |buf, _| {
+                do as_buf(sep) |sepbuf, seplen| {
+                    let mut buf = ::cast::transmute_mut_unsafe(buf);
+                    for self.iter().advance |ss| {
+                        do as_buf(ss.as_slice()) |ssbuf, sslen| {
                             if first {
                                 first = false;
                             } else {
@@ -1907,11 +1972,34 @@ impl<'self> StrSlice<'self> for &'self str {
     }
 
     /// Given a string, make a new string with repeated copies of it.
+    #[cfg(stage0)]
     fn repeat(&self, nn: uint) -> ~str {
         do as_buf(*self) |buf, len| {
             let mut ret = ~"";
             // ignore the NULL terminator
             let len = len - 1;
+            ret.reserve(nn * len);
+
+            unsafe {
+                do as_buf(ret) |rbuf, _len| {
+                    let mut rbuf = ::cast::transmute_mut_unsafe(rbuf);
+
+                    for nn.times {
+                        ptr::copy_memory(rbuf, buf, len);
+                        rbuf = rbuf.offset(len);
+                    }
+                }
+                raw::set_len(&mut ret, nn * len);
+            }
+            ret
+        }
+    }
+
+    /// Given a string, make a new string with repeated copies of it.
+    #[cfg(not(stage0))]
+    fn repeat(&self, nn: uint) -> ~str {
+        do as_buf(*self) |buf, len| {
+            let mut ret = ~"";
             ret.reserve(nn * len);
 
             unsafe {

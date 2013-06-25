@@ -107,10 +107,17 @@ impl<'self> AsciiCast<&'self[Ascii]> for &'self str {
         unsafe {self.to_ascii_nocheck()}
     }
 
+    #[cfg(stage0)]
     #[inline]
     unsafe fn to_ascii_nocheck(&self) -> &'self[Ascii] {
         let (p,len): (*u8, uint) = cast::transmute(*self);
         cast::transmute((p, len - 1))
+    }
+
+    #[cfg(not(stage0))]
+    #[inline]
+    unsafe fn to_ascii_nocheck(&self) -> &'self[Ascii] {
+        cast::transmute(*self)
     }
 
     #[inline]
