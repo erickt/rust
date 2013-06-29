@@ -18,7 +18,6 @@
  */
 
 use at_vec;
-use cast::transmute;
 use cast;
 use char;
 use char::Char;
@@ -193,10 +192,10 @@ impl<'self, S: Str> StrVector for &'self [S] {
         s.reserve(len);
 
         unsafe {
-            do as_buf(s) |buf, _| {
+            do s.as_buf |buf, _| {
                 let mut buf = ::cast::transmute_mut_unsafe(buf);
                 for self.iter().advance |ss| {
-                    do as_buf(ss.as_slice()) |ssbuf, sslen| {
+                    do ss.as_slice().as_buf |ssbuf, sslen| {
                         let sslen = sslen - 1;
                         ptr::copy_memory(buf, ssbuf, sslen);
                         buf = buf.offset(sslen);
@@ -224,12 +223,12 @@ impl<'self, S: Str> StrVector for &'self [S] {
         s.reserve(len);
 
         unsafe {
-            do as_buf(s) |buf, _| {
-                do as_buf(sep) |sepbuf, seplen| {
+            do s.as_buf |buf, _| {
+                do sep.as_buf |sepbuf, seplen| {
                     let seplen = seplen - 1;
                     let mut buf = ::cast::transmute_mut_unsafe(buf);
                     for self.iter().advance |ss| {
-                        do as_buf(ss.as_slice()) |ssbuf, sslen| {
+                        do ss.as_slice().as_buf |ssbuf, sslen| {
                             let sslen = sslen - 1;
                             if first {
                                 first = false;
@@ -532,8 +531,8 @@ Section: Comparing strings
 #[lang="str_eq"]
 #[inline]
 pub fn eq_slice(a: &str, b: &str) -> bool {
-    do as_buf(a) |ap, alen| {
-        do as_buf(b) |bp, blen| {
+    do a.as_buf |ap, alen| {
+        do b.as_buf |bp, blen| {
             if (alen != blen) { false }
             else {
                 unsafe {
@@ -549,8 +548,8 @@ pub fn eq_slice(a: &str, b: &str) -> bool {
 #[cfg(test)]
 #[inline]
 pub fn eq_slice(a: &str, b: &str) -> bool {
-    do as_buf(a) |ap, alen| {
-        do as_buf(b) |bp, blen| {
+    do a.as_buf |ap, alen| {
+        do b.as_buf |bp, blen| {
             if (alen != blen) { false }
             else {
                 unsafe {
@@ -801,30 +800,13 @@ pub fn as_c_str<T>(s: &str, f: &fn(*libc::c_char) -> T) -> T {
     s.as_c_str(f)
 }
 
-/**
- * Work with the byte buffer and length of a slice.
- *
- * The given length is one byte longer than the 'official' indexable
- * length of the string. This is to permit probing the byte past the
- * indexable area for a null byte, as is the case in slices pointing
- * to full strings, or suffixes of them.
- */
-#[inline]
-pub fn as_buf<T>(s: &str, f: &fn(*u8, uint) -> T) -> T {
-    unsafe {
-        let v : *(*u8,uint) = transmute(&s);
-        let (buf,len) = *v;
-        f(buf, len)
-    }
-}
-
 /// Unsafe operations
 pub mod raw {
     use cast;
     use libc;
     use ptr;
     use str::raw;
-    use str::{as_buf, is_utf8};
+    use str::{is_utf8};
     use vec;
     use vec::MutableVector;
 
@@ -913,7 +895,7 @@ pub mod raw {
      * If end is greater than the length of the string.
      */
     pub unsafe fn slice_bytes_owned(s: &str, begin: uint, end: uint) -> ~str {
-        do as_buf(s) |sbuf, n| {
+        do s.as_buf |sbuf, n| {
             assert!((begin <= end));
             assert!((end <= n));
 
@@ -941,7 +923,7 @@ pub mod raw {
      */
     #[inline]
     pub unsafe fn slice_bytes(s: &str, begin: uint, end: uint) -> &str {
-        do as_buf(s) |sbuf, n| {
+        do s.as_buf |sbuf, n| {
              assert!((begin <= end));
              assert!((end <= n));
 
@@ -954,7 +936,7 @@ pub mod raw {
     pub unsafe fn push_byte(s: &mut ~str, b: u8) {
         let new_len = s.len() + 1;
         s.reserve_at_least(new_len);
-        do as_buf(*s) |buf, len| {
+        do s.as_buf |buf, len| {
             let buf: *mut u8 = ::cast::transmute(buf);
             *ptr::mut_offset(buf, len) = b;
         }
@@ -1175,7 +1157,7 @@ impl<'self> Str for @str {
 impl<'self> Container for &'self str {
     #[inline]
     fn len(&self) -> uint {
-        do as_buf(*self) |_p, n| { n - 1u }
+        do self.as_buf |_p, n| { n - 1u }
     }
     #[inline]
     fn is_empty(&self) -> bool {
@@ -1244,6 +1226,8 @@ pub trait StrSlice<'self> {
     fn lev_distance(&self, t: &str) -> uint;
 
     fn subslice_offset(&self, inner: &str) -> uint;
+
+    fn as_buf<T>(&self, f: &fn(*u8, uint) -> T) -> T;
 }
 
 /// Extension methods for strings
@@ -1863,14 +1847,14 @@ impl<'self> StrSlice<'self> for &'self str {
 
     /// Given a string, make a new string with repeated copies of it.
     fn repeat(&self, nn: uint) -> ~str {
-        do as_buf(*self) |buf, len| {
+        do self.as_buf |buf, len| {
             let mut ret = ~"";
             // ignore the NULL terminator
             let len = len - 1;
             ret.reserve(nn * len);
 
             unsafe {
-                do as_buf(ret) |rbuf, _len| {
+                do ret.as_buf |rbuf, _len| {
                     let mut rbuf = ::cast::transmute_mut_unsafe(rbuf);
 
                     for nn.times {
@@ -1964,8 +1948,8 @@ impl<'self> StrSlice<'self> for &'self str {
      */
     #[inline]
     fn subslice_offset(&self, inner: &str) -> uint {
-        do as_buf(*self) |a, a_len| {
-            do as_buf(inner) |b, b_len| {
+        do self.as_buf |a, a_len| {
+            do inner.as_buf |b, b_len| {
                 let a_start: uint;
                 let a_end: uint;
                 let b_start: uint;
@@ -1981,6 +1965,22 @@ impl<'self> StrSlice<'self> for &'self str {
         }
     }
 
+    /**
+     * Work with the byte buffer and length of a slice.
+     *
+     * The given length is one byte longer than the 'official' indexable
+     * length of the string. This is to permit probing the byte past the
+     * indexable area for a null byte, as is the case in slices pointing
+     * to full strings, or suffixes of them.
+     */
+    #[inline]
+    fn as_buf<T>(&self, f: &fn(*u8, uint) -> T) -> T {
+        unsafe {
+            let v: *(*u8, uint) = cast::transmute(self);
+            let (buf, len) = *v;
+            f(buf, len)
+        }
+    }
 }
 
 #[allow(missing_doc)]
@@ -2039,8 +2039,8 @@ impl OwnedStr for ~str {
             let llen = self.len();
             let rlen = rhs.len();
             self.reserve(llen + rlen);
-            do as_buf(*self) |lbuf, _llen| {
-                do as_buf(rhs) |rbuf, _rlen| {
+            do self.as_buf |lbuf, _llen| {
+                do rhs.as_buf |rbuf, _rlen| {
                     let dst = ptr::offset(lbuf, llen);
                     let dst = ::cast::transmute_mut_unsafe(dst);
                     ptr::copy_memory(dst, rbuf, rlen);
@@ -2057,8 +2057,8 @@ impl OwnedStr for ~str {
             let llen = self.len();
             let rlen = rhs.len();
             self.reserve_at_least(llen + rlen);
-            do as_buf(*self) |lbuf, _llen| {
-                do as_buf(rhs) |rbuf, _rlen| {
+            do self.as_buf |lbuf, _llen| {
+                do rhs.as_buf |rbuf, _rlen| {
                     let dst = ptr::offset(lbuf, llen);
                     let dst = ::cast::transmute_mut_unsafe(dst);
                     ptr::copy_memory(dst, rbuf, rlen);
@@ -2082,7 +2082,7 @@ impl OwnedStr for ~str {
             let new_len = len + nb;
             self.reserve_at_least(new_len);
             let off = len;
-            do as_buf(*self) |buf, _len| {
+            do self.as_buf |buf, _len| {
                 let buf: *mut u8 = ::cast::transmute(buf);
                 match nb {
                     1u => {
@@ -3042,20 +3042,20 @@ mod tests {
     #[test]
     fn test_as_buf() {
         let a = "Abcdefg";
-        let b = as_buf(a, |buf, _l| {
+        let b = do a.as_buf |buf, _l| {
             assert_eq!(unsafe { *buf }, 65u8);
             100
-        });
+        };
         assert_eq!(b, 100);
     }
 
     #[test]
     fn test_as_buf_small() {
         let a = "A";
-        let b = as_buf(a, |buf, _l| {
+        let b = do a.as_buf |buf, _l| {
             assert_eq!(unsafe { *buf }, 65u8);
             100
-        });
+        };
         assert_eq!(b, 100);
     }
 
@@ -3063,7 +3063,7 @@ mod tests {
     fn test_as_buf2() {
         unsafe {
             let s = ~"hello";
-            let sb = as_buf(s, |b, _l| b);
+            let sb = s.as_buf(|b, _l| b);
             let s_cstr = raw::from_buf(sb);
             assert_eq!(s_cstr, s);
         }
@@ -3072,7 +3072,7 @@ mod tests {
     #[test]
     fn test_as_buf_3() {
         let a = ~"hello";
-        do as_buf(a) |buf, len| {
+        do a.as_buf |buf, len| {
             unsafe {
                 assert_eq!(a[0], 'h' as u8);
                 assert_eq!(*buf, 'h' as u8);
