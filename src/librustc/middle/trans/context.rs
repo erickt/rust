@@ -28,7 +28,6 @@ use middle::trans::type_::Type;
 use std::c_str::ToCStr;
 use std::hash;
 use std::hashmap::{HashMap, HashSet};
-use std::str;
 use std::local_data;
 use extra::time;
 use syntax::ast;

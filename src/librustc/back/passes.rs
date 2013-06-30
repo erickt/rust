@@ -9,7 +9,6 @@
 // except according to those terms.
 
 use std::c_str::ToCStr;
-use std::str;
 use std::io;
 
 use driver::session::{OptLevel, No, Less, Aggressive};
