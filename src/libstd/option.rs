@@ -50,7 +50,6 @@ use iterator::Iterator;
 use str::StrSlice;
 use clone::DeepClone;
 
-#[cfg(test)] use str;
 #[cfg(test)] use iterator::IteratorUtil;
 
 /// The option type
