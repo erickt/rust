@@ -207,9 +207,9 @@ pub fn trans_log(log_ex: &ast::expr,
             ccx, modpath, "loglevel");
         let global;
         unsafe {
-            global = str::as_c_str(s, |buf| {
+            global = do s.as_c_str |buf| {
                 llvm::LLVMAddGlobal(ccx.llmod, Type::i32().to_ref(), buf)
-            });
+            };
             llvm::LLVMSetGlobalConstant(global, False);
             llvm::LLVMSetInitializer(global, C_null(Type::i32()));
             lib::llvm::SetLinkage(global, lib::llvm::InternalLinkage);
