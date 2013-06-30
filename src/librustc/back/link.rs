@@ -108,7 +108,6 @@ pub mod jit {
     use std::c_str::ToCStr;
     use std::cast;
     use std::ptr;
-    use std::str;
     use std::sys;
     use std::unstable::intrinsics;
 
