@@ -38,7 +38,6 @@ use middle::trans::type_::Type;
 
 use std::io;
 use std::libc::c_uint;
-use std::str;
 use extra::time;
 use syntax::ast;
 
