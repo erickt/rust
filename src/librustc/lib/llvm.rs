@@ -12,7 +12,6 @@
 use std::hashmap::HashMap;
 use std::libc::{c_uint, c_ushort};
 use std::option;
-use std::str;
 
 use middle::trans::type_::Type;
 

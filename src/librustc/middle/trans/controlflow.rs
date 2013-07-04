@@ -25,7 +25,6 @@ use util::ppaux;
 
 use middle::trans::type_::Type;
 
-use std::str;
 use syntax::ast;
 use syntax::ast::ident;
 use syntax::ast_map::path_mod;

@@ -21,7 +21,6 @@ use middle::ty;
 
 use middle::trans::type_::Type;
 
-use std::str;
 use syntax::ast;
 
 // Take an inline assembly expression and splat it out via LLVM

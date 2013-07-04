@@ -27,7 +27,6 @@ use util::ppaux::ty_to_str;
 
 use middle::trans::type_::Type;
 
-use std::str;
 use std::vec;
 use syntax::ast;
 use syntax::ast_map::path_name;

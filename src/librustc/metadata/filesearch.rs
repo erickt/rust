@@ -12,7 +12,6 @@
 use std::option;
 use std::os;
 use std::result;
-use std::str;
 
 // A module for searching for libraries
 // FIXME (#2658): I'm not happy how this module turned out. Should
