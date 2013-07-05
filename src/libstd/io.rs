@@ -1713,9 +1713,7 @@ pub fn with_str_writer(f: &fn(@Writer)) -> ~str {
 
 #[cfg(not(stage0))]
 pub fn with_str_writer(f: &fn(@Writer)) -> ~str {
-    let v = with_bytes_writer(f);
-    assert!(str::is_utf8(v));
-    unsafe { ::cast::transmute(v) }
+    str::from_bytes(with_bytes_writer(f))
 }
 
 // Utility functions
