@@ -878,17 +878,6 @@ pub mod raw {
     use vec;
     use vec::MutableVector;
 
-    /// Create a Rust string from a null-terminated *u8 buffer
-    pub unsafe fn from_buf(buf: *u8) -> ~str {
-        let mut curr = buf;
-        let mut i = 0u;
-        while *curr != 0u8 {
-            i += 1u;
-            curr = ptr::offset(buf, i);
-        }
-        return from_buf_len(buf, i);
-    }
-
     /// Create a Rust string from a *u8 buffer of the given length
     #[cfg(stage0)]
     pub unsafe fn from_buf_len(buf: *const u8, len: uint) -> ~str {
@@ -918,12 +907,13 @@ pub mod raw {
 
     /// Create a Rust string from a null-terminated C string
     pub unsafe fn from_c_str(c_str: *libc::c_char) -> ~str {
-        from_buf(::cast::transmute(c_str))
-    }
-
-    /// Create a Rust string from a `*c_char` buffer of the given length
-    pub unsafe fn from_c_str_len(c_str: *libc::c_char, len: uint) -> ~str {
-        from_buf_len(::cast::transmute(c_str), len)
+        let mut curr = c_str;
+        let mut i = 0u;
+        while curr.is_not_null() {
+            i += 1u;
+            curr = c_str.offset(i);
+        }
+        from_buf_len(cast::transmute(c_str), i)
     }
 
     /// Converts a vector of bytes to a new owned string.
@@ -3138,11 +3128,11 @@ mod tests {
     }
 
     #[test]
-    fn test_from_buf() {
+    fn test_raw_from_c_str() {
         unsafe {
             let a = ~[65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 65u8, 0u8];
             let b = vec::raw::to_ptr(a);
-            let c = raw::from_buf(b);
+            let c = raw::from_c_str(b);
             assert_eq!(c, ~"AAAAAAA");
         }
     }
