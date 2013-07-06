@@ -935,8 +935,17 @@ pub mod raw {
 
     /// Converts an owned vector of bytes to a new owned string. This assumes
     /// that the utf-8-ness of the vector has already been validated
+    #[cfg(stage0)]
     pub unsafe fn from_bytes_owned(mut v: ~[u8]) -> ~str {
         v.push(0u8);
+        cast::transmute(v)
+    }
+
+    /// Converts an owned vector of bytes to a new owned string. This assumes
+    /// that the utf-8-ness of the vector has already been validated
+    #[cfg(not(stage0))]
+    #[inline]
+    pub unsafe fn from_bytes_owned(v: ~[u8]) -> ~str {
         cast::transmute(v)
     }
 
