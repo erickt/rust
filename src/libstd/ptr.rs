@@ -454,29 +454,31 @@ pub mod ptr_tests {
             let one = ~"oneOne";
             let two = ~"twoTwo";
             let three = ~"threeThree";
-            let arr: ~[*i8] = ~[
-                ::cast::transmute(&one[0]),
-                ::cast::transmute(&two[0]),
-                ::cast::transmute(&three[0]),
-            ];
-            let expected_arr = [
-                one, two, three
-            ];
-            let arr_ptr = &arr[0];
-            let mut ctr = 0;
-            let mut iteration_count = 0;
-            array_each_with_len(arr_ptr, arr.len(),
-                                |e| {
-                                         let actual = str::raw::from_c_str(e);
-                                         let expected = copy expected_arr[ctr];
-                                         debug!(
-                                             "test_ptr_array_each e: %s, a: %s",
-                                             expected, actual);
-                                         assert_eq!(actual, expected);
-                                         ctr += 1;
-                                         iteration_count += 1;
-                                     });
-            assert_eq!(iteration_count, 3u);
+
+            do one.as_imm_buf |one_buf, _| {
+                do two.as_imm_buf |two_buf, _| {
+                    do three.as_imm_buf |three_buf, _| {
+                        let arr = [one_buf, two_buf, three_buf];
+                        let expected_arr = [&one, &two, &three ];
+
+                        do arr.as_imm_buf |arr_buf, arr_len| {
+                            let mut ctr = 0;
+                            let mut iteration_count = 0;
+
+                            do array_each_with_len(arr_buf, arr_len) |e| {
+                                 let actual = str::raw::from_c_str(e);
+                                 let expected = expected_arr[ctr];
+                                 debug!("test_ptr_array_each e: %s, a: %s", *expected, actual);
+                                 assert_eq!(actual, *expected);
+                                 ctr += 1;
+                                 iteration_count += 1;
+                            }
+                            assert_eq!(iteration_count, 3u);
+                        }
+                    }
+                }
+            }
+            
         }
     }
     #[test]
@@ -485,30 +487,30 @@ pub mod ptr_tests {
             let one = ~"oneOne";
             let two = ~"twoTwo";
             let three = ~"threeThree";
-            let arr: ~[*i8] = ~[
-                ::cast::transmute(&one[0]),
-                ::cast::transmute(&two[0]),
-                ::cast::transmute(&three[0]),
-                // fake a null terminator
-                0 as *i8
-            ];
-            let expected_arr = [
-                one, two, three
-            ];
-            let arr_ptr = &arr[0];
-            let mut ctr = 0;
-            let mut iteration_count = 0;
-            array_each(arr_ptr, |e| {
-                let actual = str::raw::from_c_str(e);
-                let expected = copy expected_arr[ctr];
-                debug!(
-                    "test_ptr_array_each e: %s, a: %s",
-                    expected, actual);
-                assert_eq!(actual, expected);
-                ctr += 1;
-                iteration_count += 1;
-            });
-            assert_eq!(iteration_count, 3);
+
+            do one.as_imm_buf |one_buf, _| {
+                do two.as_imm_buf |two_buf, _| {
+                    do three.as_imm_buf |three_buf, _| {
+                        // fake a null terminator
+                        let arr = [one, two, three, 0];
+                        let expected_arr = [&one, &two, &three];
+
+                        do arr.as_imm_buf |arr_buf, arr_len| {
+                            let mut ctr = 0;
+                            let mut iteration_count = 0;
+                            do array_each(arr_ptr) |e| {
+                                let actual = str::raw::from_c_str(e);
+                                let expected = expected_arr[ctr];
+                                debug!("test_ptr_array_each e: %s, a: %s", *expected, actual);
+                                assert_eq!(actual, *expected);
+                                ctr += 1;
+                                iteration_count += 1;
+                            }
+                            assert_eq!(iteration_count, 3);
+                        }
+                    }
+                }
+            }
         }
     }
     #[test]
