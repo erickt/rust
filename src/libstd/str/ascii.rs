@@ -16,6 +16,8 @@ use str::StrSlice;
 use cast;
 use iterator::IteratorUtil;
 use vec::{CopyableVector, ImmutableVector};
+#[cfg(stage0)]
+use vec::OwnedVector;
 use to_bytes::IterBytes;
 
 /// Datatype to hold one ascii character. It wraps a `u8`, with the highest bit always zero.
