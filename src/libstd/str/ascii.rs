@@ -15,7 +15,7 @@ use str;
 use str::StrSlice;
 use cast;
 use iterator::IteratorUtil;
-use vec::{CopyableVector, ImmutableVector, OwnedVector};
+use vec::{CopyableVector, ImmutableVector};
 use to_bytes::IterBytes;
 
 /// Datatype to hold one ascii character. It wraps a `u8`, with the highest bit always zero.
@@ -192,11 +192,18 @@ impl OwnedAsciiCast for ~str {
         unsafe {self.into_ascii_nocheck()}
     }
 
+    #[cfg(stage0)]
     #[inline]
     unsafe fn into_ascii_nocheck(self) -> ~[Ascii] {
         let mut r: ~[Ascii] = cast::transmute(self);
         r.pop();
         r
+    }
+
+    #[cfg(not(stage0))]
+    #[inline]
+    unsafe fn into_ascii_nocheck(self) -> ~[Ascii] {
+        cast::transmute(self)
     }
 }
 
@@ -278,7 +285,7 @@ pub trait ToBytesConsume {
 
 impl ToBytesConsume for ~[Ascii] {
     fn into_bytes(self) -> ~[u8] {
-        unsafe {cast::transmute(self)}
+        unsafe { cast::transmute(self) }
     }
 }
 
