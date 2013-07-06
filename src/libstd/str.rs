@@ -906,7 +906,7 @@ pub mod raw {
     /// Create a Rust string from a *u8 buffer of the given length
     #[cfg(not(stage0))]
     pub unsafe fn from_buf_len(buf: *const u8, len: uint) -> ~str {
-        let mut v: ~[u8] = vec::with_capacity(len + 1);
+        let mut v: ~[u8] = vec::with_capacity(len);
         do v.as_mut_buf |vbuf, _len| {
             ptr::copy_memory(vbuf, buf as *u8, len)
         };
