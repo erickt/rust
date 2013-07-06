@@ -143,6 +143,7 @@ fn fcx_has_nonzero_span(fcx: fn_ctxt) -> bool {
 }
 
 pub fn decl_fn(llmod: ModuleRef, name: &str, cc: lib::llvm::CallConv, ty: Type) -> ValueRef {
+    debug!("decl_fn: %? cc: %?", name, cc);
     let llfn: ValueRef = do name.to_c_str().with |buf| {
         unsafe {
             llvm::LLVMGetOrInsertFunction(llmod, buf, ty.to_ref())
