@@ -344,6 +344,7 @@ pub mod ptr_tests {
     use libc;
     use str;
     use vec;
+    use ptr;
 
     #[test]
     fn test() {
