@@ -498,7 +498,7 @@ pub mod ptr_tests {
                         do arr.as_imm_buf |arr_buf, arr_len| {
                             let mut ctr = 0;
                             let mut iteration_count = 0;
-                            do array_each(arr_ptr) |e| {
+                            do array_each(arr_buf) |e| {
                                 let actual = str::raw::from_c_str(e);
                                 let expected = expected_arr[ctr];
                                 debug!("test_ptr_array_each e: %s, a: %s", *expected, actual);
