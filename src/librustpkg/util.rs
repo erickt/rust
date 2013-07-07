@@ -380,7 +380,7 @@ pub fn link_exe(_src: &Path, _dest: &Path) -> bool {
 #[cfg(target_os = "freebsd")]
 #[cfg(target_os = "macos")]
 pub fn link_exe(src: &Path, dest: &Path) -> bool {
-    use std::{libc, str};
+    use std::libc;
     unsafe {
         do src.to_c_str().with |src_buf| {
             do dest.to_c_str().with |dest_buf| {
