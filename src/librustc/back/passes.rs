@@ -173,15 +173,14 @@ pub fn populate_pass_manager(sess: Session, pm: &mut PassManager, pass_list:&[~s
     }
 }
 
-pub fn create_pass(name:&str) -> Option<PassRef> {
-    do name.to_c_str().with |s| {
-        unsafe {
-            let p = llvm::LLVMCreatePass(s);
-            if p.is_null() {
-                None
-            } else {
-                Some(p)
-            }
+pub fn create_pass(name: &str) -> Option<PassRef> {
+    let name = name.to_c_str();
+    unsafe {
+        let p = llvm::LLVMCreatePass(name.as_ptr());
+        if p.is_null() {
+            None
+        } else {
+            Some(p)
         }
     }
 }

@@ -695,10 +695,9 @@ pub fn C_integral(t: Type, u: u64, sign_extend: bool) -> ValueRef {
 }
 
 pub fn C_floating(s: &str, t: Type) -> ValueRef {
+    let s = s.to_c_str();
     unsafe {
-        do s.to_c_str().with |buf| {
-            llvm::LLVMConstRealOfString(t.to_ref(), buf)
-        }
+        llvm::LLVMConstRealOfString(t.to_ref(), s.as_ptr())
     }
 }
 
@@ -744,14 +743,12 @@ pub fn C_cstr(cx: &mut CrateContext, s: @str) -> ValueRef {
             None => ()
         }
 
-        let sc = do s.to_c_str().with |buf| {
-            llvm::LLVMConstStringInContext(cx.llcx, buf, s.len() as c_uint, False)
-        };
+        let sc = s.to_c_str();
+        let sc = llvm::LLVMConstStringInContext(cx.llcx, sc.as_ptr(), s.len() as c_uint, False);
 
         let gsym = token::gensym("str");
-        let g = do fmt!("str%u", gsym).to_c_str().with |buf| {
-            llvm::LLVMAddGlobal(cx.llmod, val_ty(sc).to_ref(), buf)
-        };
+        let g = fmt!("str%u", gsym).to_c_str();
+        let g = llvm::LLVMAddGlobal(cx.llmod, val_ty(sc).to_ref(), g.as_ptr());
         llvm::LLVMSetInitializer(g, sc);
         llvm::LLVMSetGlobalConstant(g, True);
         lib::llvm::SetLinkage(g, lib::llvm::InternalLinkage);

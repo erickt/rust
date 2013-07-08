@@ -123,11 +123,17 @@ pub fn trans_inline_asm(bcx: block, ia: &ast::inline_asm) -> block {
         ast::asm_intel => lib::llvm::AD_Intel
     };
 
-    let r = do ia.asm.to_c_str().with |a| {
-        do constraints.to_c_str().with |c| {
-            InlineAsmCall(bcx, a, c, inputs, output, ia.volatile, ia.alignstack, dialect)
-        }
-    };
+    let asm = ia.asm.to_c_str();
+    let constraints = constraints.to_c_str();
+
+    let r = InlineAsmCall(bcx,
+                          asm.as_ptr(),
+                          constraints.as_ptr(),
+                          inputs,
+                          output,
+                          ia.volatile,
+                          ia.alignstack,
+                          dialect);
 
     // Again, based on how many outputs we have
     if numOutputs == 1 {

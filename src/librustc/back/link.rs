@@ -75,30 +75,28 @@ pub fn WriteOutputFile(sess: Session,
         FileType: c_uint,
         OptLevel: c_int,
         EnableSegmentedStacks: bool) {
-    unsafe {
-        do Triple.to_c_str().with |Triple| {
-            do Feature.to_c_str().with |Feature| {
-                do Output.to_c_str().with |Output| {
-                    let result = llvm::LLVMRustWriteOutputFile(
-                            PM,
-                            M,
-                            Triple,
-                            Feature,
-                            Output,
-                            FileType,
-                            OptLevel,
-                            EnableSegmentedStacks);
-                    if (!result) {
-                        llvm_err(sess, ~"Could not write output");
-                    }
-                }
-            }
-        }
+    let Triple = Triple.to_c_str();
+    let Feature = Feature.to_c_str();
+    let Output = Output.to_c_str();
+
+    let result = unsafe {
+        llvm::LLVMRustWriteOutputFile(
+            PM,
+            M,
+            Triple.as_ptr(),
+            Feature.as_ptr(),
+            Output.as_ptr(),
+            FileType,
+            OptLevel,
+            EnableSegmentedStacks)
+    };
+
+    if (!result) {
+        llvm_err(sess, ~"Could not write output");
     }
 }
 
 pub mod jit {
-
     use back::link::llvm_err;
     use driver::session::Session;
     use lib::llvm::llvm;
@@ -128,15 +126,13 @@ pub mod jit {
             let r = cstore::get_used_crate_files(cstore);
             for r.iter().advance |cratepath| {
                 let path = cratepath.to_str();
-
                 debug!("linking: %s", path);
 
-                do path.to_c_str().with |buf_t| {
-                    if !llvm::LLVMRustLoadCrate(manager, buf_t) {
-                        llvm_err(sess, ~"Could not link");
-                    }
-                    debug!("linked: %s", path);
+                let path_c_str = path.to_c_str();
+                if !llvm::LLVMRustLoadCrate(manager, path_c_str.as_ptr()) {
+                    llvm_err(sess, ~"Could not link");
                 }
+                debug!("linked: %s", path);
             }
 
             // We custom-build a JIT execution engine via some rust wrappers
@@ -150,9 +146,8 @@ pub mod jit {
             // Next, we need to get a handle on the _rust_main function by
             // looking up it's corresponding ValueRef and then requesting that
             // the execution engine compiles the function.
-            let fun = do "_rust_main".to_c_str().with |entry| {
-                llvm::LLVMGetNamedFunction(m, entry)
-            };
+            let entry = "_rust_main".to_c_str();
+            let fun = llvm::LLVMGetNamedFunction(m, entry.as_ptr());
             if fun.is_null() {
                 llvm::LLVMDisposeExecutionEngine(ee);
                 llvm::LLVMContextDispose(c);
@@ -229,17 +224,13 @@ pub mod write {
                 match output_type {
                   output_type_bitcode => {
                     if opts.optimize != session::No {
-                        let filename = output.with_filetype("no-opt.bc");
-                        do filename.to_c_str().with |buf| {
-                            llvm::LLVMWriteBitcodeToFile(llmod, buf);
-                        }
+                        let filename = output.with_filetype("no-opt.bc").to_c_str();
+                        llvm::LLVMWriteBitcodeToFile(llmod, filename.as_ptr());
                     }
                   }
                   _ => {
-                    let filename = output.with_filetype("bc");
-                    do filename.to_c_str().with |buf| {
-                        llvm::LLVMWriteBitcodeToFile(llmod, buf);
-                    }
+                    let filename = output.with_filetype("bc").to_c_str();
+                    llvm::LLVMWriteBitcodeToFile(llmod, filename.as_ptr());
                   }
                 }
             }
@@ -299,10 +290,9 @@ pub mod write {
                 if opts.save_temps {
                     // Always output the bitcode file with --save-temps
 
-                    let filename = output.with_filetype("opt.bc");
-                    do filename.to_c_str().with |buf| {
-                        llvm::LLVMWriteBitcodeToFile(llmod, buf)
-                    };
+                    let filename = output.with_filetype("opt.bc").to_c_str();
+                    llvm::LLVMWriteBitcodeToFile(llmod, filename.as_ptr());
+
                     // Save the assembly file if -S is used
                     if output_type == output_type_assembly {
                         WriteOutputFile(
@@ -358,15 +348,13 @@ pub mod write {
 
             if output_type == output_type_llvm_assembly {
                 // Given options "-S --emit-llvm": output LLVM assembly
-                do output.to_c_str().with |buf_o| {
-                    llvm::LLVMRustAddPrintModulePass(pm.llpm, llmod, buf_o);
-                }
+                let output = output.to_c_str();
+                llvm::LLVMRustAddPrintModulePass(pm.llpm, llmod, output.as_ptr());
             } else {
                 // If only a bitcode file is asked for by using the
                 // '--emit-llvm' flag, then output it here
-                do output.to_c_str().with |buf| {
-                    llvm::LLVMWriteBitcodeToFile(llmod, buf);
-                }
+                let output = output.to_c_str();
+                llvm::LLVMWriteBitcodeToFile(llmod, output.as_ptr());
             }
 
             llvm::LLVMDisposeModule(llmod);

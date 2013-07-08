@@ -906,13 +906,13 @@ pub fn add_comment(bcx: block, text: &str) {
         let ccx = bcx.ccx();
         if ccx.sess.asm_comments() {
             let sanitized = text.replace("$", "");
-            let comment_text = ~"# " +
-                sanitized.replace("\n", "\n\t# ");
+            let comment_text = (~"# " + sanitized.replace("\n", "\n\t# ")).to_c_str();
             count_insn(bcx, "inlineasm");
-            let asm = do comment_text.to_c_str().with |c| {
-                llvm::LLVMConstInlineAsm(Type::func([], &Type::void()).to_ref(),
-                                         c, noname(), False, False)
-            };
+            let asm = llvm::LLVMConstInlineAsm(Type::func([], &Type::void()).to_ref(),
+                                               comment_text.as_ptr(),
+                                               noname(),
+                                               False,
+                                               False);
             Call(bcx, asm, []);
         }
     }
@@ -1085,9 +1085,8 @@ pub fn Trap(cx: block) {
         let BB = llvm::LLVMGetInsertBlock(b);
         let FN = llvm::LLVMGetBasicBlockParent(BB);
         let M = llvm::LLVMGetGlobalParent(FN);
-        let T = do "llvm.trap".to_c_str().with |buf| {
-            llvm::LLVMGetNamedFunction(M, buf)
-        };
+        let llvm_trap = "llvm.trap".to_c_str();
+        let T = llvm::LLVMGetNamedFunction(M, llvm_trap.as_ptr());
         assert!((T as int != 0));
         let Args = ~[];
         count_insn(cx, "trap");

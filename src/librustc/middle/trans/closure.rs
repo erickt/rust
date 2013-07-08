@@ -333,10 +333,9 @@ pub fn load_environment(fcx: fn_ctxt,
     let llloadenv = match fcx.llloadenv {
         Some(ll) => ll,
         None => {
-            let ll = do "load_env".to_c_str().with |buf| {
-                unsafe {
-                    llvm::LLVMAppendBasicBlockInContext(fcx.ccx.llcx, fcx.llfn, buf)
-                }
+            let load_env = "load_env".to_c_str();
+            let ll = unsafe {
+                llvm::LLVMAppendBasicBlockInContext(fcx.ccx.llcx, fcx.llfn, load_env.as_ptr())
             };
             fcx.llloadenv = Some(ll);
             ll

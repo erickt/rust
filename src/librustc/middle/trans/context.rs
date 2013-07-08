@@ -125,17 +125,12 @@ impl CrateContext {
         unsafe {
             let llcx = llvm::LLVMContextCreate();
             set_task_llcx(llcx);
-            let llmod = do name.to_c_str().with |buf| {
-                llvm::LLVMModuleCreateWithNameInContext(buf, llcx)
-            };
-            let data_layout: &str = sess.targ_cfg.target_strs.data_layout;
-            let targ_triple: &str = sess.targ_cfg.target_strs.target_triple;
-            do data_layout.to_c_str().with |buf| {
-                llvm::LLVMSetDataLayout(llmod, buf)
-            };
-            do targ_triple.to_c_str().with |buf| {
-                llvm::LLVMSetTarget(llmod, buf)
-            };
+            let name_c_str = name.to_c_str();
+            let llmod = llvm::LLVMModuleCreateWithNameInContext(name_c_str.as_ptr(), llcx);
+            let data_layout = sess.targ_cfg.target_strs.data_layout.to_c_str();
+            let targ_triple = sess.targ_cfg.target_strs.target_triple.to_c_str();
+            llvm::LLVMSetDataLayout(llmod, data_layout.as_ptr());
+            llvm::LLVMSetTarget(llmod, targ_triple.as_ptr());
             let targ_cfg = sess.targ_cfg;
 
             let td = mk_target_data(sess.targ_cfg.target_strs.data_layout);

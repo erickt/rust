@@ -188,10 +188,9 @@ impl<'self> Drop for StatRecorder<'self> {
 
 pub fn decl_fn(llmod: ModuleRef, name: &str, cc: lib::llvm::CallConv, ty: Type) -> ValueRef {
     debug!("decl_fn: %? cc: %?", name, cc);
-    let llfn: ValueRef = do name.to_c_str().with |buf| {
-        unsafe {
-            llvm::LLVMGetOrInsertFunction(llmod, buf, ty.to_ref())
-        }
+    let name = name.to_c_str();
+    let llfn = unsafe {
+        llvm::LLVMGetOrInsertFunction(llmod, name.as_ptr(), ty.to_ref())
     };
 
     lib::llvm::SetFunctionCallConv(llfn, cc);
@@ -227,10 +226,11 @@ pub fn get_extern_const(externs: &mut ExternMap, llmod: ModuleRef,
         Some(n) => return n,
         None => ()
     }
+
+    let name_c_str = name.to_c_str();
+
     unsafe {
-        let c = do name.to_c_str().with |buf| {
-            llvm::LLVMAddGlobal(llmod, ty.to_ref(), buf)
-        };
+        let c = llvm::LLVMAddGlobal(llmod, ty.to_ref(), name_c_str.as_ptr());
         externs.insert(name, c);
         return c;
     }
@@ -561,10 +561,9 @@ pub fn get_res_dtor(ccx: @mut CrateContext,
 // Structural comparison: a rather involved form of glue.
 pub fn maybe_name_value(cx: &CrateContext, v: ValueRef, s: &str) {
     if cx.sess.opts.save_temps {
-        do s.to_c_str().with |buf| {
-            unsafe {
-                llvm::LLVMSetValueName(v, buf)
-            }
+        let s = s.to_c_str();
+        unsafe {
+            llvm::LLVMSetValueName(v, s.as_ptr())
         }
     }
 }
@@ -1176,10 +1175,10 @@ pub fn new_block(cx: fn_ctxt, parent: Option<block>, scope: Option<@mut scope_in
                  is_lpad: bool, name: &str, opt_node_info: Option<NodeInfo>)
     -> block {
 
+    let name = name.to_c_str();
+
     unsafe {
-        let llbb = do name.to_c_str().with |buf| {
-            llvm::LLVMAppendBasicBlockInContext(cx.ccx.llcx, cx.llfn, buf)
-        };
+        let llbb = llvm::LLVMAppendBasicBlockInContext(cx.ccx.llcx, cx.llfn, name.as_ptr());
         let bcx = mk_block(llbb,
                            parent,
                            is_lpad,
@@ -1555,13 +1554,11 @@ pub fn mk_standard_basic_blocks(llfn: ValueRef) -> BasicBlocks {
     unsafe {
         let cx = task_llcx();
 
-        let sa = do "static_allocas".to_c_str().with |buf| {
-            llvm::LLVMAppendBasicBlockInContext(cx, llfn, buf)
-        };
+        let sa = "static_allocas".to_c_str();
+        let sa = llvm::LLVMAppendBasicBlockInContext(cx, llfn, sa.as_ptr());
 
-        let rt = do "return".to_c_str().with |buf| {
-            llvm::LLVMAppendBasicBlockInContext(cx, llfn, buf)
-        };
+        let rt = "return".to_c_str();
+        let rt = llvm::LLVMAppendBasicBlockInContext(cx, llfn, rt.as_ptr());
 
         BasicBlocks { sa: sa, rt: rt }
     }
@@ -2315,10 +2312,9 @@ pub fn create_entry_wrapper(ccx: @mut CrateContext,
             };
             decl_cdecl_fn(ccx.llmod, main_name, llfty)
         };
-        let llbb = do "top".to_c_str().with |buf| {
-            unsafe {
-                llvm::LLVMAppendBasicBlockInContext(ccx.llcx, llfn, buf)
-            }
+        let top_c_str = "top".to_c_str();
+        let llbb = unsafe {
+            llvm::LLVMAppendBasicBlockInContext(ccx.llcx, llfn, top_c_str.as_ptr())
         };
         let bld = ccx.builder.B;
         unsafe {
@@ -2332,9 +2328,11 @@ pub fn create_entry_wrapper(ccx: @mut CrateContext,
             }
 
             let crate_map = ccx.crate_map;
-            let opaque_crate_map = do "crate_map".to_c_str().with |buf| {
-                llvm::LLVMBuildPointerCast(bld, crate_map, Type::i8p().to_ref(), buf)
-            };
+            let crate_map_c_str = "crate_map".to_c_str();
+            let opaque_crate_map = llvm::LLVMBuildPointerCast(bld,
+                                                              crate_map,
+                                                              Type::i8p().to_ref(),
+                                                              crate_map_c_str.as_ptr());
 
             let (start_fn, args) = if use_start_lang_item {
                 let start_def_id = ccx.tcx.lang_items.start_fn();
@@ -2347,9 +2345,11 @@ pub fn create_entry_wrapper(ccx: @mut CrateContext,
                 };
 
                 let args = {
-                    let opaque_rust_main = do "rust_main".to_c_str().with |buf| {
-                        llvm::LLVMBuildPointerCast(bld, rust_main, Type::i8p().to_ref(), buf)
-                    };
+                    let rust_main_c_str = "rust_main".to_c_str();
+                    let opaque_rust_main = llvm::LLVMBuildPointerCast(bld,
+                                                                      rust_main,
+                                                                      Type::i8p().to_ref(),
+                                                                      rust_main_c_str.as_ptr());
 
                     ~[
                         C_null(Type::opaque_box(ccx).ptr_to()),
@@ -2425,9 +2425,8 @@ pub fn get_item_val(ccx: @mut CrateContext, id: ast::node_id) -> ValueRef {
                 exprt = m == ast::m_mutbl;
                 unsafe {
                     let llty = llvm::LLVMTypeOf(v);
-                    let g = do s.to_c_str().with |buf| {
-                        llvm::LLVMAddGlobal(ccx.llmod, llty, buf)
-                    };
+                    let s_c_str = s.to_c_str();
+                    let g = llvm::LLVMAddGlobal(ccx.llmod, llty, s_c_str.as_ptr());
                     ccx.item_symbols.insert(i.id, s);
                     g
                 }
@@ -2476,12 +2475,10 @@ pub fn get_item_val(ccx: @mut CrateContext, id: ast::node_id) -> ValueRef {
                 }
                 ast::foreign_item_static(*) => {
                     let typ = ty::node_id_to_type(ccx.tcx, ni.id);
-                    let ident = token::ident_to_str(&ni.ident);
-                    let g = do ident.to_c_str().with |buf| {
-                        unsafe {
-                            let ty = type_of(ccx, typ);
-                            llvm::LLVMAddGlobal(ccx.llmod, ty.to_ref(), buf)
-                        }
+                    let ident = token::ident_to_str(&ni.ident).to_c_str();
+                    let g = unsafe {
+                        let ty = type_of(ccx, typ);
+                        llvm::LLVMAddGlobal(ccx.llmod, ty.to_ref(), ident.as_ptr())
                     };
                     g
                 }
@@ -2577,10 +2574,9 @@ pub fn trans_constant(ccx: &mut CrateContext, it: @ast::item) {
             let s = mangle_exported_name(ccx, p, ty::mk_int()).to_managed();
             let disr_val = vi[i].disr_val;
             note_unique_llvm_symbol(ccx, s);
-            let discrim_gvar = do s.to_c_str().with |buf| {
-                unsafe {
-                    llvm::LLVMAddGlobal(ccx.llmod, ccx.int_type.to_ref(), buf)
-                }
+            let s_c_str = s.to_c_str();
+            let discrim_gvar = unsafe {
+                llvm::LLVMAddGlobal(ccx.llmod, ccx.int_type.to_ref(), s_c_str.as_ptr())
             };
             unsafe {
                 llvm::LLVMSetInitializer(discrim_gvar, C_int(ccx, disr_val));
@@ -2717,11 +2713,9 @@ pub fn decl_gc_metadata(ccx: &mut CrateContext, llmod_id: &str) {
         return;
     }
 
-    let gc_metadata_name = ~"_gc_module_metadata_" + llmod_id;
-    let gc_metadata = do gc_metadata_name.to_c_str().with |buf| {
-        unsafe {
-            llvm::LLVMAddGlobal(ccx.llmod, Type::i32().to_ref(), buf)
-        }
+    let gc_metadata_name = (~"_gc_module_metadata_" + llmod_id).to_c_str();
+    let gc_metadata = unsafe {
+        llvm::LLVMAddGlobal(ccx.llmod, Type::i32().to_ref(), gc_metadata_name.as_ptr())
     };
     unsafe {
         llvm::LLVMSetGlobalConstant(gc_metadata, True);
@@ -2733,10 +2727,9 @@ pub fn decl_gc_metadata(ccx: &mut CrateContext, llmod_id: &str) {
 pub fn create_module_map(ccx: &mut CrateContext) -> ValueRef {
     let elttype = Type::struct_([ccx.int_type, ccx.int_type], false);
     let maptype = Type::array(&elttype, (ccx.module_data.len() + 1) as u64);
-    let map = do "_rust_mod_map".to_c_str().with |buf| {
-        unsafe {
-            llvm::LLVMAddGlobal(ccx.llmod, maptype.to_ref(), buf)
-        }
+    let rust_mod_map_c_str = "_rust_mod_map".to_c_str();
+    let map = unsafe {
+        llvm::LLVMAddGlobal(ccx.llmod, maptype.to_ref(), rust_mod_map_c_str.as_ptr())
     };
     lib::llvm::SetLinkage(map, lib::llvm::InternalLinkage);
     let mut elts: ~[ValueRef] = ~[];
@@ -2778,13 +2771,11 @@ pub fn decl_crate_map(sess: session::Session, mapmeta: LinkMeta,
     } else {
         ~"toplevel"
     };
-    let sym_name = ~"_rust_crate_map_" + mapname;
+    let sym_name = (~"_rust_crate_map_" + mapname).to_c_str();
     let arrtype = Type::array(&int_type, n_subcrates as u64);
     let maptype = Type::struct_([Type::i32(), Type::i8p(), int_type, arrtype], false);
-    let map = do sym_name.to_c_str().with |buf| {
-        unsafe {
-            llvm::LLVMAddGlobal(llmod, maptype.to_ref(), buf)
-        }
+    let map = unsafe {
+        llvm::LLVMAddGlobal(llmod, maptype.to_ref(), sym_name.as_ptr())
     };
     lib::llvm::SetLinkage(map, lib::llvm::ExternalLinkage);
     return map;
@@ -2799,11 +2790,9 @@ pub fn fill_crate_map(ccx: @mut CrateContext, map: ValueRef) {
         let nm = fmt!("_rust_crate_map_%s_%s_%s",
                       cdata.name,
                       cstore::get_crate_vers(cstore, i),
-                      cstore::get_crate_hash(cstore, i));
-        let cr = do nm.to_c_str().with |buf| {
-            unsafe {
-                llvm::LLVMAddGlobal(ccx.llmod, ccx.int_type.to_ref(), buf)
-            }
+                      cstore::get_crate_hash(cstore, i)).to_c_str();
+        let cr = unsafe {
+            llvm::LLVMAddGlobal(ccx.llmod, ccx.int_type.to_ref(), nm.as_ptr())
         };
         subcrates.push(p2i(ccx, cr));
         i += 1;
@@ -2862,23 +2851,22 @@ pub fn write_metadata(cx: &mut CrateContext, crate: &ast::crate) {
     let encode_parms = crate_ctxt_to_encode_parms(cx, encode_inlined_item);
     let llmeta = C_bytes(encoder::encode_metadata(encode_parms, crate));
     let llconst = C_struct([llmeta]);
-    let mut llglobal = do "rust_metadata".to_c_str().with |buf| {
-        unsafe {
-            llvm::LLVMAddGlobal(cx.llmod, val_ty(llconst).to_ref(), buf)
-        }
+    let rust_metadata_c_str = "rust_metadata".to_c_str();
+    let mut llglobal = unsafe {
+        llvm::LLVMAddGlobal(cx.llmod, val_ty(llconst).to_ref(), rust_metadata_c_str.as_ptr())
     };
     unsafe {
         llvm::LLVMSetInitializer(llglobal, llconst);
-        do cx.sess.targ_cfg.target_strs.meta_sect_name.to_c_str().with |buf| {
-            llvm::LLVMSetSection(llglobal, buf)
-        };
+        let meta_sect_name = cx.sess.targ_cfg.target_strs.meta_sect_name.to_c_str();
+        llvm::LLVMSetSection(llglobal, meta_sect_name.as_ptr());
         lib::llvm::SetLinkage(llglobal, lib::llvm::InternalLinkage);
 
         let t_ptr_i8 = Type::i8p();
         llglobal = llvm::LLVMConstBitCast(llglobal, t_ptr_i8.to_ref());
-        let llvm_used = do "llvm.used".to_c_str().with |buf| {
-            llvm::LLVMAddGlobal(cx.llmod, Type::array(&t_ptr_i8, 1).to_ref(), buf)
-        };
+        let llvm_used_c_str = "llvm.used".to_c_str();
+        let llvm_used = llvm::LLVMAddGlobal(cx.llmod,
+                                            Type::array(&t_ptr_i8, 1).to_ref(),
+                                            llvm_used_c_str.as_ptr());
         lib::llvm::SetLinkage(llvm_used, lib::llvm::AppendingLinkage);
         llvm::LLVMSetInitializer(llvm_used, C_array(t_ptr_i8, [llglobal]));
     }
@@ -2890,9 +2878,8 @@ fn mk_global(ccx: &CrateContext,
              internal: bool)
           -> ValueRef {
     unsafe {
-        let llglobal = do name.to_c_str().with |buf| {
-            llvm::LLVMAddGlobal(ccx.llmod, val_ty(llval).to_ref(), buf)
-        };
+        let name = name.to_c_str();
+        let llglobal = llvm::LLVMAddGlobal(ccx.llmod, val_ty(llval).to_ref(), name.as_ptr());
         llvm::LLVMSetInitializer(llglobal, llval);
         llvm::LLVMSetGlobalConstant(llglobal, True);
 

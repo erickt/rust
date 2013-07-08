@@ -983,9 +983,10 @@ fn trans_lvalue_unadjusted(bcx: block, expr: @ast::expr) -> DatumBlock {
                                 bcx.ccx().sess.cstore,
                                 did);
 
-                            let llval = do symbol.to_c_str().with |buf| {
-                                llvm::LLVMAddGlobal(bcx.ccx().llmod, llty.to_ref(), buf)
-                            };
+                            let symbol = symbol.to_c_str();
+                            let llval = llvm::LLVMAddGlobal(bcx.ccx().llmod,
+                                                            llty.to_ref(),
+                                                            symbol.as_ptr());
                             let extern_const_values = &mut bcx.ccx().extern_const_values;
                             extern_const_values.insert(did, llval);
                             llval

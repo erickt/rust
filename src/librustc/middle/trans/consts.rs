@@ -103,9 +103,8 @@ pub fn const_vec(cx: @mut CrateContext, e: &ast::expr, es: &[@ast::expr])
 
 fn const_addr_of(cx: &mut CrateContext, cv: ValueRef) -> ValueRef {
     unsafe {
-        let gv = do "const".to_c_str().with |name| {
-            llvm::LLVMAddGlobal(cx.llmod, val_ty(cv).to_ref(), name)
-        };
+        let name = "const".to_c_str();
+        let gv = llvm::LLVMAddGlobal(cx.llmod, val_ty(cv).to_ref(), name.as_ptr());
         llvm::LLVMSetInitializer(gv, cv);
         llvm::LLVMSetGlobalConstant(gv, True);
         SetLinkage(gv, PrivateLinkage);
@@ -514,9 +513,8 @@ fn const_expr_unadjusted(cx: @mut CrateContext, e: &ast::expr) -> ValueRef {
               ast::expr_vec(ref es, ast::m_imm) => {
                 let (cv, sz, llunitty) = const_vec(cx, e, *es);
                 let llty = val_ty(cv);
-                let gv = do "const".to_c_str().with |name| {
-                    llvm::LLVMAddGlobal(cx.llmod, llty.to_ref(), name)
-                };
+                let name = "const".to_c_str();
+                let gv = llvm::LLVMAddGlobal(cx.llmod, llty.to_ref(), name.as_ptr());
                 llvm::LLVMSetInitializer(gv, cv);
                 llvm::LLVMSetGlobalConstant(gv, True);
                 SetLinkage(gv, PrivateLinkage);

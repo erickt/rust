@@ -381,13 +381,11 @@ pub fn link_exe(_src: &Path, _dest: &Path) -> bool {
 #[cfg(target_os = "macos")]
 pub fn link_exe(src: &Path, dest: &Path) -> bool {
     use std::libc;
+    let src = src.to_c_str();
+    let dest = dest.to_c_str();
     unsafe {
-        do src.to_c_str().with |src_buf| {
-            do dest.to_c_str().with |dest_buf| {
-                libc::link(src_buf, dest_buf) == 0 as libc::c_int &&
-                    libc::chmod(dest_buf, 755) == 0 as libc::c_int
-            }
-        }
+        libc::link(src.as_ptr(), dest.as_ptr()) == 0 as libc::c_int &&
+            libc::chmod(dest.as_ptr(), 755) == 0 as libc::c_int
     }
 }
 

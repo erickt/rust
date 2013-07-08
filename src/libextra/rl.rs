@@ -32,9 +32,8 @@ pub mod rustrt {
 
 /// Add a line to history
 pub unsafe fn add_history(line: &str) -> bool {
-    do line.to_c_str().with |buf| {
-        rustrt::linenoiseHistoryAdd(buf) == 1 as c_int
-    }
+    let line = line.to_c_str();
+    rustrt::linenoiseHistoryAdd(line.as_ptr()) == 1 as c_int
 }
 
 /// Set the maximum amount of lines stored
@@ -44,25 +43,25 @@ pub unsafe fn set_history_max_len(len: int) -> bool {
 
 /// Save line history to a file
 pub unsafe fn save_history(file: &str) -> bool {
-    do file.to_c_str().with |buf| {
-        rustrt::linenoiseHistorySave(buf) == 1 as c_int
-    }
+    let file = file.to_c_str();
+    rustrt::linenoiseHistorySave(file.as_ptr()) == 1 as c_int
 }
 
 /// Load line history from a file
 pub unsafe fn load_history(file: &str) -> bool {
-    do file.to_c_str().with |buf| {
-        rustrt::linenoiseHistoryLoad(buf) == 1 as c_int
-    }
+    let file = file.to_c_str();
+    rustrt::linenoiseHistoryLoad(file.as_ptr()) == 1 as c_int
 }
 
 /// Print out a prompt and then wait for input and return it
 pub unsafe fn read(prompt: &str) -> Option<~str> {
-    do prompt.to_c_str().with |buf| {
-        let line = rustrt::linenoise(buf);
+    let prompt = prompt.to_c_str();
 
-        if line.is_null() { None }
-        else { Some(str::raw::from_c_str(line)) }
+    let line = rustrt::linenoise(prompt.as_ptr());
+    if line.is_null() {
+        None
+    } else {
+        Some(str::raw::from_c_str(line))
     }
 }
 
@@ -80,9 +79,8 @@ pub unsafe fn complete(cb: CompletionCb) {
                 .get();
 
             do cb(str::raw::from_c_str(line)) |suggestion| {
-                do suggestion.to_c_str().with |buf| {
-                    rustrt::linenoiseAddCompletion(completions, buf);
-                }
+                let suggestion = suggestion.to_c_str();
+                rustrt::linenoiseAddCompletion(completions, suggestion.as_ptr());
             }
         }
     }

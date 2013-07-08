@@ -114,35 +114,35 @@ pub fn get_addr(node: &str, iotask: &iotask)
                 -> result::Result<~[IpAddr], IpGetAddrErr> {
     let (output_po, output_ch) = stream();
     let mut output_ch = Some(SharedChan::new(output_ch));
-    do node.to_c_str().with |node_ptr| {
-        let output_ch = output_ch.swap_unwrap();
-        let handle = create_uv_getaddrinfo_t();
-        let handle_ptr: *uv_getaddrinfo_t = &handle;
-        let handle_data = GetAddrData {
-            output_ch: output_ch.clone()
-        };
-        let handle_data_ptr: *GetAddrData = &handle_data;
-        do interact(iotask) |loop_ptr| {
-            unsafe {
-                let result = uv_getaddrinfo(
-                    loop_ptr,
-                    handle_ptr,
-                    get_addr_cb,
-                    node_ptr,
-                    ptr::null(),
-                    ptr::null());
-                match result {
-                    0i32 => {
-                        set_data_for_req(handle_ptr, handle_data_ptr);
-                    }
-                    _ => {
-                        output_ch.send(result::Err(GetAddrUnknownError));
-                    }
+
+    let node = node.to_c_str();
+    let output_ch = output_ch.swap_unwrap();
+    let handle = create_uv_getaddrinfo_t();
+    let handle_ptr: *uv_getaddrinfo_t = &handle;
+    let handle_data = GetAddrData {
+        output_ch: output_ch.clone()
+    };
+    let handle_data_ptr: *GetAddrData = &handle_data;
+    do interact(iotask) |loop_ptr| {
+        unsafe {
+            let result = uv_getaddrinfo(
+                loop_ptr,
+                handle_ptr,
+                get_addr_cb,
+                node.as_ptr(),
+                ptr::null(),
+                ptr::null());
+            match result {
+                0i32 => {
+                    set_data_for_req(handle_ptr, handle_data_ptr);
+                }
+                _ => {
+                    output_ch.send(result::Err(GetAddrUnknownError));
                 }
             }
-        };
-        output_po.recv()
-    }
+        }
+    };
+    output_po.recv()
 }
 
 pub mod v4 {

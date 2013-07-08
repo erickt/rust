@@ -701,10 +701,8 @@ pub fn make_vtable(ccx: &mut CrateContext,
         }
 
         let tbl = C_struct(components);
-        let vtable = ccx.sess.str_of(gensym_name("vtable"));
-        let vt_gvar = do vtable.to_c_str().with |buf| {
-            llvm::LLVMAddGlobal(ccx.llmod, val_ty(tbl).to_ref(), buf)
-        };
+        let vtable = ccx.sess.str_of(gensym_name("vtable")).to_c_str();
+        let vt_gvar = llvm::LLVMAddGlobal(ccx.llmod, val_ty(tbl).to_ref(), vtable.as_ptr());
         llvm::LLVMSetInitializer(vt_gvar, tbl);
         llvm::LLVMSetGlobalConstant(vt_gvar, lib::llvm::True);
         lib::llvm::SetLinkage(vt_gvar, lib::llvm::InternalLinkage);

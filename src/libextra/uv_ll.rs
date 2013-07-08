@@ -767,9 +767,9 @@ extern {
     unsafe fn rust_uv_strerror(err: *uv_err_t) -> *libc::c_char;
     // FIXME ref #2064
     unsafe fn rust_uv_err_name(err: *uv_err_t) -> *libc::c_char;
-    unsafe fn rust_uv_ip4_addr(ip: *u8, port: libc::c_int)
+    unsafe fn rust_uv_ip4_addr(ip: *libc::c_char, port: libc::c_int)
         -> sockaddr_in;
-    unsafe fn rust_uv_ip6_addr(ip: *u8, port: libc::c_int)
+    unsafe fn rust_uv_ip6_addr(ip: *libc::c_char, port: libc::c_int)
         -> sockaddr_in6;
     unsafe fn rust_uv_ip4_name(src: *sockaddr_in,
                                dst: *libc::c_char,
@@ -1031,16 +1031,12 @@ pub unsafe fn buf_init(input: *u8, len: uint) -> uv_buf_t {
     return out_buf;
 }
 pub unsafe fn ip4_addr(ip: &str, port: int) -> sockaddr_in {
-    do ip.to_c_str().with |ip_buf| {
-        rust_uv_ip4_addr(ip_buf as *u8,
-                                 port as libc::c_int)
-    }
+    let ip = ip.to_c_str();
+    rust_uv_ip4_addr(ip.as_ptr(), port as libc::c_int)
 }
 pub unsafe fn ip6_addr(ip: &str, port: int) -> sockaddr_in6 {
-    do ip.to_c_str().with |ip_buf| {
-        rust_uv_ip6_addr(ip_buf as *u8,
-                                 port as libc::c_int)
-    }
+    let ip = ip.to_c_str();
+    rust_uv_ip6_addr(ip.as_ptr(), port as libc::c_int)
 }
 pub unsafe fn ip4_name(src: &sockaddr_in) -> ~str {
     // ipv4 addr max size: 15 + 1 trailing null byte

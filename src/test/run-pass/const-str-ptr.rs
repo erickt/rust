@@ -24,6 +24,6 @@ pub fn main() {
         assert!(*(&B[0] as *u8) == A[0]);
 
         let bar = str::raw::from_bytes(A).to_c_str();
-        assert_eq!(bar.with(|buf| str::raw::from_c_str(buf)), ~"hi");
+        assert_eq!(str::raw::from_c_str(bar.as_ptr()), ~"hi");
     }
 }
