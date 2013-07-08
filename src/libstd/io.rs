@@ -1031,9 +1031,9 @@ pub fn stdin() -> @Reader {
 }
 
 pub fn file_reader(path: &Path) -> Result<@Reader, ~str> {
-    let f = do path.to_c_str().with |pathbuf| {
-        do bytes!("r", 0).as_imm_buf |modebuf, _| {
-            unsafe { libc::fopen(pathbuf, modebuf as *libc::c_char) }
+    let f = do bytes!("r", 0).as_imm_buf |modebuf, _| {
+        unsafe {
+            libc::fopen(path.to_c_str().as_ptr(), modebuf as *libc::c_char)
         }
     };
 
@@ -1281,9 +1281,7 @@ pub fn mk_file_writer(path: &Path, flags: &[FileFlag])
         }
     }
     let fd = unsafe {
-        do path.to_c_str().with |pathbuf| {
-            libc::open(pathbuf, fflags, (S_IRUSR | S_IWUSR) as c_int)
-        }
+        libc::open(path.to_c_str().as_ptr(), fflags, (S_IRUSR | S_IWUSR) as c_int)
     };
     if fd < (0 as c_int) {
         result::Err(fmt!("error opening %s: %s", path.to_str(),
@@ -1566,10 +1564,8 @@ pub fn file_writer(path: &Path, flags: &[FileFlag]) -> Result<@Writer, ~str> {
 // FIXME: fileflags // #2004
 pub fn buffered_file_writer(path: &Path) -> Result<@Writer, ~str> {
     unsafe {
-        let f = do path.to_c_str().with |pathbuf| {
-            do bytes!("w", 0).as_imm_buf |modebuf, _| {
-                libc::fopen(pathbuf, modebuf as *libc::c_char)
-            }
+        let f = do bytes!("w", 0).as_imm_buf |modebuf, _| {
+            libc::fopen(path.to_c_str().as_ptr(), modebuf as *libc::c_char)
         };
         return if f as uint == 0u {
             result::Err(~"error opening " + path.to_str())

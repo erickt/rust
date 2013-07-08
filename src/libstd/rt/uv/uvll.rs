@@ -283,14 +283,12 @@ pub unsafe fn timer_stop(timer_ptr: *uv_timer_t) -> c_int {
 }
 
 pub unsafe fn malloc_ip4_addr(ip: &str, port: int) -> *sockaddr_in {
-    do ip.to_c_str().with |ip_buf| {
-        rust_uv_ip4_addrp(ip_buf as *u8, port as libc::c_int)
-    }
+    let ip = ip.to_c_str();
+    rust_uv_ip4_addrp(ip.as_ptr(), port as libc::c_int)
 }
 pub unsafe fn malloc_ip6_addr(ip: &str, port: int) -> *sockaddr_in6 {
-    do ip.to_c_str().with |ip_buf| {
-        rust_uv_ip6_addrp(ip_buf as *u8, port as libc::c_int)
-    }
+    let ip = ip.to_c_str();
+    rust_uv_ip6_addrp(ip.as_ptr(), port as libc::c_int)
 }
 
 pub unsafe fn free_ip4_addr(addr: *sockaddr_in) {
@@ -396,8 +394,8 @@ extern {
     fn rust_uv_strerror(err: *uv_err_t) -> *c_char;
     // FIXME ref #2064
     fn rust_uv_err_name(err: *uv_err_t) -> *c_char;
-    fn rust_uv_ip4_addrp(ip: *u8, port: c_int) -> *sockaddr_in;
-    fn rust_uv_ip6_addrp(ip: *u8, port: c_int) -> *sockaddr_in6;
+    fn rust_uv_ip4_addrp(ip: *libc::c_char, port: c_int) -> *sockaddr_in;
+    fn rust_uv_ip6_addrp(ip: *libc::c_char, port: c_int) -> *sockaddr_in6;
     fn rust_uv_free_ip4_addr(addr: *sockaddr_in);
     fn rust_uv_free_ip6_addr(addr: *sockaddr_in6);
     fn rust_uv_ip4_name(src: *sockaddr_in, dst: *u8, size: size_t) -> c_int;

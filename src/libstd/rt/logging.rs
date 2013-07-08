@@ -49,9 +49,8 @@ pub fn init(crate_map: *u8) {
     let log_spec = os::getenv("RUST_LOG");
     match log_spec {
         Some(spec) => {
-            do spec.to_c_str().with |buf| {
-                unsafe { rust_update_log_settings(crate_map, buf) }
-            }
+            let spec = spec.to_c_str();
+            unsafe { rust_update_log_settings(crate_map, spec.as_ptr()) }
         }
         None => {
             unsafe {

@@ -709,9 +709,7 @@ fn with_argv<T>(prog: &str, args: &[~str], cb: &fn(**libc::c_char) -> T) -> T {
     // Next, convert each of the byte strings into a pointer. This is
     // technically unsafe as the caller could leak these pointers out of our
     // scope.
-    let mut ptrs = do tmps.map |tmp| {
-        tmp.with(|buf| buf)
-    };
+    let mut ptrs = tmps.map(|tmp| tmp.as_ptr() as *libc::c_char);
 
     // Finally, make sure we add a null pointer.
     ptrs.push(ptr::null());
@@ -736,9 +734,7 @@ fn with_envp<T>(env: Option<&[(~str, ~str)]>, cb: &fn(*c_void) -> T) -> T {
             }
 
             // Once again, this is unsafe.
-            let mut ptrs = do tmps.map |tmp| {
-                tmp.with(|buf| buf)
-            };
+            let mut ptrs = tmps.map(|tmp| tmp.as_ptr() as *libc::c_char);
             ptrs.push(ptr::null());
 
             do ptrs.as_imm_buf |buf, _| {
@@ -774,7 +770,10 @@ fn with_envp<T>(env: Option<&[(~str, ~str)]>, cb: &fn(*mut c_void) -> T) -> T {
 
 fn with_dirp<T>(d: Option<&Path>, cb: &fn(*libc::c_char) -> T) -> T {
     match d {
-      Some(dir) => dir.to_c_str().with(|buf| cb(buf)),
+      Some(dir) => {
+          let dir = dir.to_c_str();
+          cb(dir.as_ptr())
+      }
       None => cb(ptr::null())
     }
 }

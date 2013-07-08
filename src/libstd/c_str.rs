@@ -9,7 +9,7 @@
 // except according to those terms.
 
 use cast;
-use iterator::Iterator;
+use iterator::{Iterator, IteratorUtil};
 use libc;
 use ops::Drop;
 use option::{Option, Some, None};
@@ -24,132 +24,119 @@ use vec::ImmutableVector;
  * This structure wraps a `*libc::c_char`, and will automatically free the
  * memory it is pointing to when it goes out of scope.
  */
-pub struct CString {
+pub struct CStr {
     priv buf: *libc::c_char,
+    priv owns_buffer: bool,
 }
 
-impl<'self> CString {
+impl<'self> CStr {
     /**
-     * Create a C String from a str.
      */
-    pub fn from_str(s: &str) -> CString {
-        s.to_c_str()
-    }
-
-    /**
-     * Take the wrapped `*libc::c_char` from the `CString` wrapper.
-     *
-     * # Failure
-     *
-     * If the wrapper is empty.
-     */
-    pub unsafe fn take(&mut self) -> *libc::c_char {
-        if self.buf.is_null() {
-            fail!("CString has no wrapped `*libc::c_char`");
-        }
-        let buf = self.buf;
-        self.buf = ptr::null();
-        buf
-    }
-
-    /**
-     * Puts a `*libc::c_char` into the `CString` wrapper.
-     *
-     * # Failure
-     *
-     * If the `*libc::c_char` is null.
-     * If the wrapper is not empty.
-     */
-    pub fn put_back(&mut self, buf: *libc::c_char) {
+    pub fn new(buf: *libc::c_char) -> CStr {
         if buf.is_null() {
-            fail!("attempt to put a null pointer into a CString");
+            fail!("Passed a null pointer!");
         }
-        if self.buf.is_not_null() {
-            fail!("CString already wraps a `*libc::c_char`");
+        CStr { buf: buf, owns_buffer: false }
+    }
+
+    /**
+     */
+    pub fn new_with_ownership(buf: *libc::c_char) -> CStr {
+        if buf.is_null() {
+            fail!("Passed a null pointer!");
         }
-        self.buf = buf;
+        CStr { buf: buf, owns_buffer: true }
+    }
+
+    /**
+     * Return the length of the c string.
+     *
+     * This performs O(n) steps to count the number of bytes in the string.
+     */
+    pub fn len(&self) -> uint {
+        self.iter().count(|ch| ch != 0)
+    }
+
+    /**
+     * Returns true if the CStr does not wrap a `*libc::c_char`.
+     */
+    #[inline]
+    pub fn is_null(&self) -> bool {
+        self.buf.is_null()
+    }
+
+    /**
+     * Returns true if the CStr wraps a `*libc::c_char`.
+     */
+    #[inline]
+    pub fn is_not_null(&self) -> bool {
+        self.buf.is_not_null()
     }
 
     /**
      * Calls a closure with a reference to the underlying `*libc::c_char`.
      */
-    pub fn with<T>(&self, f: &fn(*libc::c_char) -> T) -> T {
-        if self.buf.is_null() {
-            fail!("CString already wraps a `*libc::c_char`");
+    #[inline]
+    pub fn as_ptr(&self) -> &'self libc::c_char {
+        if self.is_null() {
+            fail!("CStr already wraps a `*libc::c_char`");
         }
-        f(self.buf)
+        unsafe { cast::transmute(self.buf) }
     }
 
     /**
      * Calls a closure with a mutable reference to the underlying `*libc::c_char`.
      */
-    pub fn with_mut<T>(&mut self, f: &fn(*mut libc::c_char) -> T) -> T {
-        if self.buf.is_not_null() {
-            fail!("CString already wraps a `*libc::c_char`");
+    #[inline]
+    pub fn as_mut_ptr(&mut self) -> &'self libc::c_char {
+        if self.is_not_null() {
+            fail!("CStr already wraps a `*libc::c_char`");
         }
-        f(unsafe { cast::transmute(self.buf) })
+        unsafe { cast::transmute(self.buf) }
     }
 
     /**
-     * Returns true if the CString does not wrap a `*libc::c_char`.
+     * Converts the CStr into a `&[u8]` without copying.
      */
-    pub fn is_empty(&self) -> bool {
-        self.buf.is_null()
-    }
-
-    /**
-     * Returns true if the CString wraps a `*libc::c_char`.
-     */
-    pub fn is_not_empty(&self) -> bool {
-        self.buf.is_not_null()
-    }
-
-    /**
-     * Converts the CString into a `&[u8]` without copying.
-     */
+    #[inline]
     pub fn as_bytes(&self) -> &'self [u8] {
-        unsafe {
-            let len = libc::strlen(self.buf) as uint;
-            cast::transmute((self.buf, len + 1))
-        }
+        unsafe { cast::transmute((self.buf, self.len() + 1)) }
     }
 
     /**
-     * Return a CString iterator.
+     * Return a CStr iterator.
      */
-    fn iter(&self) -> CStringIterator<'self> {
-        CStringIterator {
-            ptr: self.buf,
-            lifetime: unsafe { cast::transmute(self.buf) },
-        }
+    fn iter(&self) -> CStrIterator<'self> {
+        CStrIterator { ptr: self.as_ptr() }
     }
 }
 
-impl Drop for CString {
+impl Drop for CStr {
     fn drop(&self) {
-        if self.buf.is_not_null() {
+        if self.owns_buffer && self.buf.is_not_null() {
             unsafe {
-                libc::free(self.buf as *libc::c_void)
-            };
+                libc::free(self.buf as *libc::c_void);
+            }
         }
     }
 }
 
 /**
- * A generic trait for converting a value to a CString.
+ * A generic trait for converting a value to a CStr.
  */
 pub trait ToCStr {
     /**
      * Create a C String.
      */
-    fn to_c_str(&self) -> CString;
+    fn to_c_str(&self) -> CStr;
 }
 
 impl<'self> ToCStr for &'self str {
     /**
      * Create a C String from a `&str`.
      */
-    fn to_c_str(&self) -> CString {
+    #[inline]
+    fn to_c_str(&self) -> CStr {
         self.as_bytes().to_c_str()
     }
 }
@@ -158,7 +145,7 @@ impl<'self> ToCStr for &'self [u8] {
     /**
      * Create a C String from a `&[u8]`.
      */
-    fn to_c_str(&self) -> CString {
+    fn to_c_str(&self) -> CStr {
         do self.as_imm_buf |self_buf, self_len| {
             unsafe {
                 let buf = libc::malloc(self_len as u64 + 1) as *mut u8;
@@ -168,32 +155,33 @@ impl<'self> ToCStr for &'self [u8] {
 
                 ptr::copy_memory(buf, self_buf, self_len);
                 *ptr::mut_offset(buf, self_len) = 0;
-                CString { buf: buf as *libc::c_char }
+
+                CStr::new_with_ownership(buf as *libc::c_char)
             }
         }
     }
 }
 
 /**
- * External iterator for a CString's bytes.
+ * External iterator for a CStr's bytes.
  *
  * Use with the `std::iterator` module.
  */
-pub struct CStringIterator<'self> {
-    priv ptr: *libc::c_char,
-    priv lifetime: &'self libc::c_char, // FIXME: #5922
+pub struct CStrIterator<'self> {
+    priv ptr: &'self libc::c_char,
 }
 
-impl<'self> Iterator<libc::c_char> for CStringIterator<'self> {
+impl<'self> Iterator<libc::c_char> for CStrIterator<'self> {
     /**
      * Advance the iterator.
      */
     fn next(&mut self) -> Option<libc::c_char> {
-        if self.ptr.is_null() {
+        let ch = *self.ptr;
+
+        if ch == 0 {
             None
         } else {
-            let ch = unsafe { *self.ptr };
-            self.ptr = ptr::offset(self.ptr, 1);
+            self.ptr = unsafe { cast::transmute(ptr::offset(self.ptr, 1)) };
             Some(ch)
         }
     }
@@ -206,86 +194,46 @@ mod tests {
     use ptr;
 
     #[test]
-    fn test_to_c_str() {
-        do "".to_c_str().with |buf| {
-            unsafe {
-                assert_eq!(*ptr::offset(buf, 0), 0);
-            }
-        }
-
-        do "hello".to_c_str().with |buf| {
-            unsafe {
-                assert_eq!(*ptr::offset(buf, 0), 'h' as libc::c_char);
-                assert_eq!(*ptr::offset(buf, 1), 'e' as libc::c_char);
-                assert_eq!(*ptr::offset(buf, 2), 'l' as libc::c_char);
-                assert_eq!(*ptr::offset(buf, 3), 'l' as libc::c_char);
-                assert_eq!(*ptr::offset(buf, 4), 'o' as libc::c_char);
-                assert_eq!(*ptr::offset(buf, 5), 0);
-            }
-        }
+    fn test_len() {
+        assert_eq!("".to_c_str().len(), 0);
+        assert_eq!("hello".to_c_str().len(), 5);
     }
 
     #[test]
-    fn test_take() {
-        let mut c_str = "hello".to_c_str();
-        unsafe { libc::free(c_str.take() as *libc::c_void) }
-        assert!(c_str.is_empty());
-    }
-
-    #[test]
-    fn test_take_and_put_back() {
-        let mut c_str = "hello".to_c_str();
-        assert!(c_str.is_not_empty());
-
-        let buf = unsafe { c_str.take() };
-
-        assert!(c_str.is_empty());
-
-        c_str.put_back(buf);
-
-        assert!(c_str.is_not_empty());
-    }
-
-    #[test]
-    #[should_fail]
-    #[ignore(cfg(windows))]
-    fn test_take_empty_fail() {
-        let mut c_str = "hello".to_c_str();
+    fn test_as_ptr() {
+        let c_str = "".to_c_str();
         unsafe {
-            libc::free(c_str.take() as *libc::c_void);
-            c_str.take();
+            assert_eq!(*ptr::offset(c_str.as_ptr(), 0), 0);
+        }
+
+        let c_str = "hello".to_c_str();
+        let ptr = c_str.as_ptr();
+        unsafe {
+            assert_eq!(*ptr::offset(ptr, 0), 'h' as libc::c_char);
+            assert_eq!(*ptr::offset(ptr, 1), 'e' as libc::c_char);
+            assert_eq!(*ptr::offset(ptr, 2), 'l' as libc::c_char);
+            assert_eq!(*ptr::offset(ptr, 3), 'l' as libc::c_char);
+            assert_eq!(*ptr::offset(ptr, 4), 'o' as libc::c_char);
+            assert_eq!(*ptr::offset(ptr, 5), 0);
         }
     }
 
     #[test]
-    #[should_fail]
-    #[ignore(cfg(windows))]
-    fn test_put_back_null_fail() {
-        let mut c_str = "hello".to_c_str();
-        c_str.put_back(ptr::null());
-    }
+    fn test_as_mut_ptr() {
+        let mut c_str = "".to_c_str();
+        unsafe {
+            assert_eq!(*ptr::offset(c_str.as_mut_ptr(), 0), 0);
+        }
 
-    #[test]
-    #[should_fail]
-    #[ignore(cfg(windows))]
-    fn test_put_back_full_fail() {
         let mut c_str = "hello".to_c_str();
-        c_str.put_back(0xdeadbeef as *libc::c_char);
-    }
-
-    fn test_with() {
-        let c_str = "hello".to_c_str();
-        let len = unsafe { c_str.with(|buf| libc::strlen(buf)) };
-        assert!(c_str.is_not_empty());
-        assert_eq!(len, 5);
-    }
-
-    #[test]
-    #[should_fail]
-    #[ignore(cfg(windows))]
-    fn test_with_empty_fail() {
-        let mut c_str = "hello".to_c_str();
-        unsafe { libc::free(c_str.take() as *libc::c_void) }
-        c_str.with(|_| ());
+        let ptr = c_str.as_mut_ptr();
+        unsafe {
+            assert_eq!(*ptr::offset(ptr, 0), 'h' as libc::c_char);
+            assert_eq!(*ptr::offset(ptr, 1), 'e' as libc::c_char);
+            assert_eq!(*ptr::offset(ptr, 2), 'l' as libc::c_char);
+            assert_eq!(*ptr::offset(ptr, 3), 'l' as libc::c_char);
+            assert_eq!(*ptr::offset(ptr, 4), 'o' as libc::c_char);
+            assert_eq!(*ptr::offset(ptr, 5), 0);
+        }
     }
 }

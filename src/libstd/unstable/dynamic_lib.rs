@@ -59,12 +59,10 @@ impl DynamicLibrary {
         // This function should have a lifetime constraint of 'self on
         // T but that feature is still unimplemented
 
-        do dl::check_for_errors_in {
-            let symbol_value = do symbol.to_c_str().with |raw_string| {
-                dl::symbol(self.handle, raw_string)
-            };
+        let symbol = symbol.to_c_str();
 
-            cast::transmute(symbol_value)
+        do dl::check_for_errors_in {
+            cast::transmute(dl::symbol(self.handle, symbol.as_ptr()))
         }
     }
 }
@@ -111,9 +109,8 @@ mod dl {
     use result::*;
 
     pub unsafe fn open_external(filename: &path::Path) -> *libc::c_void {
-        do filename.to_c_str().with |raw_name| {
-            dlopen(raw_name, Lazy as libc::c_int)
-        }
+        let filename = filename.to_c_str();
+        dlopen(filename.as_ptr(), Lazy as libc::c_int)
     }
 
     pub unsafe fn open_internal() -> *libc::c_void {

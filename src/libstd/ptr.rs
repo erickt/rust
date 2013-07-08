@@ -391,7 +391,7 @@ pub mod ptr_tests {
     use super::*;
     use prelude::*;
 
-    use c_str::{CString, ToCStr};
+    use c_str::ToCStr;
     use cast;
     use libc;
     use str;
@@ -439,27 +439,31 @@ pub mod ptr_tests {
     fn test_position() {
         use libc::c_char;
 
-        do "hello".to_c_str().with |p| {
-            unsafe {
-                assert!(2u == position(p, |c| *c == 'l' as c_char));
-                assert!(4u == position(p, |c| *c == 'o' as c_char));
-                assert!(5u == position(p, |c| *c == 0 as c_char));
-            }
+        let c_str = "hello".to_c_str();
+        let ptr = c_str.as_ptr();
+        unsafe {
+            assert!(2u == position(ptr, |c| *c == 'l' as c_char));
+            assert!(4u == position(ptr, |c| *c == 'o' as c_char));
+            assert!(5u == position(ptr, |c| *c == 0 as c_char));
         }
     }
 
     #[test]
     fn test_buf_len() {
-        do "hello".to_c_str().with |p0| {
-            do "there".to_c_str().with |p1| {
-                do "thing".to_c_str().with |p2| {
-                    let v = ~[p0, p1, p2, null()];
-                    do v.as_imm_buf |vp, len| {
-                        assert_eq!(unsafe { buf_len(vp) }, 3u);
-                        assert_eq!(len, 4u);
-                    }
-                }
-            }
+        let s0 = "hello".to_c_str();
+        let s1 = "there".to_c_str();
+        let s2 = "thing".to_c_str();
+
+        let v = ~[
+            s0.as_ptr() as *libc::c_char,
+            s1.as_ptr() as *libc::c_char,
+            s2.as_ptr() as *libc::c_char,
+            null(),
+        ];
+
+        do v.as_imm_buf |vp, len| {
+            assert_eq!(unsafe { buf_len(vp) }, 3u);
+            assert_eq!(len, 4u);
         }
     }
 
@@ -502,13 +506,13 @@ pub mod ptr_tests {
     #[test]
     fn test_ptr_array_each_with_len() {
         unsafe {
-            let one = CString::from_str("oneOne");
-            let two = CString::from_str("twoTwo");
-            let three = CString::from_str("threeThree");
+            let one = "oneOne".to_c_str();
+            let two = "twoTwo".to_c_str();
+            let three = "threeThree".to_c_str();
             let arr = ~[
-                one.with(|buf| buf),
-                two.with(|buf| buf),
-                three.with(|buf| buf),
+                one.as_ptr() as *libc::c_char,
+                two.as_ptr() as *libc::c_char,
+                three.as_ptr() as *libc::c_char,
             ];
             let expected_arr = [
                 one, two, three
@@ -519,7 +523,7 @@ pub mod ptr_tests {
                 let mut iteration_count = 0;
                 do array_each_with_len(arr_ptr, arr_len) |e| {
                      let actual = str::raw::from_c_str(e);
-                     let expected = expected_arr[ctr].with(|buf| str::raw::from_c_str(buf));
+                     let expected = str::raw::from_c_str(expected_arr[ctr].as_ptr());
                      debug!(
                          "test_ptr_array_each_with_len e: %s, a: %s",
                          expected, actual);
@@ -535,13 +539,13 @@ pub mod ptr_tests {
     #[test]
     fn test_ptr_array_each() {
         unsafe {
-            let one = CString::from_str("oneOne");
-            let two = CString::from_str("twoTwo");
-            let three = CString::from_str("threeThree");
+            let one = "oneOne".to_c_str();
+            let two = "twoTwo".to_c_str();
+            let three = "threeThree".to_c_str();
             let arr = ~[
-                one.with(|buf| buf),
-                two.with(|buf| buf),
-                three.with(|buf| buf),
+                one.as_ptr() as *libc::c_char,
+                two.as_ptr() as *libc::c_char,
+                three.as_ptr() as *libc::c_char,
                 // fake a null terminator
                 ptr::null(),
             ];
@@ -549,12 +553,12 @@ pub mod ptr_tests {
                 one, two, three
             ];
 
-            do arr.as_imm_buf |arr_ptr, arr_len| {
+            do arr.as_imm_buf |arr_ptr, _| {
                 let mut ctr = 0;
                 let mut iteration_count = 0;
                 do array_each(arr_ptr) |e| {
                      let actual = str::raw::from_c_str(e);
-                     let expected = expected_arr[ctr].with(|buf| str::raw::from_c_str(buf));
+                     let expected = str::raw::from_c_str(expected_arr[ctr].as_ptr());
                      debug!(
                          "test_ptr_array_each e: %s, a: %s",
                          expected, actual);

@@ -124,21 +124,19 @@ pub trait FailWithCause {
 
 impl FailWithCause for ~str {
     fn fail_with(cause: ~str, file: &'static str, line: uint) -> ! {
-        do cause.to_c_str().with |msg_buf| {
-            do file.to_c_str().with |file_buf| {
-                begin_unwind_(msg_buf, file_buf, line as libc::size_t)
-            }
-        }
+        let cause = cause.to_c_str();
+        let file = file.to_c_str();
+
+        begin_unwind_(cause.as_ptr(), file.as_ptr(), line as libc::size_t)
     }
 }
 
 impl FailWithCause for &'static str {
     fn fail_with(cause: &'static str, file: &'static str, line: uint) -> ! {
-        do cause.to_c_str().with |msg_buf| {
-            do file.to_c_str().with |file_buf| {
-                begin_unwind_(msg_buf, file_buf, line as libc::size_t)
-            }
-        }
+        let cause = cause.to_c_str();
+        let file = file.to_c_str();
+
+        begin_unwind_(cause.as_ptr(), file.as_ptr(), line as libc::size_t)
     }
 }
 

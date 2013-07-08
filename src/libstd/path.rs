@@ -339,12 +339,11 @@ mod stat {
 #[cfg(target_os = "win32")]
 impl WindowsPath {
     pub fn stat(&self) -> Option<libc::stat> {
-        do self.to_c_str().with |buf| {
-            let mut st = stat::arch::default_stat();
-            match unsafe { libc::stat(buf, &mut st) } {
-                0 => Some(st),
-                _ => None,
-            }
+        let path = self.to_c_str();
+        let mut st = stat::arch::default_stat();
+        match unsafe { libc::stat(path.as_ptr(), &mut st) } {
+            0 => Some(st),
+            _ => None,
         }
     }
 
@@ -373,12 +372,11 @@ impl WindowsPath {
 #[cfg(not(target_os = "win32"))]
 impl PosixPath {
     pub fn stat(&self) -> Option<libc::stat> {
-        do self.to_c_str().with |buf| {
-            let mut st = stat::arch::default_stat();
-            match unsafe { libc::stat(buf as *libc::c_char, &mut st) } {
-                0 => Some(st),
-                _ => None,
-            }
+        let path = self.to_c_str();
+        let mut st = stat::arch::default_stat();
+        match unsafe { libc::stat(path.as_ptr(), &mut st) } {
+            0 => Some(st),
+            _ => None,
         }
     }
 
@@ -451,12 +449,11 @@ impl PosixPath {
 #[cfg(unix)]
 impl PosixPath {
     pub fn lstat(&self) -> Option<libc::stat> {
-        do self.to_c_str().with |buf| {
-            let mut st = stat::arch::default_stat();
-            match unsafe { libc::lstat(buf, &mut st) } {
-                0 => Some(st),
-                _ => None,
-            }
+        let path = self.to_c_str();
+        let mut st = stat::arch::default_stat();
+        match unsafe { libc::lstat(path.as_ptr(), &mut st) } {
+            0 => Some(st),
+            _ => None,
         }
     }
 }
@@ -524,7 +521,7 @@ impl ToStr for PosixPath {
 }
 
 impl ToCStr for PosixPath {
-    fn to_c_str(&self) -> c_str::CString {
+    fn to_c_str(&self) -> c_str::CStr {
         self.to_str().to_c_str()
     }
 }
@@ -723,7 +720,7 @@ impl ToStr for WindowsPath {
 }
 
 impl c_str::ToCStr for WindowsPath {
-    fn to_c_str(&self) -> c_str::CString {
+    fn to_c_str(&self) -> c_str::CStr {
         self.to_str().to_c_str()
     }
 }
