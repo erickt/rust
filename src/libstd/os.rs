@@ -2028,7 +2028,7 @@ mod tests {
             lseek_(fd, size);
 
             let x = "x".to_c_str();
-            assert!(write(fd, x.as_ptr() as *c_void, 1) == 1);
+            assert!(write(fd, (x.as_ptr() as *libc::c_char) as *c_void, 1) == 1);
 
             fd
         };

@@ -78,9 +78,6 @@ impl<'self> CStr {
      */
     #[inline]
     pub fn as_ptr(&self) -> &'self libc::c_char {
-        if self.is_null() {
-            fail!("CStr already wraps a `*libc::c_char`");
-        }
         unsafe { cast::transmute(self.buf) }
     }
 
@@ -89,9 +86,6 @@ impl<'self> CStr {
      */
     #[inline]
     pub fn as_mut_ptr(&mut self) -> &'self libc::c_char {
-        if self.is_not_null() {
-            fail!("CStr already wraps a `*libc::c_char`");
-        }
         unsafe { cast::transmute(self.buf) }
     }
 
