@@ -2017,11 +2017,12 @@ mod tests {
            }
         }
 
-        let path = tmpdir().push("mmap_file.tmp").to_c_str();
+        let path = tmpdir().push("mmap_file.tmp");
         let size = page_size() * 2;
-        remove_file(&p);
+        remove_file(&path);
 
         let fd = unsafe {
+            let path = path.to_c_str();
             let fd = open(path.as_ptr(), O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
 
             lseek_(fd, size);
