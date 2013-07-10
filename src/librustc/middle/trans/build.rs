@@ -513,9 +513,8 @@ pub fn Alloca(cx: block, Ty: Type, name: &str) -> ValueRef {
         if name.is_empty() {
             llvm::LLVMBuildAlloca(B(cx), Ty.to_ref(), noname())
         } else {
-            str::as_c_str(
-                name,
-                |c| llvm::LLVMBuildAlloca(B(cx), Ty.to_ref(), c))
+            let name = name.to_c_str();
+            llvm::LLVMBuildAlloca(B(cx), Ty.to_ref(), name.as_ptr())
         }
     }
 }
