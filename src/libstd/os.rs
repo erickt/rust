@@ -2017,18 +2017,18 @@ mod tests {
            }
         }
 
-        let p = tmpdir().push("mmap_file.tmp");
+        let path = tmpdir().push("mmap_file.tmp").to_c_str();
         let size = page_size() * 2;
         remove_file(&p);
 
         let fd = unsafe {
-            let fd = do as_c_charp(p.to_str()) |path| {
-                open(path, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR)
-            };
+            let fd = open(path.as_ptr(), O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
+
             lseek_(fd, size);
-            do as_c_charp("x") |x| {
-                assert!(write(fd, x as *c_void, 1) == 1);
-            }
+
+            let x = "x".to_c_str();
+            assert!(write(fd, x.as_ptr() as *c_void, 1) == 1);
+
             fd
         };
         let chunk = match MemoryMap::new(size / 2, ~[
