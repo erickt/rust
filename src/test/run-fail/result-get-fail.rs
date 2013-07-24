@@ -13,5 +13,6 @@
 use std::result;
 
 fn main() {
-  error!(result::Err::<int,~str>(~"kitty").get());
+    let res = result::Err::<int,~str>(~"kitty");
+    error!(res.get());
 }

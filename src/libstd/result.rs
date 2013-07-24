@@ -30,7 +30,7 @@ pub enum Result<T, U> {
     Err(U)
 }
 
-impl<T, E> Result<T, E> {
+impl<'self, T, E> Result<T, E> {
     /**
      * Convert to the `either` type
      *
@@ -45,6 +45,21 @@ impl<T, E> Result<T, E> {
         }
     }
 
+    /// Returns true if the result is `Ok`
+    #[inline]
+    pub fn is_ok(&self) -> bool {
+        match *self {
+          Ok(_) => true,
+          Err(_) => false,
+        }
+    }
+
+    /// Returns true if the result is `Err`
+    #[inline]
+    pub fn is_err(&self) -> bool {
+        !self.is_ok()
+    }
+
     /**
      * Get a reference to the value out of a successful result
      *
@@ -53,26 +68,44 @@ impl<T, E> Result<T, E> {
      * If the result is an error
      */
     #[inline]
-    pub fn get_ref<'a>(&'a self) -> &'a T {
+    pub fn get(&'self self) -> &'self T {
         match *self {
             Ok(ref t) => t,
-            Err(ref e) => fail!("get_ref called on `Err` result: %?", *e),
+            Err(ref e) => fail!("get called on `Err` result: %?", *e),
         }
     }
 
-    /// Returns true if the result is `Ok`
+    /**
+     * Get a reference to the value out of an error result
+     *
+     * # Failure
+     *
+     * If the result is not an error
+     */
     #[inline]
-    pub fn is_ok(&self) -> bool {
+    pub fn get_err(&'self self) -> &'self E {
         match *self {
-            Ok(_) => true,
-            Err(_) => false
+            Err(ref e) => e,
+            Ok(ref t) => fail!("get_err called on `Ok` result: %?", *t)
         }
     }
 
-    /// Returns true if the result is `Err`
+    /// Unwraps a result, assuming it is an `Ok(T)`
     #[inline]
-    pub fn is_err(&self) -> bool {
-        !self.is_ok()
+    pub fn unwrap(self) -> T {
+        match self {
+            Ok(t) => t,
+            Err(e) => fail!("unwrap called on an `Err` result: %?", e),
+        }
+    }
+
+    /// Unwraps a result, assuming it is an `Err(U)`
+    #[inline]
+    pub fn unwrap_err(self) -> E {
+        match self {
+            Err(e) => e,
+            Ok(t) => fail!("unwrap called on an `Ok` result: %?", t),
+        }
     }
 
     /**
@@ -110,24 +143,6 @@ impl<T, E> Result<T, E> {
         match *self {
             Ok(_) => (),
             Err(ref e) => f(e),
-        }
-    }
-
-    /// Unwraps a result, assuming it is an `Ok(T)`
-    #[inline]
-    pub fn unwrap(self) -> T {
-        match self {
-            Ok(t) => t,
-            Err(_) => fail!("unwrap called on an `Err` result"),
-        }
-    }
-
-    /// Unwraps a result, assuming it is an `Err(U)`
-    #[inline]
-    pub fn unwrap_err(self) -> E {
-        match self {
-            Err(e) => e,
-            Ok(_) => fail!("unwrap called on an `Ok` result"),
         }
     }
 
@@ -204,40 +219,6 @@ impl<T, E> Result<T, E> {
         match self {
             Ok(t) => Ok(t),
             Err(e) => op(e),
-        }
-    }
-}
-
-impl<T: Clone, E> Result<T, E> {
-    /**
-     * Get the value out of a successful result
-     *
-     * # Failure
-     *
-     * If the result is an error
-     */
-    #[inline]
-    pub fn get(&self) -> T {
-        match *self {
-            Ok(ref t) => t.clone(),
-            Err(ref e) => fail!("get called on `Err` result: %?", *e),
-        }
-    }
-}
-
-impl<T, E: Clone> Result<T, E> {
-    /**
-     * Get the value out of an error result
-     *
-     * # Failure
-     *
-     * If the result is not an error
-     */
-    #[inline]
-    pub fn get_err(&self) -> E {
-        match *self {
-            Err(ref e) => e.clone(),
-            Ok(_) => fail!("get_err called on `Ok` result")
         }
     }
 }
@@ -353,12 +334,14 @@ mod tests {
 
     #[test]
     pub fn chain_success() {
-        assert_eq!(op1().chain(op2).get(), 667u);
+        let res = op1().chain(op2);
+        assert_eq!(res.get(), &667u);
     }
 
     #[test]
     pub fn chain_failure() {
-        assert_eq!(op3().chain( op2).get_err(), ~"sadface");
+        let res = op3().chain(op2);
+        assert_eq!(res.get_err(), &~"sadface");
     }
 
     #[test]
@@ -395,9 +378,9 @@ mod tests {
     }
 
     #[test]
-    pub fn test_get_ref_method() {
+    pub fn test_get_method() {
         let foo: Result<int, ()> = Ok(100);
-        assert_eq!(*foo.get_ref(), 100);
+        assert_eq!(foo.get(), &100);
     }
 
     #[test]
