@@ -99,10 +99,10 @@ impl<T:Clone+Add<T,T>> Add<Option<T>, Option<T>> for Option<T> {
     }
 }
 
-impl<T> Option<T> {
+impl<'self, T> Option<T> {
     /// Return an iterator over the possibly contained value
     #[inline]
-    pub fn iter<'r>(&'r self) -> OptionIterator<'r, T> {
+    pub fn iter(&'self self) -> OptionIterator<'self, T> {
         match *self {
             Some(ref x) => OptionIterator{opt: Some(x)},
             None => OptionIterator{opt: None}
@@ -111,7 +111,7 @@ impl<T> Option<T> {
 
     /// Return a mutable iterator over the possibly contained value
     #[inline]
-    pub fn mut_iter<'r>(&'r mut self) -> OptionMutIterator<'r, T> {
+    pub fn mut_iter(&'self mut self) -> OptionMutIterator<'self, T> {
         match *self {
             Some(ref mut x) => OptionMutIterator{opt: Some(x)},
             None => OptionMutIterator{opt: None}
@@ -150,8 +150,7 @@ impl<T> Option<T> {
     /// Update an optional value by optionally running its content by reference
     /// through a function that returns an option.
     #[inline]
-    pub fn chain_ref<'a, U>(&'a self, f: &fn(x: &'a T) -> Option<U>)
-                            -> Option<U> {
+    pub fn chain_ref<U>(&'self self, f: &fn(x: &'self T) -> Option<U>) -> Option<U> {
         match *self {
             Some(ref x) => f(x),
             None => None
@@ -180,20 +179,20 @@ impl<T> Option<T> {
 
     /// Maps a `Some` value from one type to another by reference
     #[inline]
-    pub fn map<'a, U>(&'a self, f: &fn(&'a T) -> U) -> Option<U> {
+    pub fn map<U>(&'self self, f: &fn(&'self T) -> U) -> Option<U> {
         match *self { Some(ref x) => Some(f(x)), None => None }
     }
 
     /// Maps a `Some` value from one type to another by a mutable reference
     #[inline]
-    pub fn map_mut<'a, U>(&'a mut self, f: &fn(&'a mut T) -> U) -> Option<U> {
+    pub fn map_mut<U>(&'self mut self, f: &fn(&'self mut T) -> U) -> Option<U> {
         match *self { Some(ref mut x) => Some(f(x)), None => None }
     }
 
     /// Maps a `Some` value from one type to another by a mutable reference,
     /// or returns a default value.
     #[inline]
-    pub fn map_mut_default<'a, U>(&'a mut self, def: U, f: &fn(&'a mut T) -> U) -> U {
+    pub fn map_mut_default<U>(&'self mut self, def: U, f: &fn(&'self mut T) -> U) -> U {
         match *self { Some(ref mut x) => f(x), None => def }
     }
 
@@ -206,7 +205,7 @@ impl<T> Option<T> {
 
     /// Applies a function to the contained value or returns a default
     #[inline]
-    pub fn map_default<'a, U>(&'a self, def: U, f: &fn(&'a T) -> U) -> U {
+    pub fn map_default<U>(&'self self, def: U, f: &fn(&'self T) -> U) -> U {
         match *self { None => def, Some(ref t) => f(t) }
     }
 
@@ -268,7 +267,7 @@ impl<T> Option<T> {
     case explicitly.
      */
     #[inline]
-    pub fn get_ref<'a>(&'a self) -> &'a T {
+    pub fn get_ref(&'self self) -> &'self T {
         match *self {
           Some(ref x) => x,
           None => fail!("option::get_ref `None`"),
@@ -290,7 +289,7 @@ impl<T> Option<T> {
     case explicitly.
      */
     #[inline]
-    pub fn get_mut_ref<'a>(&'a mut self) -> &'a mut T {
+    pub fn get_mut_ref(&'self mut self) -> &'self mut T {
         match *self {
           Some(ref mut x) => x,
           None => fail!("option::get_mut_ref `None`"),
