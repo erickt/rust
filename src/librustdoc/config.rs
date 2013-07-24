@@ -140,7 +140,7 @@ fn config_from_opts(
     let result = result::Ok(config);
     let result = do result.chain |config| {
         let output_dir = getopts::opt_maybe_str(matches, opt_output_dir());
-        let output_dir = output_dir.map(|s| Path(*s));
+        let output_dir = output_dir.map(|s| Path(s));
         result::Ok(Config {
             output_dir: output_dir.get_or_default(config.output_dir.clone()),
             .. config

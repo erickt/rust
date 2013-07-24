@@ -733,7 +733,7 @@ pub fn ty_of_closure<AC:AstConv,RS:region_scope + Clone + 'static>(
         ty_of_arg(this, &rb, a, expected_arg_ty)
     }.collect();
 
-    let expected_ret_ty = expected_sig.map(|e| e.output);
+    let expected_ret_ty = expected_sig.map_ref(|e| e.output);
     let output_ty = match decl.output.node {
         ast::ty_infer if expected_ret_ty.is_some() => expected_ret_ty.get(),
         ast::ty_infer => this.ty_infer(decl.output.span),

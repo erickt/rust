@@ -778,7 +778,7 @@ pub fn trans_arg_expr(bcx: @mut Block,
            formal_arg_ty.repr(bcx.tcx()),
            self_mode,
            arg_expr.repr(bcx.tcx()),
-           ret_flag.map(|v| bcx.val_to_str(*v)));
+           ret_flag.map_ref(|v| bcx.val_to_str(*v)));
 
     // translate the arg expr to a datum
     let arg_datumblock = match ret_flag {

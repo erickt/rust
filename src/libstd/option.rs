@@ -267,7 +267,7 @@ impl<'self, T> Option<T> {
     case explicitly.
      */
     #[inline]
-    pub fn get_ref(&'self self) -> &'self T {
+    pub fn get_ref<'self>(&'self self) -> &'self T {
         match *self {
           Some(ref x) => x,
           None => fail!("option::get_ref `None`"),
@@ -289,7 +289,7 @@ impl<'self, T> Option<T> {
     case explicitly.
      */
     #[inline]
-    pub fn get_mut_ref(&'self mut self) -> &'self mut T {
+    pub fn get_mut_ref(&'self mut self) -> &'a mut T {
         match *self {
           Some(ref mut x) => x,
           None => fail!("option::get_mut_ref `None`"),

@@ -499,9 +499,7 @@ pub fn self_exe_path() -> Option<Path> {
         }
     }
 
-    do load_self().map |pth| {
-        Path(*pth).dir_path()
-    }
+    load_self().map(|path| Path(path).dir_path())
 }
 
 

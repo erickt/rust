@@ -275,7 +275,7 @@ fn each_ancestor(list:        &mut AncestorList,
 
         // The map defaults to None, because if ancestors is None, we're at
         // the end of the list, which doesn't make sense to coalesce.
-        do ancestors.map_default((None,false)) |ancestor_arc| {
+        do ancestors.map_default_ref((None,false)) |ancestor_arc| {
             // NB: Takes a lock! (this ancestor node)
             do access_ancestors(ancestor_arc) |nobe| {
                 // Argh, but we couldn't give it to coalesce() otherwise.
