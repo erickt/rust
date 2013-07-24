@@ -868,7 +868,7 @@ impl MetricMap {
     pub fn load(p: &Path) -> MetricMap {
         assert!(os::path_exists(p));
         let f = io::file_reader(p).unwrap();
-        let mut decoder = json::Decoder(json::from_reader(f).get());
+        let mut decoder = json::Decoder(json::from_reader(f).unwrap());
         MetricMap(Decodable::decode(&mut decoder))
     }
 
