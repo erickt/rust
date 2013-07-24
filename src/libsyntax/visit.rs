@@ -259,7 +259,7 @@ pub fn visit_ty<E:Clone>(t: &Ty, (e, v): (E, vt<E>)) {
                 (v.visit_ty)(&a.ty, (e.clone(), v));
             }
             (v.visit_ty)(&f.decl.output, (e.clone(), v));
-            do f.bounds.map |bounds| {
+            do f.bounds.map_ref |bounds| {
                 visit_ty_param_bounds(bounds, (e.clone(), v));
             };
         },
@@ -271,7 +271,7 @@ pub fn visit_ty<E:Clone>(t: &Ty, (e, v): (E, vt<E>)) {
         },
         ty_path(ref p, ref bounds, _) => {
             visit_path(p, (e.clone(), v));
-            do bounds.map |bounds| {
+            do bounds.map_ref |bounds| {
                 visit_ty_param_bounds(bounds, (e.clone(), v));
             };
         },

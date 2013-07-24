@@ -339,7 +339,7 @@ impl KillHandle {
                     || {
                         // Prefer to check tombstones that were there first,
                         // being "more fair" at the expense of tail-recursion.
-                        others.take().map_consume_default(true, |f| f()) && {
+                        others.take().map_default(true, |f| f()) && {
                             let mut inner = this.take().unwrap();
                             (!inner.any_child_failed) &&
                                 inner.child_tombstones.take_map_default(true, |f| f())
@@ -361,7 +361,7 @@ impl KillHandle {
                     let others = Cell::new(other_tombstones); // :(
                     || {
                         // Prefer fairness to tail-recursion, as in above case.
-                        others.take().map_consume_default(true, |f| f()) &&
+                        others.take().map_default(true, |f| f()) &&
                             f.take()()
                     }
                 }

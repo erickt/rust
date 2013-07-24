@@ -63,7 +63,7 @@ fn run(
 }
 
 fn maybe_apply_op(op: WrappedOp, s: &Option<~str>) -> Option<~str> {
-    s.map(|s| (op.op)(*s) )
+    s.map_ref(|s| (op.op)(*s) )
 }
 
 fn fold_item(fold: &fold::Fold<WrappedOp>, doc: doc::ItemDoc)

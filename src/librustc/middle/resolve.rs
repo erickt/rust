@@ -3360,7 +3360,7 @@ impl Resolver {
                   // item, it's ok
                   match def {
                     def_ty_param(did, _)
-                        if self.def_map.find(&did.node).map_consume(|x| *x)
+                        if self.def_map.find(&did.node).map(|x| *x)
                             == Some(def_typaram_binder(item_id)) => {
                       // ok
                     }
@@ -4163,7 +4163,7 @@ impl Resolver {
                     }
                 }
 
-                do bounds.map |bound_vec| {
+                do bounds.map_ref |bound_vec| {
                     foreach bound in bound_vec.iter() {
                         self.resolve_type_parameter_bound(ty.id, bound, visitor);
                     }
@@ -4171,7 +4171,7 @@ impl Resolver {
             }
 
             ty_closure(c) => {
-                do c.bounds.map |bounds| {
+                do c.bounds.map_ref |bounds| {
                     foreach bound in bounds.iter() {
                         self.resolve_type_parameter_bound(ty.id, bound, visitor);
                     }

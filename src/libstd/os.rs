@@ -499,9 +499,7 @@ pub fn self_exe_path() -> Option<Path> {
         }
     }
 
-    do load_self().map |pth| {
-        Path(*pth).dir_path()
-    }
+    load_self().map(|path| Path(path).dir_path())
 }
 
 
@@ -1212,7 +1210,7 @@ static overridden_arg_key: local_data::Key<@OverriddenArgs> = &local_data::Key;
 /// The return value of the function can be changed by invoking the
 /// `os::set_args` function.
 pub fn args() -> ~[~str] {
-    match local_data::get(overridden_arg_key, |k| k.map(|&k| *k)) {
+    match local_data::get(overridden_arg_key, |k| k.map_ref(|&k| *k)) {
         None => real_args(),
         Some(args) => args.val.clone()
     }

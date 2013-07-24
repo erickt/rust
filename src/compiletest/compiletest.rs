@@ -110,8 +110,8 @@ pub fn parse_config(args: ~[~str]) -> config {
         compile_lib_path: getopts::opt_str(matches, "compile-lib-path"),
         run_lib_path: getopts::opt_str(matches, "run-lib-path"),
         rustc_path: opt_path(matches, "rustc-path"),
-        clang_path: getopts::opt_maybe_str(matches, "clang-path").map(|s| Path(*s)),
-        llvm_bin_path: getopts::opt_maybe_str(matches, "llvm-bin-path").map(|s| Path(*s)),
+        clang_path: getopts::opt_maybe_str(matches, "clang-path").map(|s| Path(s)),
+        llvm_bin_path: getopts::opt_maybe_str(matches, "llvm-bin-path").map(|s| Path(s)),
         src_base: opt_path(matches, "src-base"),
         build_base: opt_path(matches, "build-base"),
         aux_base: opt_path(matches, "aux-base"),
@@ -124,14 +124,14 @@ pub fn parse_config(args: ~[~str]) -> config {
             } else {
                 None
             },
-        logfile: getopts::opt_maybe_str(matches, "logfile").map(|s| Path(*s)),
-        save_metrics: getopts::opt_maybe_str(matches, "save-metrics").map(|s| Path(*s)),
+        logfile: getopts::opt_maybe_str(matches, "logfile").map(|s| Path(s)),
+        save_metrics: getopts::opt_maybe_str(matches, "save-metrics").map(|s| Path(s)),
         ratchet_metrics:
-            getopts::opt_maybe_str(matches, "ratchet-metrics").map(|s| Path(*s)),
+            getopts::opt_maybe_str(matches, "ratchet-metrics").map(|s| Path(s)),
         ratchet_noise_percent:
             getopts::opt_maybe_str(matches,
                                    "ratchet-noise-percent").map(|s|
-                                                                f64::from_str(*s).get()),
+                                                                f64::from_str(s).get()),
         runtool: getopts::opt_maybe_str(matches, "runtool"),
         rustcflags: getopts::opt_maybe_str(matches, "rustcflags"),
         jit: getopts::opt_present(matches, "jit"),

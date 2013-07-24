@@ -1813,7 +1813,7 @@ impl<'self> StrSlice<'self> for &'self str {
         } else {
             self.matches_index_iter(needle)
                 .next()
-                .map_consume(|(start, _end)| start)
+                .map(|(start, _end)| start)
         }
     }
 

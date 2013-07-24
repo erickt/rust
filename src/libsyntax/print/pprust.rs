@@ -1517,7 +1517,7 @@ fn print_path_(s: @ps, path: &ast::Path, colons_before_params: bool,
         if first { first = false; } else { word(s.s, "::"); }
         print_ident(s, *id);
     }
-    do opt_bounds.map |bounds| {
+    do opt_bounds.map_ref |bounds| {
         print_bounds(s, bounds, true);
     };
     if path.rp.is_some() || !path.types.is_empty() {
@@ -1941,7 +1941,7 @@ pub fn print_ty_fn(s: @ps,
     print_onceness(s, onceness);
     word(s.s, "fn");
     match id { Some(id) => { word(s.s, " "); print_ident(s, id); } _ => () }
-    do opt_bounds.map |bounds| { print_bounds(s, bounds, true); };
+    do opt_bounds.map_ref |bounds| { print_bounds(s, bounds, true); };
     match generics { Some(g) => print_generics(s, g), _ => () }
     zerobreak(s.s);
 
