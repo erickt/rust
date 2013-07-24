@@ -131,9 +131,7 @@ fn lookup_vtables_for_param(vcx: &VtableContext,
     // ty is the value supplied for the type parameter A...
     let mut param_result = ~[];
 
-    for ty::each_bound_trait_and_supertraits(
-        tcx, type_param_bounds.trait_bounds) |trait_ref|
-    {
+    for ty::each_bound_trait_and_supertraits(tcx, type_param_bounds.trait_bounds) |trait_ref| {
         // ...and here trait_ref is each bound that was declared on A,
         // expressed in terms of the type parameters.
 
@@ -142,7 +140,7 @@ fn lookup_vtables_for_param(vcx: &VtableContext,
         let trait_ref = substs.map_default(trait_ref, |substs| {
             debug!("about to subst: %s, %s",
                    trait_ref.repr(tcx), substs.repr(tcx));
-            trait_ref.subst(tcx, *substs)
+            trait_ref.subst(tcx, substs)
         });
 
         debug!("after subst: %s", trait_ref.repr(tcx));
@@ -321,8 +319,8 @@ fn search_for_vtable(vcx: &VtableContext,
 
     // XXX: this is a bad way to do this, since we do
     // pointless allocations.
-    let impls = tcx.trait_impls.find(&trait_ref.def_id)
-        .map_default(@mut ~[], |x| **x);
+    let impls = tcx.trait_impls.find(&trait_ref.def_id).map_default(@mut ~[], |x| *x);
+
     // impls is the list of all impls in scope for trait_ref.
     foreach im in impls.iter() {
         // im is one specific impl of trait_ref.
@@ -476,7 +474,7 @@ fn fixup_substs(vcx: &VtableContext,
                          ast::m_imm,
                          ty::EmptyBuiltinBounds());
     do fixup_ty(vcx, location_info, t, is_early).map |t_f| {
-        match ty::get(*t_f).sty {
+        match ty::get(t_f).sty {
           ty::ty_trait(_, ref substs_f, _, _, _) => (*substs_f).clone(),
           _ => fail!("t_f should be a trait")
         }

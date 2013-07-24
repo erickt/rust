@@ -212,7 +212,7 @@ fn check_generation(_younger: uint, _older: uint) { }
 
 #[inline] #[cfg(test)]
 fn incr_generation(ancestors: &AncestorList) -> uint {
-    ancestors.map_default(0, |arc| access_ancestors(arc, |a| a.generation+1))
+    ancestors.map_ref_default(0, |arc| access_ancestors(arc, |a| a.generation+1))
 }
 #[inline] #[cfg(not(test))]
 fn incr_generation(_ancestors: &AncestorList) -> uint { 0 }
