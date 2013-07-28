@@ -423,7 +423,7 @@ impl CtxMethods for Ctx {
         let maybe_executable = built_executable_in_workspace(id, workspace);
         let maybe_library = built_library_in_workspace(id, workspace);
         let target_exec = target_executable_in_workspace(id, workspace);
-        let target_lib = maybe_library.map(|_p| target_library_in_workspace(id, workspace));
+        let target_lib = maybe_library.map_ref(|_p| target_library_in_workspace(id, workspace));
 
         debug!("target_exec = %s target_lib = %? \
                 maybe_executable = %? maybe_library = %?",

@@ -275,7 +275,7 @@ fn each_ancestor(list:        &mut AncestorList,
 
         // The map defaults to None, because if ancestors is None, we're at
         // the end of the list, which doesn't make sense to coalesce.
-        do ancestors.map_default_ref((None,false)) |ancestor_arc| {
+        do ancestors.map_ref_default((None,false)) |ancestor_arc| {
             // NB: Takes a lock! (this ancestor node)
             do access_ancestors(ancestor_arc) |nobe| {
                 // Argh, but we couldn't give it to coalesce() otherwise.
@@ -421,7 +421,7 @@ fn enlist_in_taskgroup(state: TaskGroupInner, me: TaskHandle,
                            is_member: bool) -> bool {
     let me = Cell::new(me); // :(
     // If 'None', the group was failing. Can't enlist.
-    do state.map_mut_default(false) |group| {
+    do state.map_mut_ref_default(false) |group| {
         (if is_member {
             &mut group.members
         } else {
@@ -436,7 +436,7 @@ fn leave_taskgroup(state: TaskGroupInner, me: &TaskHandle,
                        is_member: bool) {
     let me = Cell::new(me); // :(
     // If 'None', already failing and we've already gotten a kill signal.
-    do state.map_mut |group| {
+    do state.map_mut_ref |group| {
         (if is_member {
             &mut group.members
         } else {
@@ -499,7 +499,7 @@ impl RuntimeGlue {
             OldTask(ptr) => rt::rust_task_kill_other(ptr),
             NewTask(handle) => {
                 let mut handle = handle;
-                do handle.kill().map_consume |killed_task| {
+                do handle.kill().map |killed_task| {
                     let killed_task = Cell::new(killed_task);
                     do Local::borrow::<Scheduler, ()> |sched| {
                         sched.enqueue_task(killed_task.take());
@@ -588,7 +588,7 @@ impl RuntimeGlue {
 fn gen_child_taskgroup(linked: bool, supervised: bool)
     -> (TaskGroupArc, AncestorList, bool) {
     do RuntimeGlue::with_my_taskgroup |spawner_group| {
-        let ancestors = AncestorList(spawner_group.ancestors.map(|x| x.clone()));
+        let ancestors = AncestorList(spawner_group.ancestors.map_ref(|x| x.clone()));
         if linked {
             // Child is in the same group as spawner.
             // Child's ancestors are spawner's ancestors.
@@ -779,7 +779,7 @@ fn spawn_raw_oldsched(mut opts: TaskOpts, f: ~fn()) {
             // Even if the below code fails to kick the child off, we must
             // send Something on the notify channel.
 
-            let notifier = notify_chan.map_consume(|c| AutoNotify(c));
+            let notifier = notify_chan.map(|c| AutoNotify(c));
 
             if enlist_many(OldTask(child), &child_arc, &mut ancestors) {
                 let group = @@mut Taskgroup(child_arc, ancestors, is_main, notifier);

@@ -134,7 +134,7 @@ fn fold_tts(tts : &[token_tree], fld: @ast_fold) -> ~[token_tree] {
             tt_seq(span, ref pattern, ref sep, is_optional) =>
             tt_seq(span,
                    @mut fold_tts(**pattern, fld),
-                   sep.map(|tok|maybe_fold_ident(tok,fld)),
+                   sep.map_ref(|tok| maybe_fold_ident(tok,fld)),
                    is_optional),
             tt_nonterminal(sp,ref ident) =>
             tt_nonterminal(sp,fld.fold_ident(*ident))
@@ -305,7 +305,7 @@ pub fn noop_fold_item_underscore(i: &item_, fld: @ast_fold) -> item_ {
         item_impl(ref generics, ref ifce, ref ty, ref methods) => {
             item_impl(
                 fold_generics(generics, fld),
-                ifce.map(|p| fold_trait_ref(p, fld)),
+                ifce.map_ref(|p| fold_trait_ref(p, fld)),
                 fld.fold_ty(ty),
                 methods.map(|x| fld.fold_method(*x))
             )
@@ -337,7 +337,7 @@ fn fold_struct_def(struct_def: @ast::struct_def, fld: @ast_fold)
                 -> @ast::struct_def {
     @ast::struct_def {
         fields: struct_def.fields.map(|f| fold_struct_field(*f, fld)),
-        ctor_id: struct_def.ctor_id.map(|cid| fld.new_id(*cid)),
+        ctor_id: struct_def.ctor_id.map_ref(|cid| fld.new_id(*cid)),
     }
 }
 
@@ -389,7 +389,7 @@ pub fn noop_fold_block(b: &Block, fld: @ast_fold) -> Block {
     ast::Block {
         view_items: view_items,
         stmts: stmts,
-        expr: b.expr.map(|x| fld.fold_expr(*x)),
+        expr: b.expr.map_ref(|x| fld.fold_expr(*x)),
         id: fld.new_id(b.id),
         rules: b.rules,
         span: b.span,
@@ -437,7 +437,7 @@ pub fn noop_fold_pat(p: &pat_, fld: @ast_fold) -> pat_ {
         pat_enum(ref pth, ref pats) => {
             pat_enum(
                 fld.fold_path(pth),
-                pats.map(|pats| pats.map(|x| fld.fold_pat(*x)))
+                pats.map_ref(|pats| pats.map(|x| fld.fold_pat(*x)))
             )
         }
         pat_struct(ref pth, ref fields, etc) => {
@@ -657,7 +657,7 @@ pub fn noop_fold_ty(t: &ty_, fld: @ast_fold) -> ty_ {
     }
     fn fold_opt_bounds(b: &Option<OptVec<TyParamBound>>, fld: @ast_fold)
                         -> Option<OptVec<TyParamBound>> {
-        do b.map |bounds| {
+        do b.map_ref |bounds| {
             do bounds.map |bound| { fold_ty_param_bound(bound, fld) }
         }
     }
@@ -730,11 +730,11 @@ fn noop_fold_variant(v: &variant_, fld: @ast_fold) -> variant_ {
                 fold_variant_arg(/*bad*/ (*x).clone())
             })
         }
-        struct_variant_kind(struct_def) => {
+        struct_variant_kind(ref struct_def) => {
             kind = struct_variant_kind(@ast::struct_def {
                 fields: struct_def.fields.iter()
                     .transform(|f| fld.fold_struct_field(*f)).collect(),
-                ctor_id: struct_def.ctor_id.map(|c| fld.new_id(*c))
+                ctor_id: struct_def.ctor_id.map_ref(|c| fld.new_id(*c))
             })
         }
     }

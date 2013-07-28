@@ -198,7 +198,7 @@ pub fn ensure_trait_methods(ccx: &CrateCtxt,
                             trait_id: ast::node_id)
 {
     let tcx = ccx.tcx;
-    let region_paramd = tcx.region_paramd_items.find(&trait_id).map(|&x| *x);
+    let region_paramd = tcx.region_paramd_items.find(&trait_id).map(|x| *x);
     match tcx.items.get_copy(&trait_id) {
         ast_map::node_item(@ast::item {
             node: ast::item_trait(ref generics, _, ref ms),

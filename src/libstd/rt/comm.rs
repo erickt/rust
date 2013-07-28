@@ -133,7 +133,7 @@ impl<T> ChanOne<T> {
                 task_as_state => {
                     // Port is blocked. Wake it up.
                     let recvr = BlockedTask::cast_from_uint(task_as_state);
-                    do recvr.wake().map_consume |woken_task| {
+                    do recvr.wake().map |woken_task| {
                         let mut sched = Local::take::<Scheduler>();
                         rtdebug!("rendezvous send");
                         sched.metrics.rendezvous_sends += 1;
@@ -256,7 +256,7 @@ impl<T> Drop for ChanOneHack<T> {
                     // The port is blocked waiting for a message we will never send. Wake it.
                     assert!((*this.packet()).payload.is_none());
                     let recvr = BlockedTask::cast_from_uint(task_as_state);
-                    do recvr.wake().map_consume |woken_task| {
+                    do recvr.wake().map |woken_task| {
                         let sched = Local::take::<Scheduler>();
                         sched.schedule_task(woken_task);
                     };

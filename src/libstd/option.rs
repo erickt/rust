@@ -177,43 +177,42 @@ impl<'self, T> Option<T> {
         }
     }
 
+    /// Maps a `Some` value from one type to another by consuming the option
+    /// and giving `f` ownership to avoid copying.
+    #[inline]
+    pub fn map<U>(self, f: &fn(T) -> U) -> Option<U> {
+        match self { Some(x) => Some(f(x)), None => None }
+    }
+
+    /// Applies a function to the contained value or returns a default
+    #[inline]
+    pub fn map_default<U>(self, def: U, f: &fn(T) -> U) -> U {
+        match self { None => def, Some(t) => f(t) }
+    }
+
     /// Maps a `Some` value from one type to another by reference
     #[inline]
-    pub fn map<U>(&'self self, f: &fn(&'self T) -> U) -> Option<U> {
+    pub fn map_ref<U>(&'self self, f: &fn(&'self T) -> U) -> Option<U> {
         match *self { Some(ref x) => Some(f(x)), None => None }
     }
 
     /// Maps a `Some` value from one type to another by a mutable reference
     #[inline]
-    pub fn map_mut<U>(&'self mut self, f: &fn(&'self mut T) -> U) -> Option<U> {
+    pub fn map_mut_ref<U>(&'self mut self, f: &fn(&'self mut T) -> U) -> Option<U> {
         match *self { Some(ref mut x) => Some(f(x)), None => None }
+    }
+
+    /// Applies a function to the contained value or returns a default
+    #[inline]
+    pub fn map_ref_default<U>(&'self self, def: U, f: &fn(&'self T) -> U) -> U {
+        match *self { None => def, Some(ref t) => f(t) }
     }
 
     /// Maps a `Some` value from one type to another by a mutable reference,
     /// or returns a default value.
     #[inline]
-    pub fn map_mut_default<U>(&'self mut self, def: U, f: &fn(&'self mut T) -> U) -> U {
+    pub fn map_mut_ref_default<U>(&'self mut self, def: U, f: &fn(&'self mut T) -> U) -> U {
         match *self { Some(ref mut x) => f(x), None => def }
-    }
-
-    /// As `map`, but consumes the option and gives `f` ownership to avoid
-    /// copying.
-    #[inline]
-    pub fn map_consume<U>(self, f: &fn(v: T) -> U) -> Option<U> {
-        match self { None => None, Some(v) => Some(f(v)) }
-    }
-
-    /// Applies a function to the contained value or returns a default
-    #[inline]
-    pub fn map_default<U>(&'self self, def: U, f: &fn(&'self T) -> U) -> U {
-        match *self { None => def, Some(ref t) => f(t) }
-    }
-
-    /// As `map_default`, but consumes the option and gives `f`
-    /// ownership to avoid copying.
-    #[inline]
-    pub fn map_consume_default<U>(self, def: U, f: &fn(v: T) -> U) -> U {
-        match self { None => def, Some(v) => f(v) }
     }
 
     /// Take the value out of the option, leaving a `None` in its place.
@@ -222,18 +221,18 @@ impl<'self, T> Option<T> {
         util::replace(self, None)
     }
 
-    /// As `map_consume`, but swaps a None into the original option rather
+    /// As `map`, but swaps a None into the original option rather
     /// than consuming it by-value.
     #[inline]
     pub fn take_map<U>(&mut self, blk: &fn(T) -> U) -> Option<U> {
-        self.take().map_consume(blk)
+        self.take().map(blk)
     }
 
-    /// As `map_consume_default`, but swaps a None into the original option
+    /// As `map_default`, but swaps a None into the original option
     /// rather than consuming it by-value.
     #[inline]
     pub fn take_map_default<U> (&mut self, def: U, blk: &fn(T) -> U) -> U {
-        self.take().map_consume_default(def, blk)
+        self.take().map_default(def, blk)
     }
 
     /// Apply a function to the contained value or do nothing

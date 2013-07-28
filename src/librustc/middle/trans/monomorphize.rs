@@ -71,7 +71,7 @@ pub fn monomorphic_fn(ccx: @mut CrateContext,
     let psubsts = @param_substs {
         tys: real_substs.tps.map(|x| do_normalize(x)),
         vtables: vtables,
-        self_ty: real_substs.self_ty.map(|x| do_normalize(x)),
+        self_ty: real_substs.self_ty.map_ref(|x| do_normalize(x)),
         self_vtables: self_vtables
     };
 

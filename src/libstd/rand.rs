@@ -861,7 +861,7 @@ static tls_rng_state: local_data::Key<@@mut IsaacRng> = &local_data::Key;
  */
 #[inline]
 pub fn task_rng() -> @mut IsaacRng {
-    let r = local_data::get(tls_rng_state, |k| k.map(|&k| *k));
+    let r = local_data::get(tls_rng_state, |k| k.map_ref(|&k| *k));
     match r {
         None => {
             let rng = @@mut IsaacRng::new_seeded(seed());

@@ -4163,7 +4163,7 @@ impl Resolver {
                     }
                 }
 
-                do bounds.map |bound_vec| {
+                do bounds.map_ref |bound_vec| {
                     for bound_vec.iter().advance |bound| {
                         self.resolve_type_parameter_bound(ty.id, bound, visitor);
                     }
@@ -4171,7 +4171,7 @@ impl Resolver {
             }
 
             ty_closure(c) => {
-                do c.bounds.map |bounds| {
+                do c.bounds.map_ref |bounds| {
                     for bounds.iter().advance |bound| {
                         self.resolve_type_parameter_bound(ty.id, bound, visitor);
                     }

@@ -149,7 +149,7 @@ fn config_from_opts(
     let result = do result.chain |config| {
         let output_format = getopts::opt_maybe_str(matches, opt_output_format());
         do output_format.map_default(result::Ok(config.clone())) |output_format| {
-            do parse_output_format(*output_format).chain |output_format| {
+            do parse_output_format(output_format).chain |output_format| {
                 result::Ok(Config {
                     output_format: output_format,
                     .. config.clone()
@@ -161,7 +161,7 @@ fn config_from_opts(
         let output_style =
             getopts::opt_maybe_str(matches, opt_output_style());
         do output_style.map_default(result::Ok(config.clone())) |output_style| {
-            do parse_output_style(*output_style).chain |output_style| {
+            do parse_output_style(output_style).chain |output_style| {
                 result::Ok(Config {
                     output_style: output_style,
                     .. config.clone()

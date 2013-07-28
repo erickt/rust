@@ -276,7 +276,7 @@ impl Scheduler {
     /// As enqueue_task, but with the possibility for the blocked task to
     /// already have been killed.
     pub fn enqueue_blocked_task(&mut self, blocked_task: BlockedTask) {
-        do blocked_task.wake().map_consume |task| {
+        do blocked_task.wake().map |task| {
             self.enqueue_task(task);
         };
     }
@@ -509,7 +509,7 @@ impl Scheduler {
             // Must happen after running the cleanup job (of course).
             // Might not be running in task context; if not, a later call to
             // resume_task_immediately will take care of this.
-            (*sched).current_task.map(|t| t.death.check_killed());
+            (*sched).current_task.map_ref(|t| t.death.check_killed());
         }
     }
 
@@ -560,7 +560,7 @@ impl Scheduler {
             (*sched).run_cleanup_job();
 
             // As above, must happen after running the cleanup job.
-            (*sched).current_task.map(|t| t.death.check_killed());
+            (*sched).current_task.map_ref(|t| t.death.check_killed());
         }
     }
 
@@ -598,7 +598,7 @@ impl Scheduler {
             (*sched).run_cleanup_job();
 
             // As above, must happen after running the cleanup job.
-            (*sched).current_task.map(|t| t.death.check_killed());
+            (*sched).current_task.map_ref(|t| t.death.check_killed());
         }
     }
 

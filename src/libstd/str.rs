@@ -1816,7 +1816,7 @@ impl<'self> StrSlice<'self> for &'self str {
         } else {
             self.matches_index_iter(needle)
                 .next()
-                .map_consume(|(start, _end)| start)
+                .map(|(start, _end)| start)
         }
     }
 
@@ -2301,7 +2301,7 @@ pub struct StrBytesIterator<'self> {
 impl<'self> Iterator<u8> for StrBytesIterator<'self> {
     #[inline]
     fn next(&mut self) -> Option<u8> {
-        self.it.next().map_consume(|&x| x)
+        self.it.next().map(|&x| x)
     }
 }
 
@@ -2315,7 +2315,7 @@ pub struct StrBytesRevIterator<'self> {
 impl<'self> Iterator<u8> for StrBytesRevIterator<'self> {
     #[inline]
     fn next(&mut self) -> Option<u8> {
-        self.it.next().map_consume(|&x| x)
+        self.it.next().map(|&x| x)
     }
 }
 

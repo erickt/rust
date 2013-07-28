@@ -3547,7 +3547,7 @@ pub fn def_has_ty_params(def: ast::def) -> bool {
 
 pub fn provided_source(cx: ctxt, id: ast::def_id)
     -> Option<ast::def_id> {
-    cx.provided_method_sources.find(&id).map(|x| **x)
+    cx.provided_method_sources.find(&id).map(|x| *x)
 }
 
 pub fn provided_trait_methods(cx: ctxt, id: ast::def_id) -> ~[@Method] {

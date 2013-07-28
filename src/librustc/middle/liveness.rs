@@ -606,9 +606,9 @@ impl Liveness {
         match expr.node {
           expr_path(_) => {
             let def = self.tcx.def_map.get_copy(&expr.id);
-            moves::moved_variable_node_id_from_def(def).map(
-                |rdef| self.variable(*rdef, expr.span)
-            )
+            do moves::moved_variable_node_id_from_def(def).map |rdef| {
+                self.variable(rdef, expr.span)
+            }
           }
           _ => None
         }
@@ -622,9 +622,9 @@ impl Liveness {
                                  -> Option<Variable> {
         match self.tcx.def_map.find(&node_id) {
           Some(&def) => {
-            moves::moved_variable_node_id_from_def(def).map(
-                |rdef| self.variable(*rdef, span)
-            )
+            do moves::moved_variable_node_id_from_def(def).map |rdef| {
+                self.variable(rdef, span)
+            }
           }
           None => {
             self.tcx.sess.span_bug(
