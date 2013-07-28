@@ -1846,7 +1846,6 @@ mod tests {
     use io;
     use path::Path;
     use result::{Ok, Err};
-    use result;
     use u64;
     use vec;
 
