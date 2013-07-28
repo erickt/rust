@@ -334,12 +334,14 @@ mod tests {
 
     #[test]
     pub fn chain_success() {
-        assert_eq!(op1().chain(op2).get(), 667u);
+        let res = op1().chain(op2);
+        assert_eq!(res.get(), &667u);
     }
 
     #[test]
     pub fn chain_failure() {
-        assert_eq!(op3().chain( op2).get_err(), ~"sadface");
+        let res = op3().chain(op2);
+        assert_eq!(res.get_err(), &~"sadface");
     }
 
     #[test]
@@ -376,9 +378,9 @@ mod tests {
     }
 
     #[test]
-    pub fn test_get_ref_method() {
+    pub fn test_get_method() {
         let foo: Result<int, ()> = Ok(100);
-        assert_eq!(*foo.get_ref(), 100);
+        assert_eq!(foo.get(), &100);
     }
 
     #[test]
