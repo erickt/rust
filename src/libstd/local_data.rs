@@ -110,16 +110,15 @@ fn test_tls_multitask() {
     set(my_key, @~"parent data");
     do task::spawn {
         // TLS shouldn't carry over.
-        assert!(get(my_key, |k| k.map(|&k| *k)).is_none());
+        assert!(get(my_key, |k| k.map(|k| *k)).is_none());
         set(my_key, @~"child data");
-        assert!(*(get(my_key, |k| k.map(|&k| *k)).get()) ==
-                ~"child data");
+        assert!(*(get(my_key, |k| k.map(|k| *k)).get()) == ~"child data");
         // should be cleaned up for us
     }
     // Must work multiple times
-    assert!(*(get(my_key, |k| k.map(|&k| *k)).get()) == ~"parent data");
-    assert!(*(get(my_key, |k| k.map(|&k| *k)).get()) == ~"parent data");
-    assert!(*(get(my_key, |k| k.map(|&k| *k)).get()) == ~"parent data");
+    assert!(*(get(my_key, |k| k.map(|k| *k)).get()) == ~"parent data");
+    assert!(*(get(my_key, |k| k.map(|k| *k)).get()) == ~"parent data");
+    assert!(*(get(my_key, |k| k.map(|k| *k)).get()) == ~"parent data");
 }
 
 #[test]
@@ -127,7 +126,7 @@ fn test_tls_overwrite() {
     static my_key: Key<@~str> = &Key;
     set(my_key, @~"first data");
     set(my_key, @~"next data"); // Shouldn't leak.
-    assert!(*(get(my_key, |k| k.map(|&k| *k)).get()) == ~"next data");
+    assert!(*(get(my_key, |k| k.map(|k| *k)).get()) == ~"next data");
 }
 
 #[test]
