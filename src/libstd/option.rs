@@ -448,6 +448,18 @@ impl<T> result::IntoResult<T, ()> for Option<T> {
     }
 }
 
+/*
+impl<T> result::AsResult<T, ()> for Option<T> {
+    #[inline]
+    fn as_result<'a>(&'a self) -> result::Result<&'a T, &'a ()> {
+        match *self {
+            Some(ref x) => result::Ok(x),
+            None => result::Err(&()),
+        }
+    }
+}
+*/
+
 impl<T: Clone> either::ToEither<(), T> for Option<T> {
     #[inline]
     fn to_either(&self) -> either::Either<(), T> {
@@ -467,6 +479,18 @@ impl<T> either::IntoEither<(), T> for Option<T> {
         }
     }
 }
+
+/*
+impl<T> either::AsEither<(), T> for Option<T> {
+    #[inline]
+    fn as_either<'a>(&'a self) -> either::Either<&'a (), &'a T> {
+        match *self {
+            Some(ref x) => either::Right(x),
+            None => either::Left(()),
+        }
+    }
+}
+*/
 
 impl<T: Default> Option<T> {
     /// Returns the contained value or default (for this type)
@@ -842,6 +866,17 @@ mod tests {
         assert_eq!(none.into_result(), result::Err(()));
     }
 
+    /*
+    #[test]
+    pub fn test_as_result() {
+        let some: Option<int> = Some(100);
+        let none: Option<int> = None;
+
+        assert_eq!(some.as_result().unwrap(), &100);
+        assert_eq!(none.as_result().unwrap_err(), &());
+    }
+    */
+
     #[test]
     pub fn test_to_either() {
         let some: Option<int> = Some(100);
@@ -859,4 +894,15 @@ mod tests {
         assert_eq!(some.into_either(), either::Right(100));
         assert_eq!(none.into_either(), either::Left(()));
     }
+
+    /*
+    #[test]
+    pub fn test_as_either() {
+        let some: Option<int> = Some(100);
+        let none: Option<int> = None;
+
+        assert_eq!(some.as_either().unwrap_right(), &100);
+        assert_eq!(none.as_either().unwrap_left(), &());
+    }
+    */
 }
