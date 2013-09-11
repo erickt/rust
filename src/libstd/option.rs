@@ -127,22 +127,49 @@ impl<T> Option<T> {
     #[inline]
     pub fn is_some(&self) -> bool { !self.is_none() }
 
-    /// Update an optional value by optionally running its content through a
-    /// function that returns an option.
+    /// Returns the rightmost `Some` value, or `None` if either are `None`.
     #[inline]
-    pub fn chain<U>(self, f: &fn(t: T) -> Option<U>) -> Option<U> {
+    pub fn and(self, optb: Option<T>) -> Option<T> {
         match self {
-            Some(t) => f(t),
-            None => None
+            Some(_) => optb,
+            None => None,
         }
     }
 
-    /// Returns the leftmost Some() value, or None if both are None.
+    /// Returns the rightmost `Some` value, or `None` if either are `None`.
+    #[inline]
+    pub fn and_then(self, f: &fn() -> Option<T>) -> Option<T> {
+        match self {
+            Some(_) => f(),
+            None => None,
+        }
+    }
+
+    /// Returns the leftmost `Some` value, or `None` if both are `None`.
     #[inline]
     pub fn or(self, optb: Option<T>) -> Option<T> {
         match self {
             Some(opta) => Some(opta),
-            _ => optb
+            None => optb
+        }
+    }
+
+    /// Returns the leftmost `Some` value, or `None` if both are `None`.
+    #[inline]
+    pub fn or_else(self, f: &fn() -> Option<T>) -> Option<T> {
+        match self {
+            Some(opta) => Some(opta),
+            None => f(),
+        }
+    }
+
+    /// Update an optional value by optionally running its content through a
+    /// function that returns an option.
+    #[inline]
+    pub fn chain<U>(self, f: &fn(T) -> Option<U>) -> Option<U> {
+        match self {
+            Some(t) => f(t),
+            None => None
         }
     }
 
@@ -507,6 +534,50 @@ mod tests {
         let mut y = Some(util::NonCopyable);
         let _y2 = y.take_unwrap();
         let _y3 = y.take_unwrap();
+    }
+
+    #[test]
+    fn test_and() {
+        let x: Option<int> = Some(1);
+        assert_eq!(x.and(Some(2)), Some(2));
+        assert_eq!(x.and(None), None);
+
+        let x: Option<int> = None;
+        assert_eq!(x.and(Some(2)), None);
+        assert_eq!(x.and(None), None);
+    }
+
+    #[test]
+    fn test_and_then() {
+        let x: Option<int> = Some(1);
+        assert_eq!(x.and_then(|| Some(2)), Some(2));
+        assert_eq!(x.and_then(|| None), None);
+
+        let x: Option<int> = None;
+        assert_eq!(x.and_then(|| Some(2)), None);
+        assert_eq!(x.and_then(|| None), None);
+    }
+
+    #[test]
+    fn test_or() {
+        let x: Option<int> = Some(1);
+        assert_eq!(x.or(Some(2)), Some(1));
+        assert_eq!(x.or(None), Some(1));
+
+        let x: Option<int> = None;
+        assert_eq!(x.or(Some(2)), Some(2));
+        assert_eq!(x.or(None), None);
+    }
+
+    #[test]
+    fn test_or_else() {
+        let x: Option<int> = Some(1);
+        assert_eq!(x.or_else(|| Some(2)), Some(1));
+        assert_eq!(x.or_else(|| None), Some(1));
+
+        let x: Option<int> = None;
+        assert_eq!(x.or_else(|| Some(2)), Some(2));
+        assert_eq!(x.or_else(|| None), None);
     }
 
     #[test]
