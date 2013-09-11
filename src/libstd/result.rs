@@ -17,6 +17,7 @@ use cmp::Eq;
 use either;
 use iter::Iterator;
 use option::{None, Option, Some, OptionIterator};
+use option;
 use vec;
 use vec::OwnedVector;
 use to_str::ToStr;
@@ -36,18 +37,6 @@ pub enum Result<T, E> {
 }
 
 impl<T, E: ToStr> Result<T, E> {
-    /// Convert to the `either` type
-    ///
-    /// `Ok` result variants are converted to `either::Right` variants, `Err`
-    /// result variants are converted to `either::Left`.
-    #[inline]
-    pub fn to_either(self)-> either::Either<E, T>{
-        match self {
-            Ok(t) => either::Right(t),
-            Err(e) => either::Left(e),
-        }
-    }
-
     /// Get a reference to the value out of a successful result
     ///
     /// # Failure
@@ -255,6 +244,68 @@ impl<T, E: Clone + ToStr> Result<T, E> {
     }
 }
 
+/// A generic trait for converting a value to a `Result`
+pub trait ToResult<T, E> {
+    /// Convert to the `result` type
+    fn to_result(&self) -> Result<T, E>;
+}
+
+/// A generic trait for converting a value to a `Result`
+pub trait IntoResult<T, E> {
+    /// Convert to the `result` type
+    fn into_result(self) -> Result<T, E>;
+}
+
+impl<T: Clone, E: Clone> ToResult<T, E> for Result<T, E> {
+    #[inline]
+    fn to_result(&self) -> Result<T, E> { self.clone() }
+}
+
+impl<T, E> IntoResult<T, E> for Result<T, E> {
+    #[inline]
+    fn into_result(self) -> Result<T, E> { self }
+}
+
+impl<T: Clone, E> option::ToOption<T> for Result<T, E> {
+    #[inline]
+    fn to_option(&self)-> Option<T> {
+        match *self {
+            Ok(ref t) => Some(t.clone()),
+            Err(_) => None,
+        }
+    }
+}
+
+impl<T, E> option::IntoOption<T> for Result<T, E> {
+    #[inline]
+    fn into_option(self)-> Option<T> {
+        match self {
+            Ok(t) => Some(t),
+            Err(_) => None,
+        }
+    }
+}
+
+impl<T: Clone, E: Clone> either::ToEither<E, T> for Result<T, E> {
+    #[inline]
+    fn to_either(&self)-> either::Either<E, T> {
+        match *self {
+            Ok(ref t) => either::Right(t.clone()),
+            Err(ref e) => either::Left(e.clone()),
+        }
+    }
+}
+
+impl<T, E> either::IntoEither<E, T> for Result<T, E> {
+    #[inline]
+    fn into_either(self)-> either::Either<E, T> {
+        match self {
+            Ok(t) => either::Right(t),
+            Err(e) => either::Left(e),
+        }
+    }
+}
+
 #[inline]
 #[allow(missing_doc)]
 pub fn map_opt<T, U: ToStr, V>(o_t: &Option<T>,
@@ -334,8 +385,11 @@ pub fn fold_<T, E, Iter: Iterator<Result<T, E>>>(
 mod tests {
     use super::*;
 
+    use either::{IntoEither, ToEither};
     use either;
     use iter::range;
+    use option::{IntoOption, ToOption};
+    use option;
     use str::OwnedStr;
     use vec::ImmutableVector;
 
@@ -413,15 +467,6 @@ mod tests {
     }
 
     #[test]
-    pub fn test_to_either() {
-        let r: Result<int, ()> = Ok(100);
-        let err: Result<(), int> = Err(404);
-
-        assert_eq!(r.to_either(), either::Right(100));
-        assert_eq!(err.to_either(), either::Left(404));
-    }
-
-    #[test]
     fn test_collect() {
         assert_eq!(collect(range(0, 0)
                            .map(|_| Ok::<int, ()>(0))),
@@ -459,5 +504,59 @@ mod tests {
         assert_eq!(fold_(functions.iter()
                         .map(|f| (*f)())),
                    Err(1));
+    }
+
+    #[test]
+    pub fn test_to_option() {
+        let ok: Result<int, ()> = Ok(100);
+        let err: Result<int, int> = Err(404);
+
+        assert_eq!(ok.to_option(), option::Some(100));
+        assert_eq!(err.to_option(), option::None);
+    }
+
+    #[test]
+    pub fn test_into_option() {
+        let ok: Result<int, ()> = Ok(100);
+        let err: Result<int, int> = Err(404);
+
+        assert_eq!(ok.into_option(), option::Some(100));
+        assert_eq!(err.into_option(), option::None);
+    }
+
+    #[test]
+    pub fn test_to_result() {
+        let ok: Result<int, ()> = Ok(100);
+        let err: Result<int, int> = Err(404);
+
+        assert_eq!(ok.to_result(), Ok(100));
+        assert_eq!(err.to_result(), Err(404));
+    }
+
+    #[test]
+    pub fn test_into_result() {
+        let ok: Result<int, ()> = Ok(100);
+        let err: Result<int, int> = Err(404);
+
+        assert_eq!(ok.into_result(), Ok(100));
+        assert_eq!(err.into_result(), Err(404));
+    }
+
+    #[test]
+    pub fn test_to_either() {
+        let ok: Result<int, ()> = Ok(100);
+        let err: Result<int, int> = Err(404);
+
+        assert_eq!(ok.to_either(), either::Right(100));
+        assert_eq!(err.to_either(), either::Left(404));
+    }
+
+    #[test]
+    pub fn test_into_either() {
+        let ok: Result<int, ()> = Ok(100);
+        let err: Result<int, int> = Err(404);
+
+        assert_eq!(ok.into_either(), either::Right(100));
+        assert_eq!(err.into_either(), either::Left(404));
     }
 }
