@@ -108,7 +108,7 @@ pub trait Combine {
             (Some(a), Some(b)) => {
                 // FIXME(#5781) this should be eq_tys
                 // eq_tys(self, a, b).then(|| Ok(Some(a)) )
-                self.contratys(a, b).chain(|t| Ok(Some(t)))
+                self.contratys(a, b).chain_move(|t| Ok(Some(t)))
             }
             (None, Some(_)) |
                 (Some(_), None) => {
@@ -162,13 +162,13 @@ pub trait Combine {
                                 }
 
                                 ty::rv_covariant => {
-                                    do this.regions(a_r, b_r).chain |r| {
+                                    do this.regions(a_r, b_r).chain_move |r| {
                                         Ok(ty::NonerasedRegions(opt_vec::with(r)))
                                     }
                                 }
 
                                 ty::rv_contravariant => {
-                                    do this.contraregions(a_r, b_r).chain |r| {
+                                    do this.contraregions(a_r, b_r).chain_move |r| {
                                         Ok(ty::NonerasedRegions(opt_vec::with(r)))
                                     }
                                 }
@@ -179,12 +179,12 @@ pub trait Combine {
             }
         }
 
-        do self.tps(as_.tps, bs.tps).chain |tps| {
-            do self.self_tys(as_.self_ty, bs.self_ty).chain |self_ty| {
+        do self.tps(as_.tps, bs.tps).chain_move |tps| {
+            do self.self_tys(as_.self_ty, bs.self_ty).chain_move |self_ty| {
                 do relate_region_params(self,
                                         generics,
                                         &as_.regions,
-                                        &bs.regions).chain |regions| {
+                                        &bs.regions).chain_move |regions| {
                     Ok(substs {
                             regions: regions,
                             self_ty: self_ty,
@@ -227,8 +227,8 @@ pub trait Combine {
     fn flds(&self, a: ty::field, b: ty::field) -> cres<ty::field> {
         if a.ident == b.ident {
             self.mts(&a.mt, &b.mt)
-                .chain(|mt| Ok(ty::field {ident: a.ident, mt: mt}) )
-                .chain_err(|e| Err(ty::terr_in_field(@e, a.ident)) )
+                .chain_move(|mt| Ok(ty::field {ident: a.ident, mt: mt}) )
+                .chain_err_move(|e| Err(ty::terr_in_field(@e, a.ident)) )
         } else {
             Err(ty::terr_record_fields(
                                        expected_found(self,
@@ -238,7 +238,7 @@ pub trait Combine {
     }
 
     fn args(&self, a: ty::t, b: ty::t) -> cres<ty::t> {
-        do self.contratys(a, b).chain |t| {
+        do self.contratys(a, b).chain_move |t| {
             Ok(t)
         }
     }
@@ -274,7 +274,7 @@ pub trait Combine {
 
         match (a, b) {
             (ty::vstore_slice(a_r), ty::vstore_slice(b_r)) => {
-                do self.contraregions(a_r, b_r).chain |r| {
+                do self.contraregions(a_r, b_r).chain_move |r| {
                     Ok(ty::vstore_slice(r))
                 }
             }
@@ -299,7 +299,7 @@ pub trait Combine {
 
         match (a, b) {
             (ty::RegionTraitStore(a_r), ty::RegionTraitStore(b_r)) => {
-                do self.contraregions(a_r, b_r).chain |r| {
+                do self.contraregions(a_r, b_r).chain_move |r| {
                     Ok(ty::RegionTraitStore(r))
                 }
             }
@@ -357,7 +357,7 @@ pub fn expected_found<C:Combine,T>(
 pub fn eq_tys<C:Combine>(this: &C, a: ty::t, b: ty::t) -> ures {
     let suber = this.sub();
     do this.infcx().try {
-        do suber.tys(a, b).chain |_ok| {
+        do suber.tys(a, b).chain_move |_ok| {
             suber.contratys(a, b)
         }.to_ures()
     }
@@ -371,10 +371,10 @@ pub fn eq_regions<C:Combine>(this: &C, a: ty::Region, b: ty::Region)
     let sub = this.sub();
     do indent {
         this.infcx().try(|| {
-            do sub.regions(a, b).chain |_r| {
+            do sub.regions(a, b).chain_move |_r| {
                 sub.contraregions(a, b)
             }
-        }).chain_err(|e| {
+        }).chain_err_move(|e| {
             // substitute a better error, but use the regions
             // found in the original error
             match e {
@@ -426,9 +426,8 @@ pub fn super_fn_sigs<C:Combine>(
         }
     }
 
-    do argvecs(this, a.inputs, b.inputs)
-            .chain |inputs| {
-        do this.tys(a.output, b.output).chain |output| {
+    do argvecs(this, a.inputs, b.inputs).chain_move |inputs| {
+        do this.tys(a.output, b.output).chain_move |output| {
             Ok(FnSig {bound_lifetime_names: opt_vec::Empty, // FIXME(#4846)
                       inputs: inputs.clone(),
                       output: output})
@@ -508,7 +507,7 @@ pub fn super_tys<C:Combine>(
        &ty::ty_enum(b_id, ref b_substs))
       if a_id == b_id => {
           let type_def = ty::lookup_item_type(tcx, a_id);
-          do this.substs(&type_def.generics, a_substs, b_substs).chain |substs| {
+          do this.substs(&type_def.generics, a_substs, b_substs).chain_move |substs| {
               Ok(ty::mk_enum(tcx, a_id, substs))
           }
       }
@@ -517,9 +516,9 @@ pub fn super_tys<C:Combine>(
        &ty::ty_trait(b_id, ref b_substs, b_store, b_mutbl, b_bounds))
       if a_id == b_id && a_mutbl == b_mutbl => {
           let trait_def = ty::lookup_trait_def(tcx, a_id);
-          do this.substs(&trait_def.generics, a_substs, b_substs).chain |substs| {
-              do this.trait_stores(ty::terr_trait, a_store, b_store).chain |s| {
-                  do this.bounds(a_bounds, b_bounds).chain |bounds| {
+          do this.substs(&trait_def.generics, a_substs, b_substs).chain_move |substs| {
+              do this.trait_stores(ty::terr_trait, a_store, b_store).chain_move |s| {
+                  do this.bounds(a_bounds, b_bounds).chain_move |bounds| {
                     Ok(ty::mk_trait(tcx,
                                     a_id,
                                     substs.clone(),
@@ -534,25 +533,25 @@ pub fn super_tys<C:Combine>(
       (&ty::ty_struct(a_id, ref a_substs), &ty::ty_struct(b_id, ref b_substs))
       if a_id == b_id => {
           let type_def = ty::lookup_item_type(tcx, a_id);
-          do this.substs(&type_def.generics, a_substs, b_substs).chain |substs| {
+          do this.substs(&type_def.generics, a_substs, b_substs).chain_move |substs| {
               Ok(ty::mk_struct(tcx, a_id, substs))
           }
       }
 
       (&ty::ty_box(ref a_mt), &ty::ty_box(ref b_mt)) => {
-        do this.mts(a_mt, b_mt).chain |mt| {
+        do this.mts(a_mt, b_mt).chain_move |mt| {
             Ok(ty::mk_box(tcx, mt))
         }
       }
 
       (&ty::ty_uniq(ref a_mt), &ty::ty_uniq(ref b_mt)) => {
-        do this.mts(a_mt, b_mt).chain |mt| {
+        do this.mts(a_mt, b_mt).chain_move |mt| {
             Ok(ty::mk_uniq(tcx, mt))
         }
       }
 
       (&ty::ty_ptr(ref a_mt), &ty::ty_ptr(ref b_mt)) => {
-        do this.mts(a_mt, b_mt).chain |mt| {
+        do this.mts(a_mt, b_mt).chain_move |mt| {
             Ok(ty::mk_ptr(tcx, mt))
         }
       }
@@ -564,15 +563,15 @@ pub fn super_tys<C:Combine>(
       }
 
       (&ty::ty_evec(ref a_mt, vs_a), &ty::ty_evec(ref b_mt, vs_b)) => {
-        do this.mts(a_mt, b_mt).chain |mt| {
-            do this.vstores(ty::terr_vec, vs_a, vs_b).chain |vs| {
+        do this.mts(a_mt, b_mt).chain_move |mt| {
+            do this.vstores(ty::terr_vec, vs_a, vs_b).chain_move |vs| {
                 Ok(ty::mk_evec(tcx, mt, vs))
             }
         }
       }
 
       (&ty::ty_estr(vs_a), &ty::ty_estr(vs_b)) => {
-        do this.vstores(ty::terr_str, vs_a, vs_b).chain |vs| {
+        do this.vstores(ty::terr_str, vs_a, vs_b).chain_move |vs| {
             Ok(ty::mk_estr(tcx,vs))
         }
       }
@@ -581,7 +580,7 @@ pub fn super_tys<C:Combine>(
         if as_.len() == bs.len() {
             result::collect(as_.iter().zip(bs.iter())
                             .map(|(a, b)| this.tys(*a, *b)))
-                    .chain(|ts| Ok(ty::mk_tup(tcx, ts)) )
+                    .chain_move(|ts| Ok(ty::mk_tup(tcx, ts)) )
         } else {
             Err(ty::terr_tuple_size(
                 expected_found(this, as_.len(), bs.len())))
@@ -589,13 +588,13 @@ pub fn super_tys<C:Combine>(
       }
 
       (&ty::ty_bare_fn(ref a_fty), &ty::ty_bare_fn(ref b_fty)) => {
-        do this.bare_fn_tys(a_fty, b_fty).chain |fty| {
+        do this.bare_fn_tys(a_fty, b_fty).chain_move |fty| {
             Ok(ty::mk_bare_fn(tcx, fty))
         }
       }
 
       (&ty::ty_closure(ref a_fty), &ty::ty_closure(ref b_fty)) => {
-        do this.closure_tys(a_fty, b_fty).chain |fty| {
+        do this.closure_tys(a_fty, b_fty).chain_move |fty| {
             Ok(ty::mk_closure(tcx, fty))
         }
       }

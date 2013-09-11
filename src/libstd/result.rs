@@ -184,7 +184,7 @@ impl<T, E: ToStr> Result<T, E> {
     ///         Ok(parse_bytes(buf))
     ///     };
     #[inline]
-    pub fn chain<U>(self, op: &fn(T) -> Result<U, E>) -> Result<U, E> {
+    pub fn chain_move<U>(self, op: &fn(T) -> Result<U, E>) -> Result<U, E> {
         match self {
             Ok(t) => op(t),
             Err(e) => Err(e),
@@ -198,7 +198,7 @@ impl<T, E: ToStr> Result<T, E> {
     /// immediately returned.  This function can be used to pass through a
     /// successful result while handling an error.
     #[inline]
-    pub fn chain_err<F>(self, op: &fn(E) -> Result<T, F>) -> Result<T, F> {
+    pub fn chain_err_move<F>(self, op: &fn(E) -> Result<T, F>) -> Result<T, F> {
         match self {
             Ok(t) => Ok(t),
             Err(e) => op(e),
@@ -218,6 +218,20 @@ impl<T: Clone, E: ToStr> Result<T, E> {
         match *self {
             Ok(ref t) => Ok(t.clone()),
             Err(ref e) => Err(op(e))
+        }
+    }
+
+    /// Call a function based on a previous result
+    ///
+    /// If `self` is `Err` then the value is extracted and passed to `op`
+    /// whereupon `op`s result is returned. if `self` is `Ok` then it is
+    /// immediately returned.  This function can be used to pass through a
+    /// successful result while handling an error.
+    #[inline]
+    pub fn chain_err<F: Clone>(&self, op: &fn(&E) -> Result<T, F>) -> Result<T, F> {
+        match *self {
+            Ok(ref t) => Ok(t.clone()),
+            Err(ref e) => op(e),
         }
     }
 }
@@ -242,6 +256,21 @@ impl<T, E: Clone + ToStr> Result<T, E> {
             Err(ref e) => Err(e.clone())
         }
     }
+
+    /// Call a function based on a previous result
+    ///
+    /// If `self` is `Err` then the value is extracted and passed to `op`
+    /// whereupon `op`s result is returned. if `self` is `Ok` then it is
+    /// immediately returned.  This function can be used to pass through a
+    /// successful result while handling an error.
+    #[inline]
+    pub fn chain<U: Clone>(&self, op: &fn(&T) -> Result<U, E>) -> Result<U, E> {
+        match *self {
+            Ok(ref t) => op(t),
+            Err(ref e) => Err(e.clone()),
+        }
+    }
+
 }
 
 /// A generic trait for converting a value to a `Result`
@@ -394,21 +423,30 @@ mod tests {
     use vec::ImmutableVector;
 
     pub fn op1() -> Result<int, ~str> { Ok(666) }
-
-    pub fn op2(i: int) -> Result<uint, ~str> {
-        Ok(i as uint + 1u)
-    }
-
-    pub fn op3() -> Result<int, ~str> { Err(~"sadface") }
+    pub fn op2() -> Result<int, ~str> { Err(~"sadface") }
 
     #[test]
-    pub fn chain_success() {
-        assert_eq!(op1().chain(op2).unwrap(), 667u);
+    pub fn chain() {
+        assert_eq!(op1().chain(|i| Ok(*i as uint + 1u)).unwrap(), 667u);
+        assert_eq!(op2().chain(|i| Ok(*i as uint + 1u)).unwrap_err(), ~"sadface");
     }
 
     #[test]
-    pub fn chain_failure() {
-        assert_eq!(op3().chain( op2).unwrap_err(), ~"sadface");
+    pub fn chain_err() {
+        assert_eq!(op1().chain_err(|e| Err(e.to_str() + "!")).unwrap(), 666);
+        assert_eq!(op2().chain_err(|e| Err(e.to_str() + "!")).unwrap_err(), ~"sadface!");
+    }
+
+    #[test]
+    pub fn chain_move() {
+        assert_eq!(op1().chain_move(|i| Ok(i as uint + 1u)).unwrap(), 667u);
+        assert_eq!(op2().chain_move(|i| Ok(i as uint + 1u)).unwrap_err(), ~"sadface");
+    }
+
+    #[test]
+    pub fn chain_err_move() {
+        assert_eq!(op1().chain_err_move(|e| Err(e + "!")).unwrap(), 666);
+        assert_eq!(op2().chain_err_move(|e| Err(e + "!")).unwrap_err(), ~"sadface!");
     }
 
     #[test]
