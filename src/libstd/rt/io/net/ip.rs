@@ -177,7 +177,7 @@ impl<'self> Parser<'self> {
         }
 
         do self.read_atomically |p| {
-            p.read_char().chain(|c| parse_digit(c, radix))
+            p.read_char().chain_move(|c| parse_digit(c, radix))
         }
     }
 

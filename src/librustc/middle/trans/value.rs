@@ -52,7 +52,7 @@ impl Value {
     pub fn get_dominating_store(self, bcx: @mut Block) -> Option<Value> {
         match self.get_single_user().chain(|user| user.as_store_inst()) {
             Some(store) => {
-                do store.get_parent().chain |store_bb| {
+                do store.get_parent().chain_move |store_bb| {
                     let mut bb = BasicBlock(bcx.llbb);
                     let mut ret = Some(store);
                     while *bb != *store_bb {

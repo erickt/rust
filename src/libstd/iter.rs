@@ -1474,7 +1474,7 @@ pub struct Scan<'self, A, B, T, St> {
 impl<'self, A, B, T: Iterator<A>, St> Iterator<B> for Scan<'self, A, B, T, St> {
     #[inline]
     fn next(&mut self) -> Option<B> {
-        self.iter.next().chain(|a| (self.f)(&mut self.state, a))
+        self.iter.next().chain_move(|a| (self.f)(&mut self.state, a))
     }
 
     #[inline]
@@ -1505,7 +1505,7 @@ impl<'self, A, T: Iterator<A>, B, U: Iterator<B>> Iterator<B> for
                 }
             }
             match self.iter.next().map_move(|x| (self.f)(x)) {
-                None => return self.backiter.chain_mut_ref(|it| it.next()),
+                None => return self.backiter.chain_mut(|it| it.next()),
                 next => self.frontiter = next,
             }
         }
@@ -1537,7 +1537,7 @@ impl<'self,
                 }
             }
             match self.iter.next_back().map_move(|x| (self.f)(x)) {
-                None => return self.frontiter.chain_mut_ref(|it| it.next_back()),
+                None => return self.frontiter.chain_mut(|it| it.next_back()),
                 next => self.backiter = next,
             }
         }

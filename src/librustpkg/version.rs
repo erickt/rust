@@ -118,7 +118,7 @@ pub fn try_getting_local_version(local_path: &Path) -> Option<Version> {
         if !l.is_whitespace() {
             output = Some(l);
         }
-        match output.chain(try_parsing_version) {
+        match output.chain_move(try_parsing_version) {
             Some(v) => return Some(v),
             None    => ()
         }
@@ -158,7 +158,7 @@ pub fn try_getting_version(remote_path: &Path) -> Option<Version> {
                 }
             }
 
-            output.chain(try_parsing_version)
+            output.chain_move(try_parsing_version)
         }
         else {
             None

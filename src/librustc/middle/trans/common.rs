@@ -505,7 +505,7 @@ impl get_node_info for ast::Block {
 
 impl get_node_info for Option<@ast::Expr> {
     fn info(&self) -> Option<NodeInfo> {
-        self.chain_ref(|s| s.info())
+        self.chain(|s| s.info())
     }
 }
 

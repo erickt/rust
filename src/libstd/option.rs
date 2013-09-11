@@ -165,20 +165,10 @@ impl<T> Option<T> {
         }
     }
 
-    /// Update an optional value by optionally running its content through a
-    /// function that returns an option.
-    #[inline]
-    pub fn chain<U>(self, f: &fn(T) -> Option<U>) -> Option<U> {
-        match self {
-            Some(t) => f(t),
-            None => None
-        }
-    }
-
     /// Update an optional value by optionally running its content by reference
     /// through a function that returns an option.
     #[inline]
-    pub fn chain_ref<'a, U>(&'a self, f: &fn(x: &'a T) -> Option<U>) -> Option<U> {
+    pub fn chain<'a, U>(&'a self, f: &fn(x: &'a T) -> Option<U>) -> Option<U> {
         match *self {
             Some(ref x) => f(x),
             None => None
@@ -188,9 +178,19 @@ impl<T> Option<T> {
     /// Update an optional value by optionally running its content by mut reference
     /// through a function that returns an option.
     #[inline]
-    pub fn chain_mut_ref<'a, U>(&'a mut self, f: &fn(x: &'a mut T) -> Option<U>) -> Option<U> {
+    pub fn chain_mut<'a, U>(&'a mut self, f: &fn(x: &'a mut T) -> Option<U>) -> Option<U> {
         match *self {
             Some(ref mut x) => f(x),
+            None => None
+        }
+    }
+
+    /// Update an optional value by optionally running its content through a
+    /// function that returns an option.
+    #[inline]
+    pub fn chain_move<U>(self, f: &fn(T) -> Option<U>) -> Option<U> {
+        match self {
+            Some(t) => f(t),
             None => None
         }
     }
