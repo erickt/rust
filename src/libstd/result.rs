@@ -462,7 +462,7 @@ mod tests {
         assert_eq!(op1().and(Err(~"bad")).unwrap_err(), ~"bad");
 
         assert_eq!(op2().and(Ok(667)).unwrap_err(), ~"sadface");
-        assert_eq!(op2().and(Err(~"bad")).unwrap_err(), ~"bad");
+        assert_eq!(op2().and(Err(~"bad")).unwrap_err(), ~"sadface");
     }
 
     #[test]
@@ -471,7 +471,7 @@ mod tests {
         assert_eq!(op1().and_then(|_| Err::<int, ~str>(~"bad")).unwrap_err(), ~"bad");
 
         assert_eq!(op2().and_then(|i| Ok::<int, ~str>(i + 1)).unwrap_err(), ~"sadface");
-        assert_eq!(op2().and_then(|_| Err::<int, ~str>(~"bad")).unwrap_err(), ~"sadface!");
+        assert_eq!(op2().and_then(|_| Err::<int, ~str>(~"bad")).unwrap_err(), ~"sadface");
     }
 
     #[test]
@@ -479,7 +479,7 @@ mod tests {
         assert_eq!(op1().or(Ok(667)).unwrap(), 666);
         assert_eq!(op1().or(Err(~"bad")).unwrap(), 666);
 
-        assert_eq!(op2().or(Ok(667)).unwrap_err(), ~"sadface");
+        assert_eq!(op2().or(Ok(667)).unwrap(), 667);
         assert_eq!(op2().or(Err(~"bad")).unwrap_err(), ~"bad");
     }
 
