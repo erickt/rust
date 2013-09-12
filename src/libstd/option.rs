@@ -483,6 +483,7 @@ impl<T: Default> Option<T> {
 }
 
 impl<T> Default for Option<T> {
+    #[inline]
     fn default() -> Option<T> { None }
 }
 
