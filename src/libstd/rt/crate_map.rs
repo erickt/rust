@@ -174,7 +174,7 @@ fn iter_crate_map_follow_children() {
             version: 1,
             annihilate_fn: ptr::null(),
             entries: vec::raw::to_ptr([
-                ModEntry { name: "t::f1".to_c_str().with_ref(|buf| buf), log_level: &mut 1},
+                ModEntry { name: "t::f1".with_c_str(|buf| buf), log_level: &mut 1},
                 ModEntry { name: ptr::null(), log_level: ptr::mut_null()}
             ]),
             children: [&child_crate2 as *CrateMap, ptr::null()]
@@ -184,7 +184,7 @@ fn iter_crate_map_follow_children() {
         let root_crate = CrateMapT2 {
             version: 1, annihilate_fn: ptr::null(),
             entries: vec::raw::to_ptr([
-                ModEntry { name: "t::f1".to_c_str().with_ref(|buf| buf), log_level: &mut 0},
+                ModEntry { name: "t::f1".with_c_str(|buf| buf), log_level: &mut 0},
                 ModEntry { name: ptr::null(), log_level: ptr::mut_null()}
             ]),
             children: [child_crate1_ptr, ptr::null()]
