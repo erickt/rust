@@ -626,11 +626,13 @@ fn trans_rvalue_stmt_unadjusted(bcx: @mut Block, expr: @ast::Expr) -> @mut Block
     trace_span!(bcx, expr.span, shorten(bcx.expr_to_str(expr)));
 
     match expr.node {
-        ast::ExprBreak(label_opt) => {
-            return controlflow::trans_break(bcx, label_opt);
+        ast::ExprBreak(opt_lifetime) => {
+            let opt_label = opt_lifetime.map(|x| x.ident.name);
+            return controlflow::trans_break(bcx, opt_label);
         }
-        ast::ExprAgain(label_opt) => {
-            return controlflow::trans_cont(bcx, label_opt);
+        ast::ExprAgain(opt_lifetime) => {
+            let opt_label = opt_lifetime.map(|x| x.ident.name);
+            return controlflow::trans_cont(bcx, opt_label);
         }
         ast::ExprRet(ex) => {
             return controlflow::trans_ret(bcx, ex);
@@ -639,7 +641,6 @@ fn trans_rvalue_stmt_unadjusted(bcx: @mut Block, expr: @ast::Expr) -> @mut Block
             return controlflow::trans_while(bcx, cond, body);
         }
         ast::ExprLoop(ref body, opt_lifetime) => {
-            // FIXME #6993: map can go away when ast.rs is changed
             let opt_label = opt_lifetime.map(|x| x.ident.name);
             return controlflow::trans_loop(bcx, body, opt_label);
         }

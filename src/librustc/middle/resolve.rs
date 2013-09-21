@@ -4132,18 +4132,30 @@ impl Resolver {
     pub fn resolve_arm(@mut self, arm: &Arm, visitor: &mut ResolveVisitor) {
         self.value_ribs.push(@Rib::new(NormalRibKind));
 
-        let bindings_list = @mut HashMap::new();
-        for pattern in arm.pats.iter() {
-            self.resolve_pattern(*pattern, RefutableMode, Immutable,
-                                 Some(bindings_list), visitor);
+        do self.with_label_rib {
+            match arm.opt_lifetime {
+                Some(ref lifetime) => {
+                    let this = &mut *self;
+                    let def_like = DlDef(DefLabel(arm.id));
+                    let rib = this.label_ribs[this.label_ribs.len() - 1];
+                    rib.bindings.insert(lifetime.ident.name, def_like);
+                }
+                None => {}
+            }
+
+            let bindings_list = @mut HashMap::new();
+            for pattern in arm.pats.iter() {
+                self.resolve_pattern(*pattern, RefutableMode, Immutable,
+                                     Some(bindings_list), visitor);
+            }
+
+            // This has to happen *after* we determine which
+            // pat_idents are variants
+            self.check_consistent_bindings(arm);
+
+            visit::walk_expr_opt(visitor, arm.guard, ());
+            self.resolve_block(&arm.body, visitor);
         }
-
-        // This has to happen *after* we determine which
-        // pat_idents are variants
-        self.check_consistent_bindings(arm);
-
-        visit::walk_expr_opt(visitor, arm.guard, ());
-        self.resolve_block(&arm.body, visitor);
 
         self.value_ribs.pop();
     }
@@ -5162,14 +5174,14 @@ impl Resolver {
 
             ExprForLoop(*) => fail!("non-desugared expr_for_loop"),
 
-            ExprBreak(Some(label)) | ExprAgain(Some(label)) => {
-                match self.search_ribs(self.label_ribs, label, expr.span,
+            ExprBreak(Some(lifetime)) | ExprAgain(Some(lifetime)) => {
+                match self.search_ribs(self.label_ribs, lifetime.ident.name, expr.span,
                                        DontAllowCapturingSelf) {
                     None =>
                         self.resolve_error(expr.span,
                                               fmt!("use of undeclared label \
                                                    `%s`",
-                                                   interner_get(label))),
+                                                   interner_get(lifetime.ident.name))),
                     Some(DlDef(def @ DefLabel(_))) => {
                         self.record_def(expr.id, def)
                     }

@@ -491,6 +491,7 @@ fn noop_fold_stmt(s: &Stmt_, fld: @ast_fold) -> Option<Stmt_> {
 
 fn noop_fold_arm(a: &Arm, fld: @ast_fold) -> Arm {
     Arm {
+        id: fld.new_id(a.id),
         pats: a.pats.map(|x| fld.fold_pat(*x)),
         guard: a.guard.map_move(|x| fld.fold_expr(x)),
         body: fld.fold_block(&a.body),

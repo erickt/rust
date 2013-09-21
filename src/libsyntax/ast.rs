@@ -465,6 +465,7 @@ pub enum Decl_ {
 
 #[deriving(Clone, Eq, Encodable, Decodable, IterBytes)]
 pub struct Arm {
+    id: NodeId,
     pats: ~[@Pat],
     guard: Option<@Expr>,
     body: Block,

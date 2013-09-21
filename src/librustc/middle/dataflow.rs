@@ -635,14 +635,14 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
                 self.reset(in_out);
             }
 
-            ast::ExprBreak(label) => {
-                let scope = self.find_scope(expr, label, loop_scopes);
+            ast::ExprBreak(lifetime) => {
+                let scope = self.find_scope(expr, lifetime, loop_scopes);
                 self.break_from_to(expr, scope, in_out);
                 self.reset(in_out);
             }
 
-            ast::ExprAgain(label) => {
-                let scope = self.find_scope(expr, label, loop_scopes);
+            ast::ExprAgain(lifetime) => {
+                let scope = self.find_scope(expr, lifetime, loop_scopes);
                 self.pop_scopes(expr, scope, in_out);
                 self.add_to_entry_set(scope.loop_id, reslice(in_out));
                 self.reset(in_out);
@@ -867,7 +867,7 @@ impl<'self, O:DataFlowOperator> PropagationContext<'self, O> {
 
     fn find_scope<'a>(&self,
                       expr: @ast::Expr,
-                      label: Option<ast::Name>,
+                      label: Option<ast::Lifetime>,
                       loop_scopes: &'a mut ~[LoopScope]) -> &'a mut LoopScope {
         let index = match label {
             None => {

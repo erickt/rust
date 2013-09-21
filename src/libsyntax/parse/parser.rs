@@ -2638,6 +2638,7 @@ impl Parser {
             };
 
             arms.push(ast::Arm {
+                id: ast::DUMMY_NODE_ID,
                 pats: pats,
                 guard: guard,
                 body: blk,

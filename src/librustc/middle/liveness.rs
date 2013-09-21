@@ -756,11 +756,11 @@ impl Liveness {
     }
 
     pub fn find_loop_scope(&self,
-                           opt_label: Option<Name>,
+                           opt_lifetime: Option<Lifetime>,
                            id: NodeId,
                            sp: Span)
                            -> NodeId {
-        match opt_label {
+        match opt_lifetime {
             Some(_) => // Refers to a labeled loop. Use the results of resolve
                       // to find with one
                 match self.tcx.def_map.find(&id) {
@@ -1117,9 +1117,9 @@ impl Liveness {
             self.propagate_through_opt_expr(o_e, self.s.exit_ln)
           }
 
-          ExprBreak(opt_label) => {
+          ExprBreak(opt_lifetime) => {
               // Find which label this break jumps to
-              let sc = self.find_loop_scope(opt_label, expr.id, expr.span);
+              let sc = self.find_loop_scope(opt_lifetime, expr.id, expr.span);
 
               // Now that we know the label we're going to,
               // look it up in the break loop nodes table
@@ -1131,9 +1131,9 @@ impl Liveness {
               }
           }
 
-          ExprAgain(opt_label) => {
+          ExprAgain(opt_lifetime) => {
               // Find which label this expr continues to
-              let sc = self.find_loop_scope(opt_label, expr.id, expr.span);
+              let sc = self.find_loop_scope(opt_lifetime, expr.id, expr.span);
 
               // Now that we know the label we're going to,
               // look it up in the continue loop nodes table

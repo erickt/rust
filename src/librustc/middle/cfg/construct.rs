@@ -334,15 +334,15 @@ impl CFGBuilder {
                 self.add_node(expr.id, [])
             }
 
-            ast::ExprBreak(label) => {
-                let loop_scope = self.find_scope(expr, label);
+            ast::ExprBreak(lifetime) => {
+                let loop_scope = self.find_scope(expr, lifetime);
                 self.add_exiting_edge(expr, pred,
                                       loop_scope, loop_scope.break_index);
                 self.add_node(expr.id, [])
             }
 
-            ast::ExprAgain(label) => {
-                let loop_scope = self.find_scope(expr, label);
+            ast::ExprAgain(lifetime) => {
+                let loop_scope = self.find_scope(expr, lifetime);
                 self.add_exiting_edge(expr, pred,
                                       loop_scope, loop_scope.continue_index);
                 self.add_node(expr.id, [])
@@ -488,7 +488,7 @@ impl CFGBuilder {
 
     fn find_scope(&self,
                   expr: @ast::Expr,
-                  label: Option<ast::Name>) -> LoopScope {
+                  label: Option<ast::Lifetime>) -> LoopScope {
         match label {
             None => {
                 return *self.loop_scopes.last();

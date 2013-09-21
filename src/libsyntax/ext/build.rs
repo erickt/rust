@@ -614,6 +614,7 @@ impl AstBuilder for @ExtCtxt {
 
     fn arm(&self, _span: Span, pats: ~[@ast::Pat], expr: @ast::Expr) -> ast::Arm {
         ast::Arm {
+            id: ast::DUMMY_NODE_ID,
             pats: pats,
             guard: None,
             body: self.block_expr(expr),
