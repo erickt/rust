@@ -643,7 +643,7 @@ impl ToCStr for PosixPath {
         self.to_str().to_c_str()
     }
 
-    unsafe fn to_c_str_unchecked(&self) -> c_str::CString {
+    fn to_c_str_unchecked(&self) -> c_str::CString {
         self.to_str().to_c_str_unchecked()
     }
 }
@@ -783,7 +783,7 @@ impl c_str::ToCStr for WindowsPath {
         self.to_str().to_c_str()
     }
 
-    unsafe fn to_c_str_unchecked(&self) -> c_str::CString {
+    fn to_c_str_unchecked(&self) -> c_str::CString {
         self.to_str().to_c_str_unchecked()
     }
 }

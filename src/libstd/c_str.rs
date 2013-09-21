@@ -154,7 +154,7 @@ pub trait ToCStr {
     fn to_c_str(&self) -> CString;
 
     /// Unsafe variant of `to_c_str()` that doesn't check for nulls.
-    unsafe fn to_c_str_unchecked(&self) -> CString;
+    fn to_c_str_unchecked(&self) -> CString;
 
     /// Work with a temporary CString constructed from the receiver.
     /// The provided `*libc::c_char` will be freed immediately upon return.
@@ -173,9 +173,9 @@ pub trait ToCStr {
         self.to_c_str().with_ref(f)
     }
 
-    /// Unsafe variant of `with_c_str()` that doesn't check for nulls.
+    /// Variant of `with_c_str()` that doesn't check for interior nulls.
     #[inline]
-    unsafe fn with_c_str_unchecked<T>(&self, f: &fn(*libc::c_char) -> T) -> T {
+    fn with_c_str_unchecked<T>(&self, f: &fn(*libc::c_char) -> T) -> T {
         self.to_c_str_unchecked().with_ref(f)
     }
 }
@@ -187,7 +187,7 @@ impl<'self> ToCStr for &'self str {
     }
 
     #[inline]
-    unsafe fn to_c_str_unchecked(&self) -> CString {
+    fn to_c_str_unchecked(&self) -> CString {
         self.as_bytes().to_c_str_unchecked()
     }
 
@@ -197,7 +197,7 @@ impl<'self> ToCStr for &'self str {
     }
 
     #[inline]
-    unsafe fn with_c_str_unchecked<T>(&self, f: &fn(*libc::c_char) -> T) -> T {
+    fn with_c_str_unchecked<T>(&self, f: &fn(*libc::c_char) -> T) -> T {
         self.as_bytes().with_c_str_unchecked(f)
     }
 }
@@ -208,25 +208,27 @@ static BUF_LEN: uint = 128;
 impl<'self> ToCStr for &'self [u8] {
     fn to_c_str(&self) -> CString {
         #[fixed_stack_segment]; #[inline(never)];
-        let mut cs = unsafe { self.to_c_str_unchecked() };
+        let mut cs = self.to_c_str_unchecked();
         do cs.with_mut_ref |buf| {
             check_for_null(*self, buf);
         }
         cs
     }
 
-    unsafe fn to_c_str_unchecked(&self) -> CString {
+    fn to_c_str_unchecked(&self) -> CString {
         #[fixed_stack_segment]; #[inline(never)];
         do self.as_imm_buf |self_buf, self_len| {
-            let buf = libc::malloc(self_len as libc::size_t + 1) as *mut u8;
-            if buf.is_null() {
-                fail!("failed to allocate memory!");
+            unsafe {
+                let buf = libc::malloc(self_len as libc::size_t + 1) as *mut u8;
+                if buf.is_null() {
+                    fail!("failed to allocate memory!");
+                }
+
+                ptr::copy_memory(buf, self_buf, self_len);
+                *ptr::mut_offset(buf, self_len as int) = 0;
+
+                CString::new(buf as *libc::c_char, true)
             }
-
-            ptr::copy_memory(buf, self_buf, self_len);
-            *ptr::mut_offset(buf, self_len as int) = 0;
-
-            CString::new(buf as *libc::c_char, true)
         }
     }
 
@@ -251,16 +253,18 @@ impl<'self> ToCStr for &'self [u8] {
         }
     }
 
-    unsafe fn with_c_str_unchecked<T>(&self, f: &fn(*libc::c_char) -> T) -> T {
+    fn with_c_str_unchecked<T>(&self, f: &fn(*libc::c_char) -> T) -> T {
         if self.len() < BUF_LEN {
             do self.as_imm_buf |self_buf, self_len| {
-                let mut buf: [u8, .. BUF_LEN] = intrinsics::uninit();
+                unsafe {
+                    let mut buf: [u8, .. BUF_LEN] = intrinsics::uninit();
 
-                do buf.as_mut_buf |buf, _| {
-                    ptr::copy_memory(buf, self_buf, self_len);
-                    *ptr::mut_offset(buf, self_len as int) = 0;
+                    do buf.as_mut_buf |buf, _| {
+                        ptr::copy_memory(buf, self_buf, self_len);
+                        *ptr::mut_offset(buf, self_len as int) = 0;
 
-                    f(buf as *libc::c_char)
+                        f(buf as *libc::c_char)
+                    }
                 }
             }
         } else {
@@ -442,8 +446,8 @@ mod tests {
 
     #[test]
     fn test_to_c_str_unchecked() {
-        unsafe {
-            do "he\x00llo".to_c_str_unchecked().with_ref |buf| {
+        do "he\x00llo".to_c_str_unchecked().with_ref |buf| {
+            unsafe {
                 assert_eq!(*buf.offset(0), 'h' as libc::c_char);
                 assert_eq!(*buf.offset(1), 'e' as libc::c_char);
                 assert_eq!(*buf.offset(2), 0);
@@ -542,7 +546,7 @@ mod bench {
 
     fn bench_to_c_str_unchecked(bh: &mut BenchHarness, s: &str) {
         do bh.iter {
-            let c_str = unsafe { s.to_c_str_unchecked() };
+            let c_str = s.to_c_str_unchecked();
             do c_str.with_ref |c_str_buf| {
                 check(s, c_str_buf)
             }
@@ -589,10 +593,8 @@ mod bench {
 
     fn bench_with_c_str_unchecked(bh: &mut BenchHarness, s: &str) {
         do bh.iter {
-            unsafe {
-                do s.with_c_str_unchecked |c_str_buf| {
-                    check(s, c_str_buf)
-                }
+            do s.with_c_str_unchecked |c_str_buf| {
+                check(s, c_str_buf)
             }
         }
     }
