@@ -468,6 +468,7 @@ pub struct Arm {
     pats: ~[@Pat],
     guard: Option<@Expr>,
     body: Block,
+    opt_lifetime: Option<Lifetime>,
 }
 
 #[deriving(Clone, Eq, Encodable, Decodable, IterBytes)]
@@ -529,13 +530,11 @@ pub enum Expr_ {
     ExprCast(@Expr, Ty),
     ExprIf(@Expr, Block, Option<@Expr>),
     ExprWhile(@Expr, Block),
-    // FIXME #6993: change to Option<Name>
-    ExprForLoop(@Pat, @Expr, Block, Option<Ident>),
+    ExprForLoop(@Pat, @Expr, Block, Option<Lifetime>),
     /* Conditionless loop (can be exited with break, cont, or ret)
        Same semantics as while(true) { body }, but typestate knows that the
        (implicit) condition is always true. */
-    // FIXME #6993: change to Option<Name>
-    ExprLoop(Block, Option<Ident>),
+    ExprLoop(Block, Option<Lifetime>),
     ExprMatch(@Expr, ~[Arm]),
     ExprFnBlock(fn_decl, Block),
     ExprDoBody(@Expr),
@@ -550,8 +549,8 @@ pub enum Expr_ {
     /// The special identifier `self`.
     ExprSelf,
     ExprAddrOf(Mutability, @Expr),
-    ExprBreak(Option<Name>),
-    ExprAgain(Option<Name>),
+    ExprBreak(Option<Lifetime>),
+    ExprAgain(Option<Lifetime>),
     ExprRet(Option<@Expr>),
 
     /// Gets the log level for the enclosing module

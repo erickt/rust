@@ -616,7 +616,8 @@ impl AstBuilder for @ExtCtxt {
         ast::Arm {
             pats: pats,
             guard: None,
-            body: self.block_expr(expr)
+            body: self.block_expr(expr),
+            opt_lifetime: None,
         }
     }
 

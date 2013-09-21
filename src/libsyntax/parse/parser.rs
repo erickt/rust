@@ -1774,8 +1774,7 @@ impl Parser {
         } else if self.eat_keyword(keywords::While) {
             return self.parse_while_expr();
         } else if self.token_is_lifetime(&*self.token) {
-            let lifetime = self.get_lifetime(&*self.token);
-            self.bump();
+            let lifetime = self.parse_lifetime();
             self.expect(&token::COLON);
             if self.eat_keyword(keywords::For) {
                 return self.parse_for_expr(Some(lifetime))
@@ -1844,9 +1843,8 @@ impl Parser {
         } else if self.eat_keyword(keywords::Break) {
             // BREAK expression
             if self.token_is_lifetime(&*self.token) {
-                let lifetime = self.get_lifetime(&*self.token);
-                self.bump();
-                ex = ExprBreak(Some(lifetime.name));
+                let lifetime = self.parse_lifetime();
+                ex = ExprBreak(Some(lifetime));
             } else {
                 ex = ExprBreak(None);
             }
@@ -2465,7 +2463,7 @@ impl Parser {
     }
 
     // parse a 'for' .. 'in' expression ('for' token already eaten)
-    pub fn parse_for_expr(&self, opt_ident: Option<ast::Ident>) -> @Expr {
+    pub fn parse_for_expr(&self, opt_lifetime: Option<ast::Lifetime>) -> @Expr {
         // Parse: `for <src_pat> in <src_expr> <src_loop_block>`
 
         let lo = self.last_span.lo;
@@ -2475,7 +2473,7 @@ impl Parser {
         let loop_block = self.parse_block();
         let hi = self.span.hi;
 
-        self.mk_expr(lo, hi, ExprForLoop(pat, expr, loop_block, opt_ident))
+        self.mk_expr(lo, hi, ExprForLoop(pat, expr, loop_block, opt_lifetime))
     }
 
 
@@ -2558,7 +2556,7 @@ impl Parser {
         return self.mk_expr(lo, hi, ExprWhile(cond, body));
     }
 
-    pub fn parse_loop_expr(&self, opt_ident: Option<ast::Ident>) -> @Expr {
+    pub fn parse_loop_expr(&self, opt_lifetime: Option<ast::Lifetime>) -> @Expr {
         // loop headers look like 'loop {' or 'loop unsafe {'
         let is_loop_header =
             *self.token == token::LBRACE
@@ -2570,19 +2568,18 @@ impl Parser {
             let lo = self.last_span.lo;
             let body = self.parse_block();
             let hi = body.span.hi;
-            return self.mk_expr(lo, hi, ExprLoop(body, opt_ident));
+            return self.mk_expr(lo, hi, ExprLoop(body, opt_lifetime));
         } else {
             // This is a 'continue' expression
-            if opt_ident.is_some() {
+            if opt_lifetime.is_some() {
                 self.span_err(*self.last_span,
                               "a label may not be used with a `loop` expression");
             }
 
             let lo = self.span.lo;
             let ex = if self.token_is_lifetime(&*self.token) {
-                let lifetime = self.get_lifetime(&*self.token);
-                self.bump();
-                ExprAgain(Some(lifetime.name))
+                let lifetime = self.parse_lifetime();
+                ExprAgain(Some(lifetime))
             } else {
                 ExprAgain(None)
             };
@@ -2605,6 +2602,14 @@ impl Parser {
         self.commit_expr_expecting(discriminant, token::LBRACE);
         let mut arms: ~[Arm] = ~[];
         while *self.token != token::RBRACE {
+            let opt_lifetime = if self.token_is_lifetime(&*self.token) {
+                let lifetime = self.parse_lifetime();
+                self.expect(&token::COLON);
+                Some(lifetime)
+            } else {
+                None
+            };
+
             let pats = self.parse_pats();
             let mut guard = None;
             if self.eat_keyword(keywords::If) {
@@ -2632,7 +2637,12 @@ impl Parser {
                 span: expr.span,
             };
 
-            arms.push(ast::Arm { pats: pats, guard: guard, body: blk });
+            arms.push(ast::Arm {
+                pats: pats,
+                guard: guard,
+                body: blk,
+                opt_lifetime: opt_lifetime,
+            });
         }
         let hi = self.span.hi;
         self.bump();

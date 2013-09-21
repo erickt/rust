@@ -121,8 +121,7 @@ pub fn expand_expr(extsbox: @mut SyntaxEnv,
 
         // Desugar expr_for_loop
         // From: `['<ident>:] for <src_pat> in <src_expr> <src_loop_block>`
-        // FIXME #6993 : change type of opt_ident to Option<Name>
-        ast::ExprForLoop(src_pat, src_expr, ref src_loop_block, opt_ident) => {
+        ast::ExprForLoop(src_pat, src_expr, ref src_loop_block, opt_lifetime) => {
             // Expand any interior macros etc.
             // NB: we don't fold pats yet. Curious.
             let src_expr = fld.fold_expr(src_expr);
@@ -154,7 +153,10 @@ pub fn expand_expr(extsbox: @mut SyntaxEnv,
             // `None => break ['<ident>];`
             let none_arm = {
                 // FIXME #6993: this map goes away:
-                let break_expr = cx.expr(span, ast::ExprBreak(opt_ident.map(|x| x.name)));
+                let break_lifetime = do opt_lifetime.map |l| {
+                    cx.lifetime(span, l.ident)
+                };
+                let break_expr = cx.expr(span, ast::ExprBreak(break_lifetime));
                 let none_pat = cx.pat_ident(span, none_ident);
                 cx.arm(span, ~[none_pat], break_expr)
             };
@@ -175,7 +177,7 @@ pub fn expand_expr(extsbox: @mut SyntaxEnv,
 
             // ['ident:] loop { ... }
             let loop_expr = cx.expr(span,
-                                    ast::ExprLoop(cx.block_expr(match_expr), opt_ident));
+                                    ast::ExprLoop(cx.block_expr(match_expr), opt_lifetime));
 
             // `{ let ... ;  loop { ... } }`
             let block = cx.block(span,

@@ -5146,14 +5146,14 @@ impl Resolver {
                 visit::walk_expr(visitor, expr, ());
             }
 
-            ExprLoop(_, Some(label)) => {
+            ExprLoop(_, Some(lifetime)) => {
                 do self.with_label_rib {
                     {
                         let this = &mut *self;
                         let def_like = DlDef(DefLabel(expr.id));
                         let rib = this.label_ribs[this.label_ribs.len() - 1];
                         // plain insert (no renaming)
-                        rib.bindings.insert(label.name, def_like);
+                        rib.bindings.insert(lifetime.ident.name, def_like);
                     }
 
                     visit::walk_expr(visitor, expr, ());

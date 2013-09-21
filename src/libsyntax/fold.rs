@@ -494,6 +494,7 @@ fn noop_fold_arm(a: &Arm, fld: @ast_fold) -> Arm {
         pats: a.pats.map(|x| fld.fold_pat(*x)),
         guard: a.guard.map_move(|x| fld.fold_expr(x)),
         body: fld.fold_block(&a.body),
+        opt_lifetime: a.opt_lifetime.map(|l| fld.fold_lifetime(l)),
     }
 }
 
@@ -636,16 +637,16 @@ pub fn noop_fold_expr(e: &Expr_, fld: @ast_fold) -> Expr_ {
         ExprWhile(cond, ref body) => {
             ExprWhile(fld.fold_expr(cond), fld.fold_block(body))
         }
-        ExprForLoop(pat, iter, ref body, opt_ident) => {
+        ExprForLoop(pat, iter, ref body, ref opt_lifetime) => {
             ExprForLoop(fld.fold_pat(pat),
                         fld.fold_expr(iter),
                         fld.fold_block(body),
-                        opt_ident.map_move(|x| fld.fold_ident(x)))
+                        opt_lifetime.map(|l| fld.fold_lifetime(l)))
         }
-        ExprLoop(ref body, opt_ident) => {
+        ExprLoop(ref body, opt_lifetime) => {
             ExprLoop(
                 fld.fold_block(body),
-                opt_ident.map_move(|x| fld.fold_ident(x))
+                opt_lifetime.map(|l| fld.fold_lifetime(l))
             )
         }
         ExprMatch(expr, ref arms) => {
@@ -687,22 +688,11 @@ pub fn noop_fold_expr(e: &Expr_, fld: @ast_fold) -> Expr_ {
         }
         ExprPath(ref pth) => ExprPath(fld.fold_path(pth)),
         ExprSelf => ExprSelf,
-        ExprBreak(ref opt_ident) => {
-            // FIXME #6993: add fold_name to fold.... then cut out the
-            // bogus Name->Ident->Name conversion.
-            ExprBreak(opt_ident.map_move(|x| {
-                // FIXME #9129: Assigning the new ident to a temporary to work around codegen bug
-                let newx = Ident::new(x);
-                fld.fold_ident(newx).name
-            }))
+        ExprBreak(ref opt_lifetime) => {
+            ExprBreak(opt_lifetime.map(|l| fld.fold_lifetime(l)))
         }
-        ExprAgain(ref opt_ident) => {
-            // FIXME #6993: add fold_name to fold....
-            ExprAgain(opt_ident.map_move(|x| {
-                // FIXME #9129: Assigning the new ident to a temporary to work around codegen bug
-                let newx = Ident::new(x);
-                fld.fold_ident(newx).name
-            }))
+        ExprAgain(ref opt_lifetime) => {
+            ExprAgain(opt_lifetime.map(|l| fld.fold_lifetime(l)))
         }
         ExprRet(ref e) => {
             ExprRet(e.map_move(|x| fld.fold_expr(x)))

@@ -1234,10 +1234,9 @@ pub fn print_expr(s: @ps, expr: &ast::Expr) {
         space(s.s);
         print_block(s, blk);
       }
-      ast::ExprForLoop(pat, iter, ref blk, opt_ident) => {
-        for ident in opt_ident.iter() {
-            word(s.s, "'");
-            print_ident(s, *ident);
+      ast::ExprForLoop(pat, iter, ref blk, ref opt_lifetime) => {
+        for lifetime in opt_lifetime.iter() {
+            print_lifetime(s, lifetime);
             word_space(s, ":");
         }
         head(s, "for");
@@ -1248,10 +1247,9 @@ pub fn print_expr(s: @ps, expr: &ast::Expr) {
         space(s.s);
         print_block(s, blk);
       }
-      ast::ExprLoop(ref blk, opt_ident) => {
-        for ident in opt_ident.iter() {
-            word(s.s, "'");
-            print_ident(s, *ident);
+      ast::ExprLoop(ref blk, opt_lifetime) => {
+        for lifetime in opt_lifetime.iter() {
+            print_lifetime(s, lifetime);
             word_space(s, ":");
         }
         head(s, "loop");
@@ -1270,6 +1268,10 @@ pub fn print_expr(s: @ps, expr: &ast::Expr) {
             space(s.s);
             cbox(s, indent_unit);
             ibox(s, 0u);
+            for lifetime in arm.opt_lifetime.iter() {
+                print_lifetime(s, lifetime);
+                word_space(s, ":");
+            }
             let mut first = true;
             for p in arm.pats.iter() {
                 if first {
@@ -1391,21 +1393,19 @@ pub fn print_expr(s: @ps, expr: &ast::Expr) {
       }
       ast::ExprPath(ref path) => print_path(s, path, true),
       ast::ExprSelf => word(s.s, "self"),
-      ast::ExprBreak(opt_ident) => {
+      ast::ExprBreak(opt_lifetime) => {
         word(s.s, "break");
         space(s.s);
-        for ident in opt_ident.iter() {
-            word(s.s, "'");
-            print_name(s, *ident);
+        for lifetime in opt_lifetime.iter() {
+            print_lifetime(s, lifetime);
             space(s.s);
         }
       }
-      ast::ExprAgain(opt_ident) => {
+      ast::ExprAgain(opt_lifetime) => {
         word(s.s, "loop");
         space(s.s);
-        for ident in opt_ident.iter() {
-            word(s.s, "'");
-            print_name(s, *ident);
+        for lifetime in opt_lifetime.iter() {
+            print_lifetime(s, lifetime);
             space(s.s)
         }
       }
