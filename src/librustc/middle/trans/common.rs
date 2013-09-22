@@ -460,10 +460,20 @@ pub fn block_cleanups(bcx: @mut Block) -> ~[cleanup] {
     }
 }
 
+pub struct Label {
+    blk: @mut Block,
+    name: Name,
+}
+
+impl Label {
+    pub fn new(blk: @mut Block, name: Name) -> Label {
+        Label { blk, name }
+    }
+}
+
 pub struct ScopeInfo {
     parent: Option<@mut ScopeInfo>,
-    loop_break: Option<@mut Block>,
-    loop_label: Option<Name>,
+    labels: ~[Label],
     // A list of functions that must be run at when leaving this
     // block, cleaning up any variables that were introduced in the
     // block.

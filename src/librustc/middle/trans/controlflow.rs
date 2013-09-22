@@ -209,31 +209,31 @@ pub fn trans_break_cont(bcx: @mut Block,
     let mut unwind = bcx;
     let mut cur_scope = unwind.scope;
     let mut target;
-    loop {
-        cur_scope = match cur_scope {
-            Some(@ScopeInfo {
-                loop_break: Some(brk),
-                loop_label: l,
-                parent,
-                _
-            }) => {
-                // If we're looking for a labeled loop, check the label...
-                target = if to_end {
-                    brk
-                } else {
-                    unwind
-                };
-                match opt_label {
-                    Some(desired) => match l {
-                        Some(actual) if actual == desired => break,
-                        // If it doesn't match the one we want,
-                        // don't break
-                        _ => parent,
-                    },
-                    None => break,
+    'out: loop {
+        match cur_scope {
+            Some(@ScopeInfo { labels, parent _ }) => {
+                for label in labels.iter() {
+                    // If we're looking for a labeled loop, check the label...
+                    target = if to_end {
+                        label.blk
+                    } else {
+                        unwind
+                    };
+                    match opt_label {
+                        Some(desired) => match l {
+                            Some(actual) if actual == desired => break 'out,
+                        },
+                        None => break 'out,
+                    }
                 }
+
+                // If it doesn't match the one we want,
+                // don't break
+                cur_scope = parent;
             }
-            Some(inf) => inf.parent,
+            Some(inf) => {
+                cur_scope = inf.parent
+            }
             None => {
                 unwind = match unwind.parent {
                     Some(bcx) => bcx,
@@ -245,7 +245,7 @@ pub fn trans_break_cont(bcx: @mut Block,
                             return bcx;
                         }
                 };
-                unwind.scope
+                cur_scope = unwind.scope;
             }
         }
     }

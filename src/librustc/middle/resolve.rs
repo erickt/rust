@@ -4132,30 +4132,18 @@ impl Resolver {
     pub fn resolve_arm(@mut self, arm: &Arm, visitor: &mut ResolveVisitor) {
         self.value_ribs.push(@Rib::new(NormalRibKind));
 
-        do self.with_label_rib {
-            match arm.opt_lifetime {
-                Some(ref lifetime) => {
-                    let this = &mut *self;
-                    let def_like = DlDef(DefLabel(arm.id));
-                    let rib = this.label_ribs[this.label_ribs.len() - 1];
-                    rib.bindings.insert(lifetime.ident.name, def_like);
-                }
-                None => {}
-            }
-
-            let bindings_list = @mut HashMap::new();
-            for pattern in arm.pats.iter() {
-                self.resolve_pattern(*pattern, RefutableMode, Immutable,
-                                     Some(bindings_list), visitor);
-            }
-
-            // This has to happen *after* we determine which
-            // pat_idents are variants
-            self.check_consistent_bindings(arm);
-
-            visit::walk_expr_opt(visitor, arm.guard, ());
-            self.resolve_block(&arm.body, visitor);
+        let bindings_list = @mut HashMap::new();
+        for pattern in arm.pats.iter() {
+            self.resolve_pattern(*pattern, RefutableMode, Immutable,
+                                 Some(bindings_list), visitor);
         }
+
+        // This has to happen *after* we determine which
+        // pat_idents are variants
+        self.check_consistent_bindings(arm);
+
+        visit::walk_expr_opt(visitor, arm.guard, ());
+        self.resolve_block(&arm.body, visitor);
 
         self.value_ribs.pop();
     }
@@ -5189,6 +5177,29 @@ impl Resolver {
                         self.session.span_bug(expr.span,
                                               "label wasn't mapped to a \
                                                label def!")
+                    }
+                }
+            }
+
+            ExprMatch(subexpression, ref arms) => {
+                visitor.visit_expr(subexpression, ());
+
+                do self.with_label_rib {
+                    // Register all the labels.
+                    for arm in arms.iter() {
+                        match arm.opt_lifetime {
+                            Some(ref lifetime) => {
+                                let this = &mut *self;
+                                let def_like = DlDef(DefLabel(arm.id));
+                                let rib = this.label_ribs[this.label_ribs.len() - 1];
+                                rib.bindings.insert(lifetime.ident.name, def_like);
+                            }
+                            None => {}
+                        }
+                    }
+
+                    for arm in arms.iter() {
+                        visitor.visit_arm(arm, ());
                     }
                 }
             }

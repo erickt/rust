@@ -1238,8 +1238,7 @@ pub fn simple_block_scope(parent: Option<@mut ScopeInfo>,
                           node_info: Option<NodeInfo>) -> @mut ScopeInfo {
     @mut ScopeInfo {
         parent: parent,
-        loop_break: None,
-        loop_label: None,
+        labels: ~[],
         cleanups: ~[],
         cleanup_paths: ~[],
         landing_pad: None,
@@ -1262,14 +1261,13 @@ pub fn scope_block(bcx: @mut Block,
 }
 
 pub fn loop_scope_block(bcx: @mut Block,
-                        loop_break: @mut Block,
-                        loop_label: Option<Name>,
+                        loop_blk: @mut Block,
+                        loop_name: Option<Name>,
                         n: &str,
                         opt_node_info: Option<NodeInfo>) -> @mut Block {
     return new_block(bcx.fcx, Some(bcx), Some(@mut ScopeInfo {
         parent: None,
-        loop_break: Some(loop_break),
-        loop_label: loop_label,
+        labels: ~[Label::new(loop_blk, loop_name)],
         cleanups: ~[],
         cleanup_paths: ~[],
         landing_pad: None,

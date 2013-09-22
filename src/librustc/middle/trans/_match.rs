@@ -1838,7 +1838,7 @@ fn trans_match_inner(scope_cx: @mut Block,
     let mut arm_datas = ~[];
     let mut matches = ~[];
     for arm in arms.iter() {
-        let body = scope_block(bcx, arm.body.info(), "case_body");
+        let body = loop_scope_block(bcx, arm.body.info(), "case_body");
         let bindings_map = create_bindings_map(bcx, arm.pats[0]);
         let arm_data = ArmData {
             bodycx: body,
