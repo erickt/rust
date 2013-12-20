@@ -9,9 +9,10 @@
 // except according to those terms.
 
 use version::{try_getting_version, try_getting_local_version,
-              Version, NoVersion, split_version};
+              Version, NoVersion, ExactRevision};
 use std::hash::Streaming;
 use std::hash;
+use syntax::pkgid;
 
 /// Path-fragment identifier of a package such as
 /// 'github.com/graydon/test'; path must be a relative
@@ -45,27 +46,14 @@ impl CrateId {
     pub fn new(s: &str) -> CrateId {
         use conditions::bad_pkg_id::cond;
 
-        let mut given_version = None;
-
-        // Did the user request a specific version?
-        let s = match split_version(s) {
-            Some((path, v)) => {
-                given_version = Some(v);
-                path
-            }
-            None => {
-                s
-            }
-        };
-
-        let path = Path::new(s);
-        if !path.is_relative() {
-            return cond.raise((path, ~"absolute crate_id"));
+        let raw_pkgid: Option<pkgid::PkgId> = from_str(s);
+        if raw_pkgid.is_none() {
+            return cond.raise((Path::new(s), ~"bad pkgid"))
         }
-        if path.filename().is_none() {
-            return cond.raise((path, ~"0-length crate_id"));
-        }
-        let short_name = path.filestem_str().expect(format!("Strange path! {}", s));
+        let raw_pkgid = raw_pkgid.unwrap();
+        let pkgid::PkgId { path, name, version } = raw_pkgid;
+        let path = Path::new(path);
+        let given_version = version.map(|v| ExactRevision(v));
 
         let version = match given_version {
             Some(v) => v,
@@ -78,10 +66,10 @@ impl CrateId {
             }
         };
 
-        CrateId {
-            path: path.clone(),
-            short_name: short_name.to_owned(),
-            version: version
+        PkgId {
+            path: path,
+            short_name: name,
+            version: version,
         }
     }
 
