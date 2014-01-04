@@ -34,7 +34,6 @@ use path_util::{target_executable_in_workspace, target_test_in_workspace,
                chmod_read_only, platform_library_name};
 use rustc::back::link::get_cc_prog;
 use rustc::metadata::filesearch::rust_path;
-use rustc::driver::session;
 use rustc::driver::driver::{build_session, build_session_options, host_triple, optgroups};
 use syntax::diagnostic;
 use target::*;
