@@ -12,7 +12,7 @@ use version::{try_getting_version, try_getting_local_version,
               Version, NoVersion, ExactRevision};
 use std::hash::Streaming;
 use std::hash;
-use syntax::pkgid;
+use syntax::crateid;
 
 /// Path-fragment identifier of a package such as
 /// 'github.com/graydon/test'; path must be a relative
@@ -46,12 +46,11 @@ impl CrateId {
     pub fn new(s: &str) -> CrateId {
         use conditions::bad_pkg_id::cond;
 
-        let raw_pkgid: Option<pkgid::PkgId> = from_str(s);
-        if raw_pkgid.is_none() {
-            return cond.raise((Path::new(s), ~"bad pkgid"))
-        }
-        let raw_pkgid = raw_pkgid.unwrap();
-        let pkgid::PkgId { path, name, version } = raw_pkgid;
+        let raw_crateid: crateid::CrateId = match from_str(s) {
+            Some(raw_crateid) => raw_crateid,
+            None => { return cond.raise((Path::new(s), ~"bad crate_id")); }
+        };
+        let crateid::CrateId { path, name, version } = raw_crateid;
         let path = Path::new(path);
         let given_version = version.map(|v| ExactRevision(v));
 
@@ -66,7 +65,7 @@ impl CrateId {
             }
         };
 
-        PkgId {
+        CrateId {
             path: path,
             short_name: name,
             version: version,

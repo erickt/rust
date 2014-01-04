@@ -213,6 +213,17 @@ fn is_url_like(p: &Path) -> bool {
     p.as_vec().split(|b| *b == '/' as u8).nth(2).is_some()
 }
 
+/// If s is of the form foo#bar, where bar is a valid version
+/// number, return the prefix before the # and the version.
+/// Otherwise, return None.
+pub fn split_version<'a>(s: &'a str) -> Option<(&'a str, Version)> {
+    // Check for extra '#' characters separately
+    if s.split('#').len() > 2 {
+        return None;
+    }
+    split_version_general(s, '#')
+}
+
 pub fn split_version_general<'a>(s: &'a str, sep: char) -> Option<(&'a str, Version)> {
     match s.rfind(sep) {
         Some(i) => {
@@ -235,4 +246,15 @@ fn test_parse_version() {
     assert!(try_parsing_version("17") == Some(ExactRevision(~"17")));
     assert!(try_parsing_version(".1.2.3") == None);
     assert!(try_parsing_version("2.3.") == None);
+}
+
+#[test]
+fn test_split_version() {
+    let s = "a/b/c#0.1";
+    debug!("== {:?} ==", split_version(s));
+    assert!(split_version(s) == Some((s.slice(0, 5), ExactRevision(~"0.1"))));
+    assert!(split_version("a/b/c") == None);
+    let s = "a#1.2";
+    assert!(split_version(s) == Some((s.slice(0, 1), ExactRevision(~"1.2"))));
+    assert!(split_version("a#a#3.4") == None);
 }

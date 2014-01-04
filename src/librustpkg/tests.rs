@@ -747,7 +747,7 @@ fn test_crate_ids_must_be_relative_path_like() {
 
     cond.trap(|(p, e)| {
         assert!(p.filename().is_none())
-        assert!("bad pkgid" == e);
+        assert_eq!(e, ~"bad crate_id");
         whatever.clone()
     }).inside(|| {
         let x = CrateId::new("");
@@ -757,7 +757,7 @@ fn test_crate_ids_must_be_relative_path_like() {
     cond.trap(|(p, e)| {
         let abs = os::make_absolute(&Path::new("foo/bar/quux"));
         assert_eq!(p, abs);
-        assert!("bad pkgid" == e);
+        assert_eq!(e, ~"bad crate_id");
         whatever.clone()
     }).inside(|| {
         let zp = os::make_absolute(&Path::new("foo/bar/quux"));
@@ -1894,9 +1894,11 @@ fn crateid_pointing_to_subdir() {
     fs::mkdir_recursive(&foo_dir, io::UserRWX);
     fs::mkdir_recursive(&bar_dir, io::UserRWX);
     writeFile(&foo_dir.join("lib.rs"),
-              "#[crate_id=\"mockgithub.com/mozilla/some_repo/extras/rust-foo#foo:0.0\"]; pub fn f() {}");
+              "#[crate_id=\"mockgithub.com/mozilla/some_repo/extras/rust-foo#foo:0.0\"];
+              pub fn f() {}");
     writeFile(&bar_dir.join("lib.rs"),
-              "#[crate_id=\"mockgithub.com/mozilla/some_repo/extras/rust-bar#bar:0.0\"]; pub fn g() {}");
+              "#[crate_id=\"mockgithub.com/mozilla/some_repo/extras/rust-bar#bar:0.0\"];
+              pub fn g() {}");
 
     debug!("Creating a file in {}", workspace.display());
     let testpkg_dir = workspace.join_many(["src", "testpkg-0.0"]);
