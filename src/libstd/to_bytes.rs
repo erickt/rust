@@ -335,27 +335,6 @@ impl<A> IterBytes for *mut A {
     }
 }
 
-/// A trait for converting a value to a list of bytes.
-pub trait ToBytes {
-    /// Converts the current value to a list of bytes. This is equivalent to
-    /// invoking iter_bytes on a type and collecting all yielded values in an
-    /// array
-    fn to_bytes(&self, lsb0: bool) -> ~[u8];
-}
-
-impl<A:IterBytes> ToBytes for A {
-    fn to_bytes(&self, lsb0: bool) -> ~[u8] {
-        use io::Writer;
-
-        let mut m = ::io::MemWriter::new();
-        self.iter_bytes(lsb0, |bytes| {
-            m.write(bytes).unwrap();
-            true
-        });
-        m.unwrap()
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
