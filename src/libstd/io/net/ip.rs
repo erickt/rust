@@ -340,7 +340,6 @@ impl FromStr for SocketAddr {
 mod test {
     use prelude::*;
     use super::*;
-    use to_bytes::ToBytes;
 
     #[test]
     fn test_from_str_ipv4() {
@@ -441,15 +440,5 @@ mod test {
         let a1 = Ipv6Addr(0, 0, 0, 0, 0, 0xffff, 0xc000, 0x280);
         assert!(a1.to_str() == ~"::ffff:192.0.2.128" || a1.to_str() == ~"::FFFF:192.0.2.128");
         assert_eq!(Ipv6Addr(8, 9, 10, 11, 12, 13, 14, 15).to_str(), ~"8:9:a:b:c:d:e:f");
-    }
-
-    #[test]
-    fn ipv4_addr_to_bytes() {
-        Ipv4Addr(123, 20, 12, 56).to_bytes(true);
-    }
-
-    #[test]
-    fn socket_addr_to_bytes() {
-        SocketAddr { ip: Ipv4Addr(1, 2, 3, 4), port: 1234 }.to_bytes(true);
     }
 }
