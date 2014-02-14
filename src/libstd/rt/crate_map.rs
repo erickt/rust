@@ -107,16 +107,6 @@ fn do_iter_crate_map<'a>(
 }
 
 /// Iterates recursively over `crate_map` and all child crate maps
-#[cfg(stage0)]
-pub fn iter_crate_map<'a>(crate_map: &'a CrateMap<'a>, f: |&ModEntry|) {
-    // FIXME: use random numbers as keys from the OS-level RNG when there is a nice
-    //        way to do this
-    let mut v: HashSet<*CrateMap<'a>> = HashSet::with_capacity_and_keys(0, 0, 32);
-    do_iter_crate_map(crate_map, f, &mut v);
-}
-
-/// Iterates recursively over `crate_map` and all child crate maps
-#[cfg(not(stage0))]
 pub fn iter_crate_map<'a>(crate_map: &'a CrateMap<'a>, f: |&ModEntry|) {
     use hash::sip::SipHasher;
 

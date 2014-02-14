@@ -17,14 +17,6 @@
 
 use std::vec;
 
-#[cfg(stage0)]
-#[deriving(Clone, Encodable, Decodable, IterBytes)]
-pub enum OptVec<T> {
-    Empty,
-    Vec(~[T])
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Encodable, Decodable, Hash)]
 pub enum OptVec<T> {
     Empty,

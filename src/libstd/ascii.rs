@@ -20,17 +20,9 @@ use cast;
 use fmt;
 use iter::Iterator;
 use vec::{ImmutableVector, MutableVector, Vector};
-#[cfg(stage0)]
-use to_bytes::IterBytes;
 use option::{Option, Some, None};
 
 /// Datatype to hold one ascii character. It wraps a `u8`, with the highest bit always zero.
-#[cfg(stage0)]
-#[deriving(Clone, Eq, Ord, TotalOrd, TotalEq)]
-pub struct Ascii { priv chr: u8 }
-
-/// Datatype to hold one ascii character. It wraps a `u8`, with the highest bit always zero.
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Ord, TotalOrd, TotalEq, Hash)]
 pub struct Ascii { priv chr: u8 }
 
@@ -318,14 +310,6 @@ impl IntoStr for ~[Ascii] {
     #[inline]
     fn into_str(self) -> ~str {
         unsafe { cast::transmute(self) }
-    }
-}
-
-#[cfg(stage0)]
-impl IterBytes for Ascii {
-    #[inline]
-    fn iter_bytes(&self, _lsb0: bool, f: |buf: &[u8]| -> bool) -> bool {
-        f([self.to_byte()])
     }
 }
 

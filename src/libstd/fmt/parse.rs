@@ -121,17 +121,6 @@ pub enum Method<'a> {
 }
 
 /// A selector for what pluralization a plural method should take
-#[cfg(stage0)]
-#[deriving(Eq, IterBytes)]
-pub enum PluralSelector {
-    /// One of the plural keywords should be used
-    Keyword(PluralKeyword),
-    /// A literal pluralization should be used
-    Literal(uint),
-}
-
-/// A selector for what pluralization a plural method should take
-#[cfg(not(stage0))]
 #[deriving(Eq, Hash)]
 pub enum PluralSelector {
     /// One of the plural keywords should be used
@@ -154,18 +143,6 @@ pub struct PluralArm<'a> {
 /// specially placed in the `Plural` variant of `Method`
 ///
 /// http://www.icu-project.org/apiref/icu4c/classicu_1_1PluralRules.html
-#[cfg(stage0)]
-#[deriving(Eq, IterBytes)]
-#[allow(missing_doc)]
-pub enum PluralKeyword {
-    Zero, One, Two, Few, Many
-}
-
-/// Enum of the 5 CLDR plural keywords. There is one more, "other", but that is
-/// specially placed in the `Plural` variant of `Method`
-///
-/// http://www.icu-project.org/apiref/icu4c/classicu_1_1PluralRules.html
-#[cfg(not(stage0))]
 #[deriving(Eq, Hash)]
 #[allow(missing_doc)]
 pub enum PluralKeyword {

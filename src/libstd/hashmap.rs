@@ -56,12 +56,8 @@ use container::{Container, Mutable, Map, MutableMap, Set, MutableSet};
 use clone::Clone;
 use cmp::{Eq, Equiv, max};
 use default::Default;
-#[cfg(not(stage0))] use fmt;
-#[cfg(stage0)]
-use hash_old::Hash;
-#[cfg(not(stage0))]
+use fmt;
 use hash::{Hash, Hasher};
-#[cfg(not(stage0))]
 use hash::sip::SipHasher;
 use iter;
 use iter::{Iterator, FromIterator, Extendable};
@@ -71,7 +67,7 @@ use num;
 use option::{None, Option, Some};
 use rand::Rng;
 use rand;
-#[cfg(not(stage0))] use result::{Ok, Err};
+use result::{Ok, Err};
 use vec::{ImmutableVector, MutableVector, OwnedVector, Items, MutItems};
 use vec_ng;
 use vec_ng::Vec;
@@ -92,24 +88,6 @@ struct Bucket<K,V> {
 /// this can frequently be achieved by just implementing the `Eq` and
 /// `IterBytes` traits as `Hash` is automatically implemented for types that
 /// implement `IterBytes`.
-#[cfg(stage0)]
-pub struct HashMap<K,V> {
-    priv k0: u64,
-    priv k1: u64,
-    priv resize_at: uint,
-    priv size: uint,
-    priv buckets: Vec<Option<Bucket<K, V>>>
-}
-
-/// A hash map implementation which uses linear probing along with the SipHash
-/// hash function for internal state. This means that the order of all hash maps
-/// is randomized by keying each hash map randomly on creation.
-///
-/// It is required that the keys implement the `Eq` and `Hash` traits, although
-/// this can frequently be achieved by just implementing the `Eq` and
-/// `IterBytes` traits as `Hash` is automatically implemented for types that
-/// implement `IterBytes`.
-#[cfg(not(stage0))]
 pub struct HashMap<K, V, H = SipHasher> {
     priv hasher: H,
     priv resize_at: uint,
@@ -155,29 +133,12 @@ impl<K:Hash + Eq,V> HashMap<K, V> {
         }
     }
 
-    #[cfg(stage0)]
-    #[inline]
-    fn bucket_for_key(&self, k: &K) -> SearchResult {
-        let hash = k.hash_keyed(self.k0, self.k1) as uint;
-        self.bucket_for_key_with_hash(hash, k)
-    }
-
-    #[cfg(not(stage0))]
     #[inline]
     fn bucket_for_key(&self, k: &K) -> SearchResult {
         let hash = self.hasher.hash(k) as uint;
         self.bucket_for_key_with_hash(hash, k)
     }
 
-    #[cfg(stage0)]
-    #[inline]
-    fn bucket_for_key_equiv<Q:Hash + Equiv<K>>(&self, k: &Q)
-                                               -> SearchResult {
-        let hash = k.hash_keyed(self.k0, self.k1) as uint;
-        self.bucket_for_key_with_hash_equiv(hash, k)
-    }
-
-    #[cfg(not(stage0))]
     #[inline]
     fn bucket_for_key_equiv<Q:Hash + Equiv<K>>(&self, k: &Q) -> SearchResult {
         let hash = self.hasher.hash(k) as uint;
@@ -368,27 +329,6 @@ impl<K:Hash + Eq,V> MutableMap<K, V> for HashMap<K, V> {
 
     /// Insert a key-value pair from the map. If the key already had a value
     /// present in the map, that value is returned. Otherwise None is returned.
-    #[cfg(stage0)]
-    fn swap(&mut self, k: K, v: V) -> Option<V> {
-        // this could be faster.
-
-        if self.size >= self.resize_at {
-            // n.b.: We could also do this after searching, so
-            // that we do not resize if this call to insert is
-            // simply going to update a key in place.  My sense
-            // though is that it's worse to have to search through
-            // buckets to find the right spot twice than to just
-            // resize in this corner case.
-            self.expand();
-        }
-
-        let hash = k.hash_keyed(self.k0, self.k1) as uint;
-        self.insert_internal(hash, k, v)
-    }
-
-    /// Insert a key-value pair from the map. If the key already had a value
-    /// present in the map, that value is returned. Otherwise None is returned.
-    #[cfg(not(stage0))]
     fn swap(&mut self, k: K, v: V) -> Option<V> {
         // this could be faster.
 
@@ -408,15 +348,6 @@ impl<K:Hash + Eq,V> MutableMap<K, V> for HashMap<K, V> {
 
     /// Removes a key from the map, returning the value at the key if the key
     /// was previously in the map.
-    #[cfg(stage0)]
-    fn pop(&mut self, k: &K) -> Option<V> {
-        let hash = k.hash_keyed(self.k0, self.k1) as uint;
-        self.pop_internal(hash, k)
-    }
-
-    /// Removes a key from the map, returning the value at the key if the key
-    /// was previously in the map.
-    #[cfg(not(stage0))]
     fn pop(&mut self, k: &K) -> Option<V> {
         let hash = self.hasher.hash(k) as uint;
         self.pop_internal(hash, k)
@@ -431,37 +362,10 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
 
     /// Create an empty HashMap with space for at least `capacity`
     /// elements in the hash table.
-    #[cfg(stage0)]
-    pub fn with_capacity(capacity: uint) -> HashMap<K, V> {
-        let mut r = rand::task_rng();
-        HashMap::with_capacity_and_keys(r.gen(), r.gen(), capacity)
-    }
-
-    /// Create an empty HashMap with space for at least `capacity`
-    /// elements in the hash table.
-    #[cfg(not(stage0))]
     pub fn with_capacity(capacity: uint) -> HashMap<K, V> {
         let mut r = rand::task_rng();
         let hasher = SipHasher::new_with_keys(r.gen(), r.gen());
         HashMap::with_capacity_and_hasher(hasher, capacity)
-    }
-
-    /// Create an empty HashMap with space for at least `capacity`
-    /// elements, using `k0` and `k1` as the keys.
-    ///
-    /// Warning: `k0` and `k1` are normally randomly generated, and
-    /// are designed to allow HashMaps to be resistant to attacks that
-    /// cause many collisions and very poor performance. Setting them
-    /// manually using this function can expose a DoS attack vector.
-    #[cfg(stage0)]
-    pub fn with_capacity_and_keys(k0: u64, k1: u64, capacity: uint) -> HashMap<K, V> {
-        let cap = max(INITIAL_CAPACITY, capacity);
-        HashMap {
-            k0: k0, k1: k1,
-            resize_at: resize_at(cap),
-            size: 0,
-            buckets: Vec::from_fn(cap, |_| None)
-        }
     }
 
     /// Create an empty HashMap with space for at least `capacity`
@@ -471,7 +375,6 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
     /// are designed to allow HashMaps to be resistant to attacks that
     /// cause many collisions and very poor performance. Setting it
     /// manually using this function can expose a DoS attack vector.
-    #[cfg(not(stage0))]
     pub fn with_capacity_and_hasher(hasher: SipHasher, capacity: uint) -> HashMap<K, V> {
         let cap = max(INITIAL_CAPACITY, capacity);
         HashMap {
@@ -529,80 +432,6 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
     ///    println!("{} -> {:?}", *k, *v);
     /// }
     /// ```
-    #[cfg(stage0)]
-    pub fn mangle<'a,
-                  A>(
-                  &'a mut self,
-                  k: K,
-                  a: A,
-                  not_found: |&K, A| -> V,
-                  found: |&K, &mut V, A|)
-                  -> &'a mut V {
-        if self.size >= self.resize_at {
-            // n.b.: We could also do this after searching, so
-            // that we do not resize if this call to insert is
-            // simply going to update a key in place.  My sense
-            // though is that it's worse to have to search through
-            // buckets to find the right spot twice than to just
-            // resize in this corner case.
-            self.expand();
-        }
-
-        let hash = k.hash_keyed(self.k0, self.k1) as uint;
-        let idx = match self.bucket_for_key_with_hash(hash, &k) {
-            TableFull => fail!("Internal logic error"),
-            FoundEntry(idx) => { found(&k, self.mut_value_for_bucket(idx), a); idx }
-            FoundHole(idx) => {
-                let v = not_found(&k, a);
-                self.buckets.as_mut_slice()[idx] = Some(Bucket{hash: hash, key: k, value: v});
-                self.size += 1;
-                idx
-            }
-        };
-
-        self.mut_value_for_bucket(idx)
-    }
-
-    /// Modify and return the value corresponding to the key in the map, or
-    /// insert and return a new value if it doesn't exist.
-    ///
-    /// This method allows for all insertion behaviours of a hashmap,
-    /// see methods like `insert`, `find_or_insert` and
-    /// `insert_or_update_with` for less general and more friendly
-    /// variations of this.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use std::hashmap::HashMap;
-    ///
-    /// // map some strings to vectors of strings
-    /// let mut map = HashMap::<~str, ~[~str]>::new();
-    /// map.insert(~"a key", ~[~"value"]);
-    /// map.insert(~"z key", ~[~"value"]);
-    ///
-    /// let new = ~[~"a key", ~"b key", ~"z key"];
-    /// for k in new.move_iter() {
-    ///     map.mangle(k, ~"new value",
-    ///                // if the key doesn't exist in the map yet, add it in
-    ///                // the obvious way.
-    ///                |_k, v| ~[v],
-    ///                // if the key does exist either prepend or append this
-    ///                // new value based on the first letter of the key.
-    ///                |key, already, new| {
-    ///                     if key.starts_with("z") {
-    ///                         already.unshift(new);
-    ///                     } else {
-    ///                         already.push(new);
-    ///                     }
-    ///                });
-    /// }
-    ///
-    /// for (k, v) in map.iter() {
-    ///    println!("{} -> {:?}", *k, *v);
-    /// }
-    /// ```
-    #[cfg(not(stage0))]
     pub fn mangle<'a,
                   A>(
                   &'a mut self,
@@ -768,7 +597,6 @@ impl<K:Hash + Eq + Clone,V:Clone> Clone for HashMap<K,V> {
     }
 }
 
-#[cfg(not(stage0))]
 impl<A: fmt::Show + Hash + Eq, B: fmt::Show> fmt::Show for HashMap<A, B> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if_ok!(write!(f.buf, r"\{"))
@@ -978,19 +806,6 @@ impl<T:Hash + Eq> HashSet<T> {
     /// are designed to allow HashSets to be resistant to attacks that
     /// cause many collisions and very poor performance. Setting them
     /// manually using this function can expose a DoS attack vector.
-    #[cfg(stage0)]
-    pub fn with_capacity_and_keys(k0: u64, k1: u64, capacity: uint) -> HashSet<T> {
-        HashSet { map: HashMap::with_capacity_and_keys(k0, k1, capacity) }
-    }
-
-    /// Create an empty HashSet with space for at least `capacity`
-    /// elements in the hash table, using `k0` and `k1` as the keys.
-    ///
-    /// Warning: `k0` and `k1` are normally randomly generated, and
-    /// are designed to allow HashSets to be resistant to attacks that
-    /// cause many collisions and very poor performance. Setting them
-    /// manually using this function can expose a DoS attack vector.
-    #[cfg(not(stage0))]
     pub fn with_capacity_and_hasher(hasher: SipHasher, capacity: uint) -> HashSet<T> {
         HashSet { map: HashMap::with_capacity_and_hasher(hasher, capacity) }
     }
@@ -1060,7 +875,6 @@ impl<T:Hash + Eq + Clone> Clone for HashSet<T> {
     }
 }
 
-#[cfg(not(stage0))]
 impl<A: fmt::Show + Hash + Eq> fmt::Show for HashSet<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if_ok!(write!(f.buf, r"\{"))

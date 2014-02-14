@@ -37,9 +37,6 @@ extern mod serialize;
 extern mod term;
 extern mod collections;
 
-#[cfg(stage0)]
-pub use ast = ast_old;
-
 pub mod util {
     pub mod interner;
     #[cfg(test)]
@@ -57,9 +54,6 @@ pub mod attr;
 pub mod diagnostic;
 pub mod codemap;
 pub mod abi;
-#[cfg(stage0)]
-pub mod ast_old;
-#[cfg(not(stage0))]
 pub mod ast;
 pub mod ast_util;
 pub mod ast_map;
