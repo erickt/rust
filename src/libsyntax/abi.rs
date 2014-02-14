@@ -8,12 +8,34 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#[cfg(stage0)]
 use std::to_bytes;
 
 #[deriving(Eq)]
 pub enum Os { OsWin32, OsMacos, OsLinux, OsAndroid, OsFreebsd, }
 
+#[cfg(stage0)]
 #[deriving(Eq)]
+pub enum Abi {
+    // NB: This ordering MUST match the AbiDatas array below.
+    // (This is ensured by the test indices_are_correct().)
+
+    // Single platform ABIs come first (`for_arch()` relies on this)
+    Cdecl,
+    Stdcall,
+    Fastcall,
+    Aapcs,
+    Win64,
+
+    // Multiplatform ABIs second
+    Rust,
+    C,
+    System,
+    RustIntrinsic,
+}
+
+#[cfg(not(stage0))]
+#[deriving(Eq, Hash)]
 pub enum Abi {
     // NB: This ordering MUST match the AbiDatas array below.
     // (This is ensured by the test indices_are_correct().)
@@ -64,7 +86,14 @@ enum AbiArchitecture {
     Archs(u32)  // Multiple architectures (bitset)
 }
 
+#[cfg(stage0)]
 #[deriving(Clone, Eq, Encodable, Decodable)]
+pub struct AbiSet {
+    priv bits: u32   // each bit represents one of the abis below
+}
+
+#[cfg(not(stage0))]
+#[deriving(Clone, Eq, Encodable, Decodable, Hash)]
 pub struct AbiSet {
     priv bits: u32   // each bit represents one of the abis below
 }
@@ -265,12 +294,14 @@ impl AbiSet {
     }
 }
 
+#[cfg(stage0)]
 impl to_bytes::IterBytes for Abi {
     fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) -> bool {
         self.index().iter_bytes(lsb0, f)
     }
 }
 
+#[cfg(stage0)]
 impl to_bytes::IterBytes for AbiSet {
     fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) -> bool {
         self.bits.iter_bytes(lsb0, f)

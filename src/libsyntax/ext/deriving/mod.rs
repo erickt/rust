@@ -23,9 +23,11 @@ use ext::base::ExtCtxt;
 use codemap::Span;
 
 pub mod clone;
-pub mod iter_bytes;
-pub mod encodable;
 pub mod decodable;
+pub mod encodable;
+pub mod hash;
+#[cfg(stage0)]
+pub mod iter_bytes;
 pub mod rand;
 pub mod to_str;
 pub mod show;
@@ -45,6 +47,7 @@ pub mod totalord;
 
 pub mod generic;
 
+#[cfg(stage0)]
 pub fn expand_meta_deriving(cx: &mut ExtCtxt,
                             _span: Span,
                             mitem: @MetaItem,
@@ -71,6 +74,67 @@ pub fn expand_meta_deriving(cx: &mut ExtCtxt,
                             "DeepClone" => expand!(clone::expand_deriving_deep_clone),
 
                             "IterBytes" => expand!(iter_bytes::expand_deriving_iter_bytes),
+                            "Hash" => expand!(hash::expand_deriving_hash),
+
+                            "Encodable" => expand!(encodable::expand_deriving_encodable),
+                            "Decodable" => expand!(decodable::expand_deriving_decodable),
+
+                            "Eq" => expand!(eq::expand_deriving_eq),
+                            "TotalEq" => expand!(totaleq::expand_deriving_totaleq),
+                            "Ord" => expand!(ord::expand_deriving_ord),
+                            "TotalOrd" => expand!(totalord::expand_deriving_totalord),
+
+                            "Rand" => expand!(rand::expand_deriving_rand),
+
+                            "ToStr" => expand!(to_str::expand_deriving_to_str),
+                            "Show" => expand!(show::expand_deriving_show),
+
+                            "Zero" => expand!(zero::expand_deriving_zero),
+                            "Default" => expand!(default::expand_deriving_default),
+
+                            "FromPrimitive" => expand!(primitive::expand_deriving_from_primitive),
+
+                            ref tname => {
+                                cx.span_err(titem.span, format!("unknown \
+                                    `deriving` trait: `{}`", *tname));
+                                in_items
+                            }
+                        }
+                    }
+                }
+            })
+        }
+    }
+}
+
+#[cfg(not(stage0))]
+pub fn expand_meta_deriving(cx: &mut ExtCtxt,
+                            _span: Span,
+                            mitem: @MetaItem,
+                            in_items: ~[@Item])
+                         -> ~[@Item] {
+    match mitem.node {
+        MetaNameValue(_, ref l) => {
+            cx.span_err(l.span, "unexpected value in `deriving`");
+            in_items
+        }
+        MetaWord(_) | MetaList(_, []) => {
+            cx.span_warn(mitem.span, "empty trait list in `deriving`");
+            in_items
+        }
+        MetaList(_, ref titems) => {
+            titems.rev_iter().fold(in_items, |in_items, &titem| {
+                match titem.node {
+                    MetaNameValue(ref tname, _) |
+                    MetaList(ref tname, _) |
+                    MetaWord(ref tname) => {
+                        macro_rules! expand(($func:path) => ($func(cx, titem.span,
+                                                                   titem, in_items)));
+                        match tname.get() {
+                            "Clone" => expand!(clone::expand_deriving_clone),
+                            "DeepClone" => expand!(clone::expand_deriving_deep_clone),
+
+                            "Hash" => expand!(hash::expand_deriving_hash),
 
                             "Encodable" => expand!(encodable::expand_deriving_encodable),
                             "Decodable" => expand!(decodable::expand_deriving_decodable),

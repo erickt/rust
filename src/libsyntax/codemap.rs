@@ -32,13 +32,28 @@ pub trait Pos {
 
 /// A byte offset. Keep this small (currently 32-bits), as AST contains
 /// a lot of them.
+#[cfg(stage0)]
 #[deriving(Clone, Eq, IterBytes, Ord)]
+pub struct BytePos(u32);
+
+/// A byte offset. Keep this small (currently 32-bits), as AST contains
+/// a lot of them.
+#[cfg(not(stage0))]
+#[deriving(Clone, Eq, Hash, Ord)]
 pub struct BytePos(u32);
 
 /// A character offset. Because of multibyte utf8 characters, a byte offset
 /// is not equivalent to a character offset. The CodeMap will convert BytePos
 /// values to CharPos values as necessary.
+#[cfg(stage0)]
 #[deriving(Eq,IterBytes, Ord)]
+pub struct CharPos(uint);
+
+/// A character offset. Because of multibyte utf8 characters, a byte offset
+/// is not equivalent to a character offset. The CodeMap will convert BytePos
+/// values to CharPos values as necessary.
+#[cfg(not(stage0))]
+#[deriving(Eq, Hash, Ord)]
 pub struct CharPos(uint);
 
 // FIXME: Lots of boilerplate in these impls, but so far my attempts to fix
@@ -84,7 +99,22 @@ are *absolute* positions from the beginning of the codemap, not positions
 relative to FileMaps. Methods on the CodeMap can be used to relate spans back
 to the original source.
 */
+#[cfg(stage0)]
 #[deriving(Clone, IterBytes)]
+pub struct Span {
+    lo: BytePos,
+    hi: BytePos,
+    expn_info: Option<@ExpnInfo>
+}
+
+/**
+Spans represent a region of code, used for error reporting. Positions in spans
+are *absolute* positions from the beginning of the codemap, not positions
+relative to FileMaps. Methods on the CodeMap can be used to relate spans back
+to the original source.
+*/
+#[cfg(not(stage0))]
+#[deriving(Clone, Hash)]
 pub struct Span {
     lo: BytePos,
     hi: BytePos,
@@ -93,7 +123,15 @@ pub struct Span {
 
 pub static DUMMY_SP: Span = Span { lo: BytePos(0), hi: BytePos(0), expn_info: None };
 
+#[cfg(stage0)]
 #[deriving(Clone, Eq, Encodable, Decodable, IterBytes)]
+pub struct Spanned<T> {
+    node: T,
+    span: Span,
+}
+
+#[cfg(not(stage0))]
+#[deriving(Clone, Eq, Encodable, Decodable, Hash)]
 pub struct Spanned<T> {
     node: T,
     span: Span,
@@ -160,6 +198,7 @@ pub struct LocWithOpt {
 pub struct FileMapAndLine {fm: @FileMap, line: uint}
 pub struct FileMapAndBytePos {fm: @FileMap, pos: BytePos}
 
+#[cfg(stage0)]
 #[deriving(Clone, IterBytes)]
 pub enum MacroFormat {
     // e.g. #[deriving(...)] <item>
@@ -168,6 +207,16 @@ pub enum MacroFormat {
     MacroBang
 }
 
+#[cfg(not(stage0))]
+#[deriving(Clone, Hash)]
+pub enum MacroFormat {
+    // e.g. #[deriving(...)] <item>
+    MacroAttribute,
+    // e.g. `format!()`
+    MacroBang
+}
+
+#[cfg(stage0)]
 #[deriving(Clone, IterBytes)]
 pub struct NameAndSpan {
     name: ~str,
@@ -176,8 +225,26 @@ pub struct NameAndSpan {
     span: Option<Span>
 }
 
+#[cfg(not(stage0))]
+#[deriving(Clone, Hash)]
+pub struct NameAndSpan {
+    name: ~str,
+    // the format with which the macro was invoked.
+    format: MacroFormat,
+    span: Option<Span>
+}
+
 /// Extra information for tracking macro expansion of spans
+#[cfg(stage0)]
 #[deriving(IterBytes)]
+pub struct ExpnInfo {
+    call_site: Span,
+    callee: NameAndSpan
+}
+
+/// Extra information for tracking macro expansion of spans
+#[cfg(not(stage0))]
+#[deriving(Hash)]
 pub struct ExpnInfo {
     call_site: Span,
     callee: NameAndSpan

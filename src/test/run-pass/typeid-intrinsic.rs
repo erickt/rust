@@ -17,6 +17,7 @@ extern mod other2 = "typeid-intrinsic2";
 
 use std::unstable::intrinsics;
 use std::unstable::intrinsics::TypeId;
+use std::hash::hash;
 
 struct A;
 struct Test;
@@ -70,5 +71,5 @@ pub fn main() {
     // check it has a hash
     let (a, b) = (TypeId::of::<uint>(), TypeId::of::<uint>());
 
-    assert_eq!(a.hash(), b.hash());
+    assert_eq!(hash(&a), hash(&b));
 }
