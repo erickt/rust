@@ -22,6 +22,7 @@ pub fn expand_deriving_totalord(cx: &mut ExtCtxt,
                                 in_items: ~[@Item]) -> ~[@Item] {
     let trait_def = TraitDef {
         span: span,
+        attributes: ~[],
         path: Path::new(~["std", "cmp", "TotalOrd"]),
         additional_bounds: ~[],
         generics: LifetimeBounds::empty(),

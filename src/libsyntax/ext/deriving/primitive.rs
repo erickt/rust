@@ -22,6 +22,7 @@ pub fn expand_deriving_from_primitive(cx: &mut ExtCtxt,
                                       in_items: ~[@Item]) -> ~[@Item] {
     let trait_def = TraitDef {
         span: span,
+        attributes: ~[],
         path: Path::new(~["std", "num", "FromPrimitive"]),
         additional_bounds: ~[],
         generics: LifetimeBounds::empty(),

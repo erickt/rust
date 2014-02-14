@@ -36,6 +36,7 @@ pub fn expand_deriving_ord(cx: &mut ExtCtxt,
 
     let trait_def = TraitDef {
         span: span,
+        attributes: ~[],
         path: Path::new(~["std", "cmp", "Ord"]),
         additional_bounds: ~[],
         generics: LifetimeBounds::empty(),

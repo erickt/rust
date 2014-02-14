@@ -88,6 +88,7 @@ pub fn expand_deriving_encodable(cx: &mut ExtCtxt,
                                  in_items: ~[@Item]) -> ~[@Item] {
     let trait_def = TraitDef {
         span: span,
+        attributes: ~[],
         path: Path::new_(~["serialize", "Encodable"], None,
                          ~[~Literal(Path::new_local("__E"))], true),
         additional_bounds: ~[],
