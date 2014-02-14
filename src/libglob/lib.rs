@@ -165,11 +165,22 @@ fn list_dir_sorted(path: &Path) -> ~[Path] {
 /**
  * A compiled Unix shell style pattern.
  */
+#[cfg(stage0)]
 #[deriving(Clone, Eq, TotalEq, Ord, TotalOrd, IterBytes, Default)]
 pub struct Pattern {
     priv tokens: ~[PatternToken]
 }
 
+/**
+ * A compiled Unix shell style pattern.
+ */
+#[cfg(not(stage0))]
+#[deriving(Clone, Eq, TotalEq, Ord, TotalOrd, Hash, Default)]
+pub struct Pattern {
+    priv tokens: ~[PatternToken]
+}
+
+#[cfg(stage0)]
 #[deriving(Clone, Eq, TotalEq, Ord, TotalOrd, IterBytes)]
 enum PatternToken {
     Char(char),
@@ -179,7 +190,25 @@ enum PatternToken {
     AnyExcept(~[CharSpecifier])
 }
 
+#[cfg(not(stage0))]
+#[deriving(Clone, Eq, TotalEq, Ord, TotalOrd, Hash)]
+enum PatternToken {
+    Char(char),
+    AnyChar,
+    AnySequence,
+    AnyWithin(~[CharSpecifier]),
+    AnyExcept(~[CharSpecifier])
+}
+
+#[cfg(stage0)]
 #[deriving(Clone, Eq, TotalEq, Ord, TotalOrd, IterBytes)]
+enum CharSpecifier {
+    SingleChar(char),
+    CharRange(char, char)
+}
+
+#[cfg(not(stage0))]
+#[deriving(Clone, Eq, TotalEq, Ord, TotalOrd, Hash)]
 enum CharSpecifier {
     SingleChar(char),
     CharRange(char, char)
@@ -490,7 +519,37 @@ fn chars_eq(a: char, b: char, case_sensitive: bool) -> bool {
 /**
  * Configuration options to modify the behaviour of `Pattern::matches_with(..)`
  */
+#[cfg(stage0)]
 #[deriving(Clone, Eq, TotalEq, Ord, TotalOrd, IterBytes, Default)]
+pub struct MatchOptions {
+
+    /**
+     * Whether or not patterns should be matched in a case-sensitive manner. This
+     * currently only considers upper/lower case relationships between ASCII characters,
+     * but in future this might be extended to work with Unicode.
+     */
+    priv case_sensitive: bool,
+
+    /**
+     * If this is true then path-component separator characters (e.g. `/` on Posix)
+     * must be matched by a literal `/`, rather than by `*` or `?` or `[...]`
+     */
+    priv require_literal_separator: bool,
+
+    /**
+     * If this is true then paths that contain components that start with a `.` will
+     * not match unless the `.` appears literally in the pattern: `*`, `?` or `[...]`
+     * will not match. This is useful because such files are conventionally considered
+     * hidden on Unix systems and it might be desirable to skip them when listing files.
+     */
+    priv require_literal_leading_dot: bool
+}
+
+/**
+ * Configuration options to modify the behaviour of `Pattern::matches_with(..)`
+ */
+#[cfg(not(stage0))]
+#[deriving(Clone, Eq, TotalEq, Ord, TotalOrd, Hash, Default)]
 pub struct MatchOptions {
 
     /**

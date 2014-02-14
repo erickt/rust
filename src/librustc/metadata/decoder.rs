@@ -75,6 +75,7 @@ fn lookup_hash<'a>(d: ebml::Doc<'a>, eq_fn: |&[u8]| -> bool,
 
 pub type GetCrateDataCb<'a> = 'a |ast::CrateNum| -> Cmd;
 
+#[cfg(stage0)]
 pub fn maybe_find_item<'a>(item_id: ast::NodeId,
                            items: ebml::Doc<'a>) -> Option<ebml::Doc<'a>> {
     fn eq_item(bytes: &[u8], item_id: ast::NodeId) -> bool {
@@ -85,6 +86,19 @@ pub fn maybe_find_item<'a>(item_id: ast::NodeId,
     lookup_hash(items,
                 |a| eq_item(a, item_id),
                 (item_id as i64).hash())
+}
+
+#[cfg(not(stage0))]
+pub fn maybe_find_item<'a>(item_id: ast::NodeId,
+                           items: ebml::Doc<'a>) -> Option<ebml::Doc<'a>> {
+    fn eq_item(bytes: &[u8], item_id: ast::NodeId) -> bool {
+        return u64_from_be_bytes(
+            bytes.slice(0u, 4u), 0u, 4u) as ast::NodeId
+            == item_id;
+    }
+    lookup_hash(items,
+                |a| eq_item(a, item_id),
+                ::std::hash::hash(&(item_id as i64)))
 }
 
 fn find_item<'a>(item_id: ast::NodeId, items: ebml::Doc<'a>) -> ebml::Doc<'a> {

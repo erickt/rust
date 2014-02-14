@@ -14,12 +14,19 @@ use iter::Iterator;
 use option::{Option, None, Some};
 use str::StrSlice;
 use to_str::ToStr;
-use to_bytes::IterBytes;
 use vec::{MutableCloneableVector, ImmutableVector, MutableVector};
 
 pub type Port = u16;
 
+#[cfg(stage0)]
 #[deriving(Eq, TotalEq, Clone, IterBytes)]
+pub enum IpAddr {
+    Ipv4Addr(u8, u8, u8, u8),
+    Ipv6Addr(u16, u16, u16, u16, u16, u16, u16, u16)
+}
+
+#[cfg(not(stage0))]
+#[deriving(Eq, TotalEq, Clone, Hash)]
 pub enum IpAddr {
     Ipv4Addr(u8, u8, u8, u8),
     Ipv6Addr(u16, u16, u16, u16, u16, u16, u16, u16)
@@ -49,12 +56,19 @@ impl ToStr for IpAddr {
     }
 }
 
+#[cfg(stage0)]
 #[deriving(Eq, TotalEq, Clone, IterBytes)]
 pub struct SocketAddr {
     ip: IpAddr,
     port: Port,
 }
 
+#[cfg(not(stage0))]
+#[deriving(Eq, TotalEq, Clone, Hash)]
+pub struct SocketAddr {
+    ip: IpAddr,
+    port: Port,
+}
 
 impl ToStr for SocketAddr {
     fn to_str(&self) -> ~str {
