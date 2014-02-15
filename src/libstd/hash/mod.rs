@@ -73,15 +73,19 @@ pub trait StreamState {
     /// Input `u8` into the hash.
     #[inline]
     fn input_u8(&mut self, v: u8) {
-        unsafe {
-            let bytes: [u8, .. 1] = cast::transmute(v);
-            self.input_bytes(bytes)
-        }
+        self.input_bytes([v])
     }
 
     /// Input `u16` into the hash.
     #[inline]
     fn input_u16(&mut self, v: u16) {
+        // huonw did some benchmarking in #11863 and compared the performance
+        // of manually extracting out the bytes of an integer with `[(x >> 8)
+        // as u8, x as u8]` with using a cast. It turns that while at an
+        // --opt-level=1, they are about the same, at --opt-level=2 and higher,
+        // casting is about 40% faster for u64, 10% faster for u32, and about
+        // the same for u16 and u8.
+
         unsafe {
             let value = mem::to_le16(v as i16);
             let bytes: [u8, .. 2] = cast::transmute(value);
@@ -92,6 +96,8 @@ pub trait StreamState {
     /// Input `u32` into the hash.
     #[inline]
     fn input_u32(&mut self, v: u32) {
+        // See justification for using transmute in `.input_u16`.
+
         unsafe {
             let value = mem::to_le32(v as i32);
             let bytes: [u8, .. 4] = cast::transmute(value);
@@ -102,6 +108,8 @@ pub trait StreamState {
     /// Input `u64` into the hash.
     #[inline]
     fn input_u64(&mut self, v: u64) {
+        // See justification for using transmute in `.input_u16`.
+
         unsafe {
             let value = mem::to_le64(v as i64);
             let bytes: [u8, .. 8] = cast::transmute(value);
