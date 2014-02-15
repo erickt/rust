@@ -238,40 +238,44 @@ pub trait StreamHash<S: StreamState = sip::SipState>: Hash<S> {
 //////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_hash(
-    ($ty:ty => $e:expr) => (
-        impl<'a, S: StreamState> Hash<S> for $ty {
-            #[inline]
-            fn hash(&self, mut state: S) -> u64 {
-                self.input(&mut state);
-                state.result()
+    ( $( $ty:ty => $method:ident;)* ) => (
+        $(
+            impl<'a, S: StreamState> Hash<S> for $ty {
+                #[inline]
+                fn hash(&self, mut state: S) -> u64 {
+                    self.input(&mut state);
+                    state.result()
+                }
             }
-        }
 
-        impl<'a, S: StreamState> StreamHash<S> for $ty {
-            #[inline]
-            fn input(&self, state: &mut S) {
-                $e
+            impl<'a, S: StreamState> StreamHash<S> for $ty {
+                #[inline]
+                fn input(&self, state: &mut S) {
+                    state.$method(*self)
+                }
             }
-        }
+        )*
     )
 )
 
-impl_hash!(u8 => state.input_u8(*self))
-impl_hash!(u16 => state.input_u16(*self))
-impl_hash!(u32 => state.input_u32(*self))
-impl_hash!(u64 => state.input_u64(*self))
-impl_hash!(uint => state.input_uint(*self))
-impl_hash!(i8 => state.input_i8(*self))
-impl_hash!(i16 => state.input_i16(*self))
-impl_hash!(i32 => state.input_i32(*self))
-impl_hash!(i64 => state.input_i64(*self))
-impl_hash!(int => state.input_int(*self))
-impl_hash!(f32 => state.input_f32(*self))
-impl_hash!(f64 => state.input_f64(*self))
-impl_hash!(bool => state.input_bool(*self))
-impl_hash!(char => state.input_char(*self))
-impl_hash!(&'a str => state.input_str(*self))
-impl_hash!(~str => state.input_str(*self))
+impl_hash!(
+    u8 => input_u8;
+    u16 => input_u16;
+    u32 => input_u32;
+    u64 => input_u64;
+    uint => input_uint;
+    i8 => input_i8;
+    i16 => input_i16;
+    i32 => input_i32;
+    i64 => input_i64;
+    int => input_int;
+    f32 => input_f32;
+    f64 => input_f64;
+    bool => input_bool;
+    char => input_char;
+    &'a str => input_str;
+    ~str => input_str;
+)
 
 macro_rules! impl_input_tuple(
     () => (
@@ -319,17 +323,11 @@ macro_rules! impl_input_tuple(
                 }
             }
         }
+
+        impl_input_tuple!($($B)*)
     );
 )
 
-impl_input_tuple!()
-impl_input_tuple!(A0)
-impl_input_tuple!(A0 A1)
-impl_input_tuple!(A0 A1 A2)
-impl_input_tuple!(A0 A1 A2 A3)
-impl_input_tuple!(A0 A1 A2 A3 A4)
-impl_input_tuple!(A0 A1 A2 A3 A4 A5)
-impl_input_tuple!(A0 A1 A2 A3 A4 A5 A6)
 impl_input_tuple!(A0 A1 A2 A3 A4 A5 A6 A7)
 
 macro_rules! impl_input_compound(
