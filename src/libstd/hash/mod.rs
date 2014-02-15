@@ -209,12 +209,6 @@ pub trait StreamState {
         }
     }
 
-    /// Input `&T` into the hash.
-    #[inline]
-    fn input_ref<T: StreamHash<Self>>(&mut self, v: &T) {
-        (*v).input(self)
-    }
-
     /// Input `*T` into the hash.
     #[inline]
     fn input_ptr<T>(&mut self, v: *T) {
@@ -358,11 +352,13 @@ macro_rules! impl_input_compound(
 )
 
 impl_input_compound!(&'a [T] => state.input_slice(*self))
+impl_input_compound!(&'a mut [T] => state.input_slice(*self))
 impl_input_compound!(~[T] => state.input_slice(*self))
-impl_input_compound!(&'a T => state.input_ref(*self))
-impl_input_compound!(~T => state.input_ref(&*self))
-impl_input_compound!(@T => state.input_ref(&*self))
-impl_input_compound!(Rc<T> => state.input_ref(self.borrow()))
+impl_input_compound!(&'a T => (**self).input(state))
+impl_input_compound!(&'a mut T => (**self).input(state))
+impl_input_compound!(~T => (*self).input(state))
+impl_input_compound!(@T => (*self).input(state))
+impl_input_compound!(Rc<T> => self.borrow().input(state))
 
 impl<S: StreamState, T: StreamHash<S>> Hash<S> for Option<T> {
     #[inline]
