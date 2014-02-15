@@ -417,42 +417,77 @@ impl<S: StreamState, T> StreamHash<S> for *mut T {
 
 #[cfg(test)]
 mod tests {
+    use cast;
     use iter::{Iterator};
     use option::{Some, None};
     use vec::ImmutableVector;
 
     use super::{Hash, StreamState, Hasher};
 
-    /// A stream hasher that computes the hash by just summing up the bytes.
-    struct SumHasher;
+    struct MyStreamHasher;
 
-    impl Hasher<SumState> for SumHasher {
-        fn state(&self) -> SumState {
-            SumState { sum: 0 }
+    impl Hasher<MyStreamState> for MyStreamHasher {
+        fn state(&self) -> MyStreamState {
+            MyStreamState { hash: 0 }
         }
     }
 
-    struct SumState {
-        sum: u64,
+    struct MyStreamState {
+        hash: u64,
     }
 
-    impl StreamState for SumState {
+    impl StreamState for MyStreamState {
+        // Most things we'll just add up the bytes.
         fn input_bytes(&mut self, buf: &[u8]) {
             for byte in buf.iter() {
-                self.sum += *byte as u64;
+                self.hash += *byte as u64;
             }
         }
 
+        // But we want to do something interesting with u16.
+        fn input_u16(&mut self, x: u16) {
+            self.hash += (x as u64 * 7) % 100;
+        }
+
         fn result(&self) -> u64 {
-            self.sum
+            self.hash
         }
     }
 
     #[test]
-    fn test_mock_stream_hasher() {
-        let hasher = SumHasher;
+    fn test_stream_hasher() {
+        let hasher = MyStreamHasher;
+
+        assert_eq!(hasher.hash(&()), 0);
+
         assert_eq!(hasher.hash(&5u8), 5);
+        assert_eq!(hasher.hash(&5u16), 35);
+        assert_eq!(hasher.hash(&5u32), 5);
+        assert_eq!(hasher.hash(&5u64), 5);
+        assert_eq!(hasher.hash(&5u), 5);
+
+        assert_eq!(hasher.hash(&5i8), 5);
+        assert_eq!(hasher.hash(&5i16), 35);
+        assert_eq!(hasher.hash(&5i32), 5);
+        assert_eq!(hasher.hash(&5i64), 5);
+        assert_eq!(hasher.hash(&5i), 5);
+
+        assert_eq!(hasher.hash(&5f32), 224);
+        assert_eq!(hasher.hash(&5f64), 84);
+
+        assert_eq!(hasher.hash(&false), 0);
+        assert_eq!(hasher.hash(&true), 1);
+
+        assert_eq!(hasher.hash(&'a'), 97);
+
+        assert_eq!(hasher.hash(& &"a"), 97 + 0xFF);
         assert_eq!(hasher.hash(& &[1u8, 2u8, 3u8]), 9);
+
+        unsafe {
+            let ptr: *int = cast::transmute(5);
+            assert_eq!(hasher.hash(&ptr), 5);
+        }
+
     }
 
     struct Custom {
@@ -466,7 +501,7 @@ mod tests {
     }
 
     #[test]
-    fn test_custom() {
+    fn test_custom_hasher() {
         let custom = Custom { hash: 5 };
         assert_eq!(custom.hash(()), 5);
     }
