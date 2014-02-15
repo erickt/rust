@@ -18,7 +18,8 @@ use parse::token::InternedString;
 pub fn expand_deriving_hash(cx: &mut ExtCtxt,
                             span: Span,
                             _mitem: @MetaItem,
-                            in_items: ~[@Item]) -> ~[@Item] {
+                            item: @Item,
+                            push: |@Item|) {
     let hash_trait_def = TraitDef {
         span: span,
         attributes: ~[
@@ -85,37 +86,31 @@ pub fn expand_deriving_hash(cx: &mut ExtCtxt,
         ]
     };
 
-    let mut result = ~[];
-    for item in in_items.iter() {
-        result.push(*item);
-        match item.node {
-            ItemStruct(struct_def, ref generics) => {
-                result.push(hash_trait_def.expand_struct_def(cx,
-                                                             struct_def,
-                                                             item.ident,
-                                                             generics));
+    match item.node {
+        ItemStruct(struct_def, ref generics) => {
+            push(hash_trait_def.expand_struct_def(cx,
+                                                  struct_def,
+                                                  item.ident,
+                                                  generics));
 
-                result.push(stream_hash_trait_def.expand_struct_def(cx,
-                                                                    struct_def,
-                                                                    item.ident,
-                                                                    generics));
-            }
-            ItemEnum(ref enum_def, ref generics) => {
-                result.push(hash_trait_def.expand_enum_def(cx,
-                                                           enum_def,
-                                                           item.ident,
-                                                           generics));
-
-                result.push(stream_hash_trait_def.expand_enum_def(cx,
-                                                                  enum_def,
-                                                                  item.ident,
-                                                                  generics));
-            }
-            _ => { }
+            push(stream_hash_trait_def.expand_struct_def(cx,
+                                                         struct_def,
+                                                         item.ident,
+                                                         generics));
         }
-    }
+        ItemEnum(ref enum_def, ref generics) => {
+            push(hash_trait_def.expand_enum_def(cx,
+                                                enum_def,
+                                                item.ident,
+                                                generics));
 
-    result
+            push(stream_hash_trait_def.expand_enum_def(cx,
+                                                       enum_def,
+                                                       item.ident,
+                                                       generics));
+        }
+        _ => { }
+    }
 }
 
 fn hash_substructure(cx: &mut ExtCtxt, span: Span, substr: &Substructure) -> @Expr {
