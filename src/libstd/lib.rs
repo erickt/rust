@@ -143,11 +143,7 @@ pub mod from_str;
 pub mod num;
 pub mod iter;
 pub mod to_str;
-#[cfg(stage0)]
-pub mod to_bytes;
 pub mod clone;
-#[cfg(stage0)]
-pub mod hash_old;
 pub mod hash;
 pub mod container;
 pub mod default;

@@ -35,9 +35,6 @@ use std::hashmap::{HashMap, HashSet};
 use std::ops;
 use std::ptr::to_unsafe_ptr;
 use std::rc::Rc;
-#[cfg(stage0)]
-use std::to_bytes;
-#[cfg(not(stage0))]
 use std::hash::{StreamState, StreamHash};
 use std::to_str::ToStr;
 use std::vec;
@@ -62,14 +59,6 @@ pub static INITIAL_DISCRIMINANT_VALUE: Disr = 0;
 
 // Data types
 
-#[cfg(stage0)]
-#[deriving(Eq, IterBytes)]
-pub struct field {
-    ident: ast::Ident,
-    mt: mt
-}
-
-#[cfg(not(stage0))]
 #[deriving(Eq, Hash)]
 pub struct field {
     ident: ast::Ident,
@@ -132,29 +121,12 @@ pub struct Impl {
     methods: ~[@Method]
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub struct mt {
-    ty: t,
-    mutbl: ast::Mutability,
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub struct mt {
     ty: t,
     mutbl: ast::Mutability,
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, Encodable, Decodable, IterBytes, ToStr)]
-pub enum vstore {
-    vstore_fixed(uint),
-    vstore_uniq,
-    vstore_slice(Region)
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Encodable, Decodable, Hash, ToStr)]
 pub enum vstore {
     vstore_fixed(uint),
@@ -162,14 +134,6 @@ pub enum vstore {
     vstore_slice(Region)
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes, Encodable, Decodable, ToStr)]
-pub enum TraitStore {
-    UniqTraitStore,             // ~Trait
-    RegionTraitStore(Region),   // &Trait
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash, Encodable, Decodable, ToStr)]
 pub enum TraitStore {
     UniqTraitStore,             // ~Trait
@@ -184,17 +148,6 @@ pub struct field_ty {
 
 // Contains information needed to resolve types and (in the future) look up
 // the types of AST nodes.
-#[cfg(stage0)]
-#[deriving(Eq,IterBytes)]
-pub struct creader_cache_key {
-    cnum: CrateNum,
-    pos: uint,
-    len: uint
-}
-
-// Contains information needed to resolve types and (in the future) look up
-// the types of AST nodes.
-#[cfg(not(stage0))]
 #[deriving(Eq, Hash)]
 pub struct creader_cache_key {
     cnum: CrateNum,
@@ -223,20 +176,8 @@ impl cmp::Eq for intern_key {
     }
 }
 
-// NB: Do not replace this with #[deriving(IterBytes)], as above. (Figured
-// this out the hard way.)
-#[cfg(stage0)]
-impl to_bytes::IterBytes for intern_key {
-    fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) -> bool {
-        unsafe {
-            (*self.sty).iter_bytes(lsb0, f)
-        }
-    }
-}
-
 // NB: Do not replace this with #[deriving(Hash)], as above. (Figured
 // this out the hard way.)
-#[cfg(not(stage0))]
 #[allow(default_type_param_usage)]
 impl<S: StreamState> Hash<S> for intern_key {
     fn hash(&self, mut state: S) -> u64 {
@@ -485,15 +426,6 @@ pub fn type_has_regions(t: t) -> bool {
 }
 pub fn type_id(t: t) -> uint { get(t).id }
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub struct BareFnTy {
-    purity: ast::Purity,
-    abis: AbiSet,
-    sig: FnSig
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub struct BareFnTy {
     purity: ast::Purity,
@@ -501,18 +433,6 @@ pub struct BareFnTy {
     sig: FnSig
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub struct ClosureTy {
-    purity: ast::Purity,
-    sigil: ast::Sigil,
-    onceness: ast::Onceness,
-    region: Region,
-    bounds: BuiltinBounds,
-    sig: FnSig,
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub struct ClosureTy {
     purity: ast::Purity,
@@ -535,28 +455,6 @@ pub struct ClosureTy {
  * - `output` is the return type.
  * - `variadic` indicates whether this is a varidic function. (only true for foreign fns)
  */
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub struct FnSig {
-    binder_id: ast::NodeId,
-    inputs: ~[t],
-    output: t,
-    variadic: bool
-}
-
-/**
- * Signature of a function type, which I have arbitrarily
- * decided to use to refer to the input/output types.
- *
- * - `binder_id` is the node id where this fn type appeared;
- *   it is used to identify all the bound regions appearing
- *   in the input/output types that are bound by this fn type
- *   (vs some enclosing or enclosed fn type)
- * - `inputs` is the list of arguments and their modes.
- * - `output` is the return type.
- * - `variadic` indicates whether this is a varidic function. (only true for foreign fns)
- */
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub struct FnSig {
     binder_id: ast::NodeId,
@@ -565,14 +463,6 @@ pub struct FnSig {
     variadic: bool
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub struct param_ty {
-    idx: uint,
-    def_id: DefId
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub struct param_ty {
     idx: uint,
@@ -580,45 +470,6 @@ pub struct param_ty {
 }
 
 /// Representation of regions:
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes, Encodable, Decodable, ToStr)]
-pub enum Region {
-    // Region bound in a type or fn declaration which will be
-    // substituted 'early' -- that is, at the same time when type
-    // parameters are substituted.
-    ReEarlyBound(/* param id */ ast::NodeId, /*index*/ uint, ast::Ident),
-
-    // Region bound in a function scope, which will be substituted when the
-    // function is called. The first argument must be the `binder_id` of
-    // some enclosing function signature.
-    ReLateBound(/* binder_id */ ast::NodeId, BoundRegion),
-
-    /// When checking a function body, the types of all arguments and so forth
-    /// that refer to bound region parameters are modified to refer to free
-    /// region parameters.
-    ReFree(FreeRegion),
-
-    /// A concrete region naming some expression within the current function.
-    ReScope(NodeId),
-
-    /// Static data that has an "infinite" lifetime. Top in the region lattice.
-    ReStatic,
-
-    /// A region variable.  Should not exist after typeck.
-    ReInfer(InferRegion),
-
-    /// Empty lifetime is for data that is never accessed.
-    /// Bottom in the region lattice. We treat ReEmpty somewhat
-    /// specially; at least right now, we do not generate instances of
-    /// it during the GLB computations, but rather
-    /// generate an error instead. This is to improve error messages.
-    /// The only way to get an instance of ReEmpty is to have a region
-    /// variable with no constraints.
-    ReEmpty,
-}
-
-/// Representation of regions:
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash, Encodable, Decodable, ToStr)]
 pub enum Region {
     // Region bound in a type or fn declaration which will be
@@ -660,73 +511,12 @@ pub enum Region {
  * the original var id (that is, the root variable that is referenced
  * by the upvar) and the id of the closure expression.
  */
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub struct UpvarId {
-    var_id: ast::NodeId,
-    closure_expr_id: ast::NodeId,
-}
-
-/**
- * Upvars do not get their own node-id. Instead, we use the pair of
- * the original var id (that is, the root variable that is referenced
- * by the upvar) and the id of the closure expression.
- */
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub struct UpvarId {
     var_id: ast::NodeId,
     closure_expr_id: ast::NodeId,
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub enum BorrowKind {
-    /// Data must be immutable and is aliasable.
-    ImmBorrow,
-
-    /// Data must be immutable but not aliasable.  This kind of borrow
-    /// cannot currently be expressed by the user and is used only in
-    /// implicit closure bindings. It is needed when you the closure
-    /// is borrowing or mutating a mutable referent, e.g.:
-    ///
-    ///    let x: &mut int = ...;
-    ///    let y = || *x += 5;
-    ///
-    /// If we were to try to translate this closure into a more explicit
-    /// form, we'd encounter an error with the code as written:
-    ///
-    ///    struct Env { x: & &mut int }
-    ///    let x: &mut int = ...;
-    ///    let y = (&mut Env { &x }, fn_ptr);  // Closure is pair of env and fn
-    ///    fn fn_ptr(env: &mut Env) { **env.x += 5; }
-    ///
-    /// This is then illegal because you cannot mutate a `&mut` found
-    /// in an aliasable location. To solve, you'd have to translate with
-    /// an `&mut` borrow:
-    ///
-    ///    struct Env { x: & &mut int }
-    ///    let x: &mut int = ...;
-    ///    let y = (&mut Env { &mut x }, fn_ptr); // changed from &x to &mut x
-    ///    fn fn_ptr(env: &mut Env) { **env.x += 5; }
-    ///
-    /// Now the assignment to `**env.x` is legal, but creating a
-    /// mutable pointer to `x` is not because `x` is not mutable. We
-    /// could fix this by declaring `x` as `let mut x`. This is ok in
-    /// user code, if awkward, but extra weird for closures, since the
-    /// borrow is hidden.
-    ///
-    /// So we introduce a "unique imm" borrow -- the referent is
-    /// immutable, but not aliasable. This solves the problem. For
-    /// simplicity, we don't give users the way to express this
-    /// borrow, it's just used when translating closures.
-    UniqueImmBorrow,
-
-    /// Data is mutable and not aliasable.
-    MutBorrow
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub enum BorrowKind {
     /// Data must be immutable and is aliasable.
@@ -840,37 +630,12 @@ impl Region {
     }
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, TotalOrd, TotalEq, IterBytes, Encodable, Decodable, ToStr)]
-pub struct FreeRegion {
-    scope_id: NodeId,
-    bound_region: BoundRegion
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, TotalOrd, TotalEq, Hash, Encodable, Decodable, ToStr)]
 pub struct FreeRegion {
     scope_id: NodeId,
     bound_region: BoundRegion
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, TotalEq, TotalOrd, IterBytes, Encodable, Decodable, ToStr)]
-pub enum BoundRegion {
-    /// An anonymous region parameter for a given fn (&T)
-    BrAnon(uint),
-
-    /// Named region parameters for functions (a in &'a T)
-    ///
-    /// The def-id is needed to distinguish free regions in
-    /// the event of shadowing.
-    BrNamed(ast::DefId, ast::Ident),
-
-    /// Fresh bound identifiers created during GLB computations.
-    BrFresh(uint),
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, TotalEq, TotalOrd, Hash, Encodable, Decodable, ToStr)]
 pub enum BoundRegion {
     /// An anonymous region parameter for a given fn (&T)
@@ -890,18 +655,6 @@ pub enum BoundRegion {
  * Represents the values to use when substituting lifetime parameters.
  * If the value is `ErasedRegions`, then this subst is occurring during
  * trans, and all region parameters will be replaced with `ty::ReStatic`. */
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub enum RegionSubsts {
-    ErasedRegions,
-    NonerasedRegions(OptVec<ty::Region>)
-}
-
-/**
- * Represents the values to use when substituting lifetime parameters.
- * If the value is `ErasedRegions`, then this subst is occurring during
- * trans, and all region parameters will be replaced with `ty::ReStatic`. */
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub enum RegionSubsts {
     ErasedRegions,
@@ -925,32 +678,6 @@ pub enum RegionSubsts {
  * - `self_ty` is the type to which `self` should be remapped, if any.  The
  *   `self` type is rather funny in that it can only appear on traits and is
  *   always substituted away to the implementing type for a trait. */
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub struct substs {
-    self_ty: Option<ty::t>,
-    tps: ~[t],
-    regions: RegionSubsts,
-}
-
-/**
- * The type substs represents the kinds of things that can be substituted to
- * convert a polytype into a monotype.  Note however that substituting bound
- * regions other than `self` is done through a different mechanism:
- *
- * - `tps` represents the type parameters in scope.  They are indexed
- *   according to the order in which they were declared.
- *
- * - `self_r` indicates the region parameter `self` that is present on nominal
- *   types (enums, structs) declared as having a region parameter.  `self_r`
- *   should always be none for types that are not region-parameterized and
- *   Some(_) for types that are.  The only bound region parameter that should
- *   appear within a region-parameterized type is `self`.
- *
- * - `self_ty` is the type to which `self` should be remapped, if any.  The
- *   `self` type is rather funny in that it can only appear on traits and is
- *   always substituted away to the implementing type for a trait. */
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub struct substs {
     self_ty: Option<ty::t>,
@@ -1006,45 +733,6 @@ mod primitives {
 
 // NB: If you change this, you'll probably want to change the corresponding
 // AST structure in libsyntax/ast.rs as well.
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub enum sty {
-    ty_nil,
-    ty_bot,
-    ty_bool,
-    ty_char,
-    ty_int(ast::IntTy),
-    ty_uint(ast::UintTy),
-    ty_float(ast::FloatTy),
-    ty_str(vstore),
-    ty_enum(DefId, substs),
-    ty_box(t),
-    ty_uniq(t),
-    ty_vec(mt, vstore),
-    ty_ptr(mt),
-    ty_rptr(Region, mt),
-    ty_bare_fn(BareFnTy),
-    ty_closure(ClosureTy),
-    ty_trait(DefId, substs, TraitStore, ast::Mutability, BuiltinBounds),
-    ty_struct(DefId, substs),
-    ty_tup(~[t]),
-
-    ty_param(param_ty), // type parameter
-    ty_self(DefId), /* special, implicit `self` type parameter;
-                      * def_id is the id of the trait */
-
-    ty_infer(InferTy), // something used only during inference/typeck
-    ty_err, // Also only used during inference/typeck, to represent
-            // the type of an erroneous expression (helps cut down
-            // on non-useful type error messages)
-
-    // "Fake" types, used for trans purposes
-    ty_unboxed_vec(mt),
-}
-
-// NB: If you change this, you'll probably want to change the corresponding
-// AST structure in libsyntax/ast.rs as well.
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub enum sty {
     ty_nil,
@@ -1080,14 +768,6 @@ pub enum sty {
     ty_unboxed_vec(mt),
 }
 
-#[cfg(stage0)]
-#[deriving(Eq, IterBytes)]
-pub struct TraitRef {
-    def_id: DefId,
-    substs: substs
-}
-
-#[cfg(not(stage0))]
 #[deriving(Eq, Hash)]
 pub struct TraitRef {
     def_id: DefId,
@@ -1150,14 +830,6 @@ pub enum type_err {
     terr_variadic_mismatch(expected_found<bool>)
 }
 
-#[cfg(stage0)]
-#[deriving(Eq, IterBytes)]
-pub struct ParamBounds {
-    builtin_bounds: BuiltinBounds,
-    trait_bounds: ~[@TraitRef]
-}
-
-#[cfg(not(stage0))]
 #[deriving(Eq, Hash)]
 pub struct ParamBounds {
     builtin_bounds: BuiltinBounds,
@@ -1166,18 +838,6 @@ pub struct ParamBounds {
 
 pub type BuiltinBounds = EnumSet<BuiltinBound>;
 
-#[cfg(stage0)]
-#[deriving(Clone, Encodable, Eq, Decodable, IterBytes, ToStr)]
-#[repr(uint)]
-pub enum BuiltinBound {
-    BoundStatic,
-    BoundSend,
-    BoundFreeze,
-    BoundSized,
-    BoundPod,
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Encodable, Eq, Decodable, Hash, ToStr)]
 #[repr(uint)]
 pub enum BuiltinBound {
@@ -1210,51 +870,20 @@ impl CLike for BuiltinBound {
     }
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub struct TyVid(uint);
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub struct TyVid(uint);
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub struct IntVid(uint);
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub struct IntVid(uint);
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub struct FloatVid(uint);
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub struct FloatVid(uint);
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, Encodable, Decodable, IterBytes)]
-pub struct RegionVid {
-    id: uint
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Encodable, Decodable, Hash)]
 pub struct RegionVid {
     id: uint
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes)]
-pub enum InferTy {
-    TyVar(TyVid),
-    IntVar(IntVid),
-    FloatVar(FloatVid)
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash)]
 pub enum InferTy {
     TyVar(TyVid),
@@ -1262,14 +891,6 @@ pub enum InferTy {
     FloatVar(FloatVid)
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Encodable, Decodable, IterBytes, ToStr)]
-pub enum InferRegion {
-    ReVar(RegionVid),
-    ReSkolemized(uint, BoundRegion)
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Encodable, Decodable, Hash, ToStr)]
 pub enum InferRegion {
     ReVar(RegionVid),
@@ -5309,154 +4930,6 @@ pub fn trait_method_of_method(tcx: ctxt,
 
 /// Creates a hash of the type `t` which will be the same no matter what crate
 /// context it's calculated within. This is used by the `type_id` intrinsic.
-#[cfg(stage0)]
-pub fn hash_crate_independent(tcx: ctxt, t: t, local_hash: ~str) -> u64 {
-    use std::hash_old::{SipState, Streaming};
-
-    let mut hash = SipState::new(0, 0);
-    let region = |_hash: &mut SipState, r: Region| {
-        match r {
-            ReStatic => {}
-
-            ReEmpty |
-            ReEarlyBound(..) |
-            ReLateBound(..) |
-            ReFree(..) |
-            ReScope(..) |
-            ReInfer(..) => {
-                tcx.sess.bug("non-static region found when hashing a type")
-            }
-        }
-    };
-    let vstore = |hash: &mut SipState, v: vstore| {
-        match v {
-            vstore_fixed(_) => hash.input([0]),
-            vstore_uniq => hash.input([1]),
-            vstore_slice(r) => {
-                hash.input([3]);
-                region(hash, r);
-            }
-        }
-    };
-    let did = |hash: &mut SipState, did: DefId| {
-        let h = if ast_util::is_local(did) {
-            local_hash.clone()
-        } else {
-            tcx.sess.cstore.get_crate_hash(did.krate)
-        };
-        hash.input(h.as_bytes());
-        iter(hash, &did.node);
-    };
-    let mt = |hash: &mut SipState, mt: mt| {
-        iter(hash, &mt.mutbl);
-    };
-    fn iter<T: IterBytes>(hash: &mut SipState, t: &T) {
-        t.iter_bytes(true, |bytes| { hash.input(bytes); true });
-    }
-    ty::walk_ty(t, |t| {
-        match ty::get(t).sty {
-            ty_nil => hash.input([0]),
-            ty_bot => hash.input([1]),
-            ty_bool => hash.input([2]),
-            ty_char => hash.input([3]),
-            ty_int(i) => {
-                hash.input([4]);
-                iter(&mut hash, &i);
-            }
-            ty_uint(u) => {
-                hash.input([5]);
-                iter(&mut hash, &u);
-            }
-            ty_float(f) => {
-                hash.input([6]);
-                iter(&mut hash, &f);
-            }
-            ty_str(v) => {
-                hash.input([7]);
-                vstore(&mut hash, v);
-            }
-            ty_enum(d, _) => {
-                hash.input([8]);
-                did(&mut hash, d);
-            }
-            ty_box(_) => {
-                hash.input([9]);
-            }
-            ty_uniq(_) => {
-                hash.input([10]);
-            }
-            ty_vec(m, v) => {
-                hash.input([11]);
-                mt(&mut hash, m);
-                vstore(&mut hash, v);
-            }
-            ty_ptr(m) => {
-                hash.input([12]);
-                mt(&mut hash, m);
-            }
-            ty_rptr(r, m) => {
-                hash.input([13]);
-                region(&mut hash, r);
-                mt(&mut hash, m);
-            }
-            ty_bare_fn(ref b) => {
-                hash.input([14]);
-                iter(&mut hash, &b.purity);
-                iter(&mut hash, &b.abis);
-            }
-            ty_closure(ref c) => {
-                hash.input([15]);
-                iter(&mut hash, &c.purity);
-                iter(&mut hash, &c.sigil);
-                iter(&mut hash, &c.onceness);
-                iter(&mut hash, &c.bounds);
-                region(&mut hash, c.region);
-            }
-            ty_trait(d, _, store, m, bounds) => {
-                hash.input([17]);
-                did(&mut hash, d);
-                match store {
-                    UniqTraitStore => hash.input([0]),
-                    RegionTraitStore(r) => {
-                        hash.input([1]);
-                        region(&mut hash, r);
-                    }
-                }
-                iter(&mut hash, &m);
-                iter(&mut hash, &bounds);
-            }
-            ty_struct(d, _) => {
-                hash.input([18]);
-                did(&mut hash, d);
-            }
-            ty_tup(ref inner) => {
-                hash.input([19]);
-                iter(&mut hash, &inner.len());
-            }
-            ty_param(p) => {
-                hash.input([20]);
-                iter(&mut hash, &p.idx);
-                did(&mut hash, p.def_id);
-            }
-            ty_self(d) => {
-                hash.input([21]);
-                did(&mut hash, d);
-            }
-            ty_infer(_) => unreachable!(),
-            ty_err => hash.input([23]),
-            ty_unboxed_vec(m) => {
-                hash.input([24]);
-                mt(&mut hash, m);
-            }
-        }
-    });
-
-    hash.result_u64()
-}
-
-/// Creates a hash of the type `t` which will be the same no matter what crate
-/// context it's calculated within. This is used by the `type_id` intrinsic.
-#[cfg(not(stage0))]
 pub fn hash_crate_independent(tcx: ctxt, t: t, local_hash: ~str) -> u64 {
     use std::hash::{StreamState, StreamHash};
     use std::hash::sip::SipState;

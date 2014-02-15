@@ -27,34 +27,6 @@ use hashmap;
 use io;
 use rt::rtio::{IoFactory, LocalIo, RtioSignal};
 
-#[cfg(stage0)]
-#[repr(int)]
-#[deriving(Eq, IterBytes)]
-pub enum Signum {
-    /// Equivalent to SIGBREAK, delivered when the user presses Ctrl-Break.
-    Break = 21i,
-    /// Equivalent to SIGHUP, delivered when the user closes the terminal
-    /// window. On delivery of HangUp, the program is given approximately
-    /// 10 seconds to perform any cleanup. After that, Windows will
-    /// unconditionally terminate it.
-    HangUp = 1i,
-    /// Equivalent to SIGINT, delivered when the user presses Ctrl-c.
-    Interrupt = 2i,
-    /// Equivalent to SIGQUIT, delivered when the user presses Ctrl-\.
-    Quit = 3i,
-    /// Equivalent to SIGTSTP, delivered when the user presses Ctrl-z.
-    StopTemporarily = 20i,
-    /// Equivalent to SIGUSR1.
-    User1 = 10i,
-    /// Equivalent to SIGUSR2.
-    User2 = 12i,
-    /// Equivalent to SIGWINCH, delivered when the console has been resized.
-    /// WindowSizeChange may not be delivered in a timely manner; size change
-    /// will only be detected when the cursor is being moved.
-    WindowSizeChange = 28i,
-}
-
-#[cfg(not(stage0))]
 #[repr(int)]
 #[deriving(Eq, Hash)]
 pub enum Signum {

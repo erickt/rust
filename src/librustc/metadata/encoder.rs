@@ -1378,28 +1378,6 @@ fn encode_info_for_items(ecx: &EncodeContext,
 
 // Path and definition ID indexing
 
-#[cfg(stage0)]
-fn create_index<T:Clone + Hash + IterBytes + 'static>(
-                index: ~[entry<T>])
-                -> ~[@~[entry<T>]] {
-    let mut buckets: ~[@RefCell<~[entry<T>]>] = ~[];
-    for _ in range(0u, 256u) {
-        buckets.push(@RefCell::new(~[]));
-    }
-    for elt in index.iter() {
-        let h = elt.val.hash() as uint;
-        let mut bucket = buckets[h % 256].borrow_mut();
-        bucket.get().push((*elt).clone());
-    }
-
-    let mut buckets_frozen = ~[];
-    for bucket in buckets.iter() {
-        buckets_frozen.push(@/*bad*/(**bucket).get());
-    }
-    return buckets_frozen;
-}
-
-#[cfg(not(stage0))]
 #[allow(default_type_param_usage)]
 fn create_index<T:Clone + ::std::hash::StreamHash<::std::hash::sip::SipState> + 'static>(
                 index: ~[entry<T>])

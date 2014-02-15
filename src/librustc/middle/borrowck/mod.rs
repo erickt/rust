@@ -185,13 +185,6 @@ pub struct BorrowStats {
 //
 // Note that there is no entry with derefs:3---the type of that expression
 // is T, which is not a box.
-#[cfg(stage0)]
-#[deriving(Eq, IterBytes)]
-pub struct root_map_key {
-    id: ast::NodeId,
-    derefs: uint
-}
-#[cfg(not(stage0))]
 #[deriving(Eq, Hash)]
 pub struct root_map_key {
     id: ast::NodeId,
@@ -230,28 +223,12 @@ pub enum LoanCause {
     RefBinding,
 }
 
-#[cfg(stage0)]
-#[deriving(Eq, IterBytes)]
-pub enum LoanPath {
-    LpVar(ast::NodeId),               // `x` in doc.rs
-    LpExtend(@LoanPath, mc::MutabilityCategory, LoanPathElem)
-}
-
-#[cfg(not(stage0))]
 #[deriving(Eq, Hash)]
 pub enum LoanPath {
     LpVar(ast::NodeId),               // `x` in doc.rs
     LpExtend(@LoanPath, mc::MutabilityCategory, LoanPathElem)
 }
 
-#[cfg(stage0)]
-#[deriving(Eq, IterBytes)]
-pub enum LoanPathElem {
-    LpDeref(mc::PointerKind),    // `*LV` in doc.rs
-    LpInterior(mc::InteriorKind) // `LV.f` in doc.rs
-}
-
-#[cfg(not(stage0))]
 #[deriving(Eq, Hash)]
 pub enum LoanPathElem {
     LpDeref(mc::PointerKind),    // `*LV` in doc.rs

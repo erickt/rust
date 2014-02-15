@@ -74,8 +74,6 @@ use std::rand;
 use std::rand::Rng;
 use std::cmp::Eq;
 use std::cast::{transmute,transmute_copy};
-#[cfg(stage0)]
-use std::to_bytes::{IterBytes, Cb};
 
 use serialize::{Encoder, Encodable, Decoder, Decodable};
 
@@ -116,14 +114,6 @@ pub struct Uuid {
     bytes: UuidBytes
 }
 
-#[cfg(stage0)]
-impl IterBytes for Uuid {
-    fn iter_bytes(&self, _: bool, f: Cb) -> bool {
-        f(self.bytes.slice_from(0))
-    }
-}
-
-#[cfg(not(stage0))]
 #[allow(default_type_param_usage)]
 impl<S: ::std::hash::StreamState> Hash<S> for Uuid {
     fn hash(&self, state: S) -> u64 {

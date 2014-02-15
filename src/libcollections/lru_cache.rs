@@ -39,8 +39,6 @@
 
 use std::container::Container;
 use std::hashmap::HashMap;
-#[cfg(stage0)]
-use std::to_bytes::Cb;
 use std::ptr;
 use std::cast;
 
@@ -61,14 +59,6 @@ pub struct LruCache<K, V> {
     priv tail: *mut LruEntry<K, V>,
 }
 
-#[cfg(stage0)]
-impl<K: IterBytes> IterBytes for KeyRef<K> {
-    fn iter_bytes(&self, lsb0: bool, f: Cb) -> bool {
-        unsafe{ (*self.k).iter_bytes(lsb0, f) }
-    }
-}
-
-#[cfg(not(stage0))]
 #[allow(default_type_param_usage)]
 impl<S, K: Hash<S>> Hash<S> for KeyRef<K> {
     fn hash(&self, state: S) -> u64 {
@@ -102,132 +92,6 @@ impl<K, V> LruEntry<K, V> {
     }
 }
 
-#[cfg(stage0)]
-impl<K: IterBytes + Eq, V> LruCache<K, V> {
-    /// Create an LRU Cache that holds at most `capacity` items.
-    pub fn new(capacity: uint) -> LruCache<K, V> {
-        let cache = LruCache {
-            map: HashMap::new(),
-            max_size: capacity,
-            head: unsafe{ cast::transmute(~LruEntry::<K, V>::new()) },
-            tail: unsafe{ cast::transmute(~LruEntry::<K, V>::new()) },
-        };
-        unsafe {
-            (*cache.head).next = cache.tail;
-            (*cache.tail).prev = cache.head;
-        }
-        return cache;
-    }
-
-    /// Put a key-value pair into cache.
-    pub fn put(&mut self, k: K, v: V) {
-        let mut key_existed = false;
-        let (node_ptr, node_opt) = match self.map.find_mut(&KeyRef{k: &k}) {
-            Some(node) => {
-                key_existed = true;
-                node.value = Some(v);
-                let node_ptr: *mut LruEntry<K, V> = &mut **node;
-                (node_ptr, None)
-            }
-            None => {
-                let mut node = ~LruEntry::with_key_value(k, v);
-                let node_ptr: *mut LruEntry<K, V> = &mut *node;
-                (node_ptr, Some(node))
-            }
-        };
-        if key_existed {
-            self.detach(node_ptr);
-            self.attach(node_ptr);
-        } else {
-            let keyref = unsafe { (*node_ptr).key.as_ref().unwrap() };
-            self.map.swap(KeyRef{k: keyref}, node_opt.unwrap());
-            self.attach(node_ptr);
-            if self.len() > self.capacity() {
-                self.remove_lru();
-            }
-        }
-    }
-
-    /// Return a value corresponding to the key in the cache.
-    pub fn get<'a>(&'a mut self, k: &K) -> Option<&'a V> {
-        let (value, node_ptr_opt) = match self.map.find_mut(&KeyRef{k: k}) {
-            None => (None, None),
-            Some(node) => {
-                let node_ptr: *mut LruEntry<K, V> = &mut **node;
-                unsafe {
-                    match (*node_ptr).value {
-                        None => (None, None),
-                        Some(ref value) => (Some(value), Some(node_ptr))
-                    }
-                }
-            }
-        };
-        match node_ptr_opt {
-            None => (),
-            Some(node_ptr) => {
-                self.detach(node_ptr);
-                self.attach(node_ptr);
-            }
-        }
-        return value;
-    }
-
-    /// Remove and return a value corresponding to the key from the cache.
-    pub fn pop(&mut self, k: &K) -> Option<V> {
-        match self.map.pop(&KeyRef{k: k}) {
-            None => None,
-            Some(lru_entry) => lru_entry.value
-        }
-    }
-
-    /// Return the maximum number of key-value pairs the cache can hold.
-    pub fn capacity(&self) -> uint {
-        self.max_size
-    }
-
-    /// Change the number of key-value pairs the cache can hold. Remove
-    /// least-recently-used key-value pairs if necessary.
-    pub fn change_capacity(&mut self, capacity: uint) {
-        for _ in range(capacity, self.len()) {
-            self.remove_lru();
-        }
-        self.max_size = capacity;
-    }
-
-    #[inline]
-    fn remove_lru(&mut self) {
-        if self.len() > 0 {
-            let lru = unsafe { (*self.tail).prev };
-            self.detach(lru);
-            unsafe {
-                match (*lru).key {
-                    None => (),
-                    Some(ref k) => { self.map.pop(&KeyRef{k: k}); }
-                }
-            }
-        }
-    }
-
-    #[inline]
-    fn detach(&mut self, node: *mut LruEntry<K, V>) {
-        unsafe {
-            (*(*node).prev).next = (*node).next;
-            (*(*node).next).prev = (*node).prev;
-        }
-    }
-
-    #[inline]
-    fn attach(&mut self, node: *mut LruEntry<K, V>) {
-        unsafe {
-            (*node).next = (*self.head).next;
-            (*node).prev = self.head;
-            (*self.head).next = node;
-            (*(*node).next).prev = node;
-        }
-    }
-}
-
-#[cfg(not(stage0))]
 impl<K: Hash + Eq, V> LruCache<K, V> {
     /// Create an LRU Cache that holds at most `capacity` items.
     pub fn new(capacity: uint) -> LruCache<K, V> {
@@ -352,41 +216,6 @@ impl<K: Hash + Eq, V> LruCache<K, V> {
     }
 }
 
-#[cfg(stage0)]
-impl<A: ToStr + IterBytes + Eq, B: ToStr> ToStr for LruCache<A, B> {
-    /// Return a string that lists the key-value pairs from most-recently
-    /// used to least-recently used.
-    #[inline]
-    fn to_str(&self) -> ~str {
-        let mut acc = ~"{";
-        let mut cur = self.head;
-        for i in range(0, self.len()) {
-            if i > 0 {
-                acc.push_str(", ");
-            }
-            unsafe {
-                cur = (*cur).next;
-                match (*cur).key {
-                    // should never print nil
-                    None => acc.push_str("nil"),
-                    Some(ref k) => acc.push_str(k.to_str())
-                }
-            }
-            acc.push_str(": ");
-            unsafe {
-                match (*cur).value {
-                    // should never print nil
-                    None => acc.push_str("nil"),
-                    Some(ref value) => acc.push_str(value.to_str())
-                }
-            }
-        }
-        acc.push_char('}');
-        acc
-    }
-}
-
-#[cfg(not(stage0))]
 impl<A: ToStr + Hash + Eq, B: ToStr> ToStr for LruCache<A, B> {
     /// Return a string that lists the key-value pairs from most-recently
     /// used to least-recently used.
@@ -420,15 +249,6 @@ impl<A: ToStr + Hash + Eq, B: ToStr> ToStr for LruCache<A, B> {
     }
 }
 
-#[cfg(stage0)]
-impl<K: IterBytes + Eq, V> Container for LruCache<K, V> {
-    /// Return the number of key-value pairs in the cache.
-    fn len(&self) -> uint {
-        self.map.len()
-    }
-}
-
-#[cfg(not(stage0))]
 impl<K: Hash + Eq, V> Container for LruCache<K, V> {
     /// Return the number of key-value pairs in the cache.
     fn len(&self) -> uint {
@@ -436,15 +256,6 @@ impl<K: Hash + Eq, V> Container for LruCache<K, V> {
     }
 }
 
-#[cfg(stage0)]
-impl<K: IterBytes + Eq, V> Mutable for LruCache<K, V> {
-    /// Clear the cache of all key-value pairs.
-    fn clear(&mut self) {
-        self.map.clear();
-    }
-}
-
-#[cfg(not(stage0))]
 impl<K: Hash + Eq, V> Mutable for LruCache<K, V> {
     /// Clear the cache of all key-value pairs.
     fn clear(&mut self) {

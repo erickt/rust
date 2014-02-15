@@ -22,23 +22,6 @@ use std::fmt;
 use std::local_data;
 use std::path::BytesContainer;
 
-#[cfg(stage0)]
-#[allow(non_camel_case_types)]
-#[deriving(Clone, Encodable, Decodable, Eq, IterBytes)]
-pub enum BinOp {
-    PLUS,
-    MINUS,
-    STAR,
-    SLASH,
-    PERCENT,
-    CARET,
-    AND,
-    OR,
-    SHL,
-    SHR,
-}
-
-#[cfg(not(stage0))]
 #[allow(non_camel_case_types)]
 #[deriving(Clone, Encodable, Decodable, Eq, Hash)]
 pub enum BinOp {
@@ -54,73 +37,6 @@ pub enum BinOp {
     SHR,
 }
 
-#[cfg(stage0)]
-#[allow(non_camel_case_types)]
-#[deriving(Clone, Encodable, Decodable, Eq, IterBytes)]
-pub enum Token {
-    /* Expression-operator symbols. */
-    EQ,
-    LT,
-    LE,
-    EQEQ,
-    NE,
-    GE,
-    GT,
-    ANDAND,
-    OROR,
-    NOT,
-    TILDE,
-    BINOP(BinOp),
-    BINOPEQ(BinOp),
-
-    /* Structural symbols */
-    AT,
-    DOT,
-    DOTDOT,
-    DOTDOTDOT,
-    COMMA,
-    SEMI,
-    COLON,
-    MOD_SEP,
-    RARROW,
-    LARROW,
-    DARROW,
-    FAT_ARROW,
-    LPAREN,
-    RPAREN,
-    LBRACKET,
-    RBRACKET,
-    LBRACE,
-    RBRACE,
-    POUND,
-    DOLLAR,
-
-    /* Literals */
-    LIT_CHAR(u32),
-    LIT_INT(i64, ast::IntTy),
-    LIT_UINT(u64, ast::UintTy),
-    LIT_INT_UNSUFFIXED(i64),
-    LIT_FLOAT(ast::Ident, ast::FloatTy),
-    LIT_FLOAT_UNSUFFIXED(ast::Ident),
-    LIT_STR(ast::Ident),
-    LIT_STR_RAW(ast::Ident, uint), /* raw str delimited by n hash symbols */
-
-    /* Name components */
-    // an identifier contains an "is_mod_name" boolean,
-    // indicating whether :: follows this token with no
-    // whitespace in between.
-    IDENT(ast::Ident, bool),
-    UNDERSCORE,
-    LIFETIME(ast::Ident),
-
-    /* For interpolation */
-    INTERPOLATED(Nonterminal),
-
-    DOC_COMMENT(ast::Ident),
-    EOF,
-}
-
-#[cfg(not(stage0))]
 #[allow(non_camel_case_types)]
 #[deriving(Clone, Encodable, Decodable, Eq, Hash)]
 pub enum Token {
@@ -186,24 +102,6 @@ pub enum Token {
     EOF,
 }
 
-#[cfg(stage0)]
-#[deriving(Clone, Encodable, Decodable, Eq, IterBytes)]
-/// For interpolation during macro expansion.
-pub enum Nonterminal {
-    NtItem(@ast::Item),
-    NtBlock(P<ast::Block>),
-    NtStmt(@ast::Stmt),
-    NtPat( @ast::Pat),
-    NtExpr(@ast::Expr),
-    NtTy(  P<ast::Ty>),
-    NtIdent(~ast::Ident, bool),
-    NtAttr(@ast::Attribute), // #[foo]
-    NtPath(~ast::Path),
-    NtTT(  @ast::TokenTree), // needs @ed to break a circularity
-    NtMatchers(~[ast::Matcher])
-}
-
-#[cfg(not(stage0))]
 #[deriving(Clone, Encodable, Decodable, Eq, Hash)]
 /// For interpolation during macro expansion.
 pub enum Nonterminal {
@@ -638,22 +536,6 @@ pub fn get_ident_interner() -> @IdentInterner {
 /// destroyed. In particular, they must not access string contents. This can
 /// be fixed in the future by just leaking all strings until task death
 /// somehow.
-#[cfg(stage0)]
-#[deriving(Clone, Eq, IterBytes, Ord, TotalEq, TotalOrd)]
-pub struct InternedString {
-    priv string: RcStr,
-}
-
-/// Represents a string stored in the task-local interner. Because the
-/// interner lives for the life of the task, this can be safely treated as an
-/// immortal string, as long as it never crosses between tasks.
-///
-/// FIXME(pcwalton): You must be careful about what you do in the destructors
-/// of objects stored in TLS, because they may run after the interner is
-/// destroyed. In particular, they must not access string contents. This can
-/// be fixed in the future by just leaking all strings until task death
-/// somehow.
-#[cfg(not(stage0))]
 #[deriving(Clone, Eq, Hash, Ord, TotalEq, TotalOrd)]
 pub struct InternedString {
     priv string: RcStr,

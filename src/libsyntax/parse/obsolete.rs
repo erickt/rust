@@ -22,34 +22,7 @@ use codemap::{Span, respan};
 use parse::parser::Parser;
 use parse::token;
 
-#[cfg(stage0)]
-use std::to_bytes;
-
 /// The specific types of unsupported syntax
-#[cfg(stage0)]
-#[deriving(Eq)]
-pub enum ObsoleteSyntax {
-    ObsoleteSwap,
-    ObsoleteUnsafeBlock,
-    ObsoleteBareFnType,
-    ObsoleteMultipleLocalDecl,
-    ObsoleteUnsafeExternFn,
-    ObsoleteTraitFuncVisibility,
-    ObsoleteConstPointer,
-    ObsoleteLoopAsContinue,
-    ObsoleteEnumWildcard,
-    ObsoleteStructWildcard,
-    ObsoleteVecDotDotWildcard,
-    ObsoleteBoxedClosure,
-    ObsoleteClosureType,
-    ObsoleteMultipleImport,
-    ObsoleteManagedPattern,
-    ObsoleteManagedString,
-    ObsoleteManagedVec,
-}
-
-/// The specific types of unsupported syntax
-#[cfg(not(stage0))]
 #[deriving(Eq, Hash)]
 pub enum ObsoleteSyntax {
     ObsoleteSwap,
@@ -69,14 +42,6 @@ pub enum ObsoleteSyntax {
     ObsoleteManagedPattern,
     ObsoleteManagedString,
     ObsoleteManagedVec,
-}
-
-#[cfg(stage0)]
-impl to_bytes::IterBytes for ObsoleteSyntax {
-    #[inline]
-    fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) -> bool {
-        (*self as uint).iter_bytes(lsb0, f)
-    }
 }
 
 pub trait ParserObsoleteMethods {

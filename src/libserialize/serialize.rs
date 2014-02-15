@@ -606,25 +606,6 @@ impl<
     }
 }
 
-#[cfg(stage0)]
-impl<
-    E: Encoder,
-    K: Encodable<E> + Hash + IterBytes + Eq,
-    V: Encodable<E>
-> Encodable<E> for HashMap<K, V> {
-    fn encode(&self, e: &mut E) {
-        e.emit_map(self.len(), |e| {
-            let mut i = 0;
-            for (key, val) in self.iter() {
-                e.emit_map_elt_key(i, |e| key.encode(e));
-                e.emit_map_elt_val(i, |e| val.encode(e));
-                i += 1;
-            }
-        })
-    }
-}
-
-#[cfg(not(stage0))]
 impl<
     E: Encoder,
     K: Encodable<E> + Hash + Eq,
@@ -642,26 +623,6 @@ impl<
     }
 }
 
-#[cfg(stage0)]
-impl<
-    D: Decoder,
-    K: Decodable<D> + Hash + IterBytes + Eq,
-    V: Decodable<D>
-> Decodable<D> for HashMap<K, V> {
-    fn decode(d: &mut D) -> HashMap<K, V> {
-        d.read_map(|d, len| {
-            let mut map = HashMap::with_capacity(len);
-            for i in range(0u, len) {
-                let key = d.read_map_elt_key(i, |d| Decodable::decode(d));
-                let val = d.read_map_elt_val(i, |d| Decodable::decode(d));
-                map.insert(key, val);
-            }
-            map
-        })
-    }
-}
-
-#[cfg(not(stage0))]
 impl<
     D: Decoder,
     K: Decodable<D> + Hash + Eq,
@@ -680,23 +641,6 @@ impl<
     }
 }
 
-#[cfg(stage0)]
-impl<
-    S: Encoder,
-    T: Encodable<S> + Hash + IterBytes + Eq
-> Encodable<S> for HashSet<T> {
-    fn encode(&self, s: &mut S) {
-        s.emit_seq(self.len(), |s| {
-            let mut i = 0;
-            for e in self.iter() {
-                s.emit_seq_elt(i, |s| e.encode(s));
-                i += 1;
-            }
-        })
-    }
-}
-
-#[cfg(not(stage0))]
 impl<
     S: Encoder,
     T: Encodable<S> + Hash + Eq
@@ -712,23 +656,6 @@ impl<
     }
 }
 
-#[cfg(stage0)]
-impl<
-    D: Decoder,
-    T: Decodable<D> + Hash + IterBytes + Eq
-> Decodable<D> for HashSet<T> {
-    fn decode(d: &mut D) -> HashSet<T> {
-        d.read_seq(|d, len| {
-            let mut set = HashSet::with_capacity(len);
-            for i in range(0u, len) {
-                set.insert(d.read_seq_elt(i, |d| Decodable::decode(d)));
-            }
-            set
-        })
-    }
-}
-
-#[cfg(not(stage0))]
 impl<
     D: Decoder,
     T: Decodable<D> + Hash + Eq
