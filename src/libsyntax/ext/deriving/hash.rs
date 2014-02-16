@@ -8,7 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use ast::{MetaItem, Item, Expr, MutMutable, ItemStruct, ItemEnum, Inherited};
+use ast::{MetaItem, Item, Expr, MutMutable, Inherited};
 use codemap::Span;
 use ext::base::ExtCtxt;
 use ext::build::AstBuilder;
@@ -17,19 +17,20 @@ use parse::token::InternedString;
 
 pub fn expand_deriving_hash(cx: &mut ExtCtxt,
                             span: Span,
-                            _mitem: @MetaItem,
+                            mitem: @MetaItem,
                             item: @Item,
                             push: &|@Item|) {
+
+    let allow_default_type_param_usage = cx.attribute(
+        span,
+        cx.meta_list(
+            span,
+            InternedString::new("allow"),
+            ~[cx.meta_word(span, InternedString::new("default_type_param_usage"))]));
+
     let hash_trait_def = TraitDef {
         span: span,
-        attributes: ~[
-            cx.attribute(
-                span,
-                cx.meta_list(
-                    span,
-                    InternedString::new("allow"),
-                    ~[cx.meta_word(span,
-                                   InternedString::new("default_type_param_usage"))]))],
+        attributes: ~[allow_default_type_param_usage],
         path: Path::new_(~["std", "hash", "Hash"], None,
                          ~[~Literal(Path::new_local("__S"))], true),
         additional_bounds: ~[
@@ -56,14 +57,7 @@ pub fn expand_deriving_hash(cx: &mut ExtCtxt,
 
     let stream_hash_trait_def = TraitDef {
         span: span,
-        attributes: ~[
-            cx.attribute(
-                span,
-                cx.meta_list(
-                    span,
-                    InternedString::new("allow"),
-                    ~[cx.meta_word(span,
-                                   InternedString::new("default_type_param_usage"))]))],
+        attributes: ~[allow_default_type_param_usage],
         path: Path::new_(~["std", "hash", "StreamHash"], None,
                          ~[~Literal(Path::new_local("__S"))], true),
         additional_bounds: ~[],
@@ -86,31 +80,8 @@ pub fn expand_deriving_hash(cx: &mut ExtCtxt,
         ]
     };
 
-    match item.node {
-        ItemStruct(struct_def, ref generics) => {
-            (*push)(hash_trait_def.expand_struct_def(cx,
-                                                  struct_def,
-                                                  item.ident,
-                                                  generics));
-
-            (*push)(stream_hash_trait_def.expand_struct_def(cx,
-                                                         struct_def,
-                                                         item.ident,
-                                                         generics));
-        }
-        ItemEnum(ref enum_def, ref generics) => {
-            (*push)(hash_trait_def.expand_enum_def(cx,
-                                                enum_def,
-                                                item.ident,
-                                                generics));
-
-            (*push)(stream_hash_trait_def.expand_enum_def(cx,
-                                                       enum_def,
-                                                       item.ident,
-                                                       generics));
-        }
-        _ => { }
-    }
+    hash_trait_def.expand(cx, mitem, item, push);
+    stream_hash_trait_def.expand(cx, mitem, item, push);
 }
 
 fn hash_substructure(cx: &mut ExtCtxt, span: Span, substr: &Substructure) -> @Expr {
@@ -165,12 +136,9 @@ fn stream_hash_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substru
         cx.stmt_expr(expr)
     };
     let mut stmts = ~[];
-    let fields;
 
-    match *substr.fields {
-        Struct(ref fs) => {
-            fields = fs;
-        }
+    let fields = match *substr.fields {
+        Struct(ref fs) => fs,
         EnumMatching(index, variant, ref fs) => {
             // Determine the discriminant. We will feed this value to the byte
             // iteration function.
@@ -181,10 +149,10 @@ fn stream_hash_substructure(cx: &mut ExtCtxt, trait_span: Span, substr: &Substru
 
             stmts.push(call_hash(trait_span, discriminant));
 
-            fields = fs;
+            fs
         }
         _ => cx.span_bug(trait_span, "impossible substructure in `deriving(StreamHash)`")
-    }
+    };
 
     for &FieldInfo { self_, span, .. } in fields.iter() {
         stmts.push(call_hash(span, self_));
