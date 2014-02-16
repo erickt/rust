@@ -26,6 +26,7 @@ pub struct Interner<T> {
 }
 
 // when traits can extend traits, we should extend index<Name,T> to get []
+#[cfg(stage0)]
 impl<T:Eq + IterBytes + Hash + Freeze + Clone + 'static> Interner<T> {
     pub fn new() -> Interner<T> {
         Interner {
@@ -84,7 +85,74 @@ impl<T:Eq + IterBytes + Hash + Freeze + Clone + 'static> Interner<T> {
     }
 }
 
+// when traits can extend traits, we should extend index<Name,T> to get []
+#[cfg(not(stage0))]
+impl<T:Eq + Hash + Freeze + Clone + 'static> Interner<T> {
+    pub fn new() -> Interner<T> {
+        Interner {
+            map: RefCell::new(HashMap::new()),
+            vect: RefCell::new(~[]),
+        }
+    }
+
+    pub fn prefill(init: &[T]) -> Interner<T> {
+        let rv = Interner::new();
+        for v in init.iter() {
+            rv.intern((*v).clone());
+        }
+        rv
+    }
+
+    pub fn intern(&self, val: T) -> Name {
+        let mut map = self.map.borrow_mut();
+        match map.get().find(&val) {
+            Some(&idx) => return idx,
+            None => (),
+        }
+
+        let mut vect = self.vect.borrow_mut();
+        let new_idx = vect.get().len() as Name;
+        map.get().insert(val.clone(), new_idx);
+        vect.get().push(val);
+        new_idx
+    }
+
+    pub fn gensym(&self, val: T) -> Name {
+        let mut vect = self.vect.borrow_mut();
+        let new_idx = vect.get().len() as Name;
+        // leave out of .map to avoid colliding
+        vect.get().push(val);
+        new_idx
+    }
+
+    pub fn get(&self, idx: Name) -> T {
+        let vect = self.vect.borrow();
+        vect.get()[idx].clone()
+    }
+
+    pub fn len(&self) -> uint {
+        let vect = self.vect.borrow();
+        vect.get().len()
+    }
+
+    pub fn find_equiv<Q:Hash + Equiv<T>>(&self, val: &Q)
+                                         -> Option<Name> {
+        let map = self.map.borrow();
+        match map.get().find_equiv(val) {
+            Some(v) => Some(*v),
+            None => None,
+        }
+    }
+}
+
+#[cfg(stage0)]
 #[deriving(Clone, Eq, IterBytes, Ord)]
+pub struct RcStr {
+    priv string: Rc<~str>,
+}
+
+#[cfg(not(stage0))]
+#[deriving(Clone, Eq, Hash, Ord)]
 pub struct RcStr {
     priv string: Rc<~str>,
 }
@@ -206,8 +274,18 @@ impl StrInterner {
         vect.get().len()
     }
 
+    #[cfg(stage0)]
     pub fn find_equiv<Q:Hash + IterBytes + Equiv<RcStr>>(&self, val: &Q)
                                                          -> Option<Name> {
+        let map = self.map.borrow();
+        match map.get().find_equiv(val) {
+            Some(v) => Some(*v),
+            None => None,
+        }
+    }
+
+    #[cfg(not(stage0))]
+    pub fn find_equiv<Q:Hash + Equiv<RcStr>>(&self, val: &Q) -> Option<Name> {
         let map = self.map.borrow();
         match map.get().find_equiv(val) {
             Some(v) => Some(*v),

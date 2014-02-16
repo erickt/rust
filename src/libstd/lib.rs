@@ -143,14 +143,15 @@ pub mod from_str;
 pub mod num;
 pub mod iter;
 pub mod to_str;
+#[cfg(stage0)]
 pub mod to_bytes;
 pub mod clone;
+#[cfg(stage0)]
 pub mod hash_old;
 pub mod hash;
 pub mod container;
 pub mod default;
 pub mod any;
-
 
 /* Common data structures */
 
@@ -227,6 +228,7 @@ mod std {
     pub use os;
     pub use rt;
     pub use str;
+    #[cfg(stage0)]
     pub use to_bytes;
     pub use to_str;
     pub use unstable;

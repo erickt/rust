@@ -722,6 +722,7 @@ pub fn is_null(val: ValueRef) -> bool {
 }
 
 // Used to identify cached monomorphized functions and vtables
+#[cfg(stage0)]
 #[deriving(Eq,IterBytes)]
 pub enum mono_param_id {
     mono_precise(ty::t, Option<@~[mono_id]>),
@@ -732,7 +733,31 @@ pub enum mono_param_id {
               datum::RvalueMode),
 }
 
+#[cfg(not(stage0))]
+#[deriving(Eq, Hash)]
+pub enum mono_param_id {
+    mono_precise(ty::t, Option<@~[mono_id]>),
+    mono_any,
+    mono_repr(uint /* size */,
+              uint /* align */,
+              MonoDataClass,
+              datum::RvalueMode),
+}
+
+#[cfg(stage0)]
 #[deriving(Eq,IterBytes)]
+pub enum MonoDataClass {
+    MonoBits,    // Anything not treated differently from arbitrary integer data
+    MonoNonNull, // Non-null pointers (used for optional-pointer optimization)
+    // FIXME(#3547)---scalars and floats are
+    // treated differently in most ABIs.  But we
+    // should be doing something more detailed
+    // here.
+    MonoFloat
+}
+
+#[cfg(not(stage0))]
+#[deriving(Eq, Hash)]
 pub enum MonoDataClass {
     MonoBits,    // Anything not treated differently from arbitrary integer data
     MonoNonNull, // Non-null pointers (used for optional-pointer optimization)
@@ -754,8 +779,15 @@ pub fn mono_data_classify(t: ty::t) -> MonoDataClass {
     }
 }
 
-
+#[cfg(stage0)]
 #[deriving(Eq,IterBytes)]
+pub struct mono_id_ {
+    def: ast::DefId,
+    params: ~[mono_param_id]
+}
+
+#[cfg(not(stage0))]
+#[deriving(Eq, Hash)]
 pub struct mono_id_ {
     def: ast::DefId,
     params: ~[mono_param_id]

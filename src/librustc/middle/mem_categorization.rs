@@ -93,7 +93,18 @@ pub struct CopiedUpvar {
 }
 
 // different kinds of pointers:
+#[cfg(stage0)]
 #[deriving(Eq, IterBytes)]
+pub enum PointerKind {
+    OwnedPtr,
+    GcPtr,
+    BorrowedPtr(ty::BorrowKind, ty::Region),
+    UnsafePtr(ast::Mutability),
+}
+
+// different kinds of pointers:
+#[cfg(not(stage0))]
+#[deriving(Eq, Hash)]
 pub enum PointerKind {
     OwnedPtr,
     GcPtr,
@@ -103,18 +114,35 @@ pub enum PointerKind {
 
 // We use the term "interior" to mean "something reachable from the
 // base without a pointer dereference", e.g. a field
+#[cfg(stage0)]
 #[deriving(Eq, IterBytes)]
 pub enum InteriorKind {
     InteriorField(FieldName),
     InteriorElement(ElementKind),
 }
 
+#[cfg(not(stage0))]
+#[deriving(Eq, Hash)]
+pub enum InteriorKind {
+    InteriorField(FieldName),
+    InteriorElement(ElementKind),
+}
+
+#[cfg(stage0)]
 #[deriving(Eq, IterBytes)]
 pub enum FieldName {
     NamedField(ast::Name),
     PositionalField(uint)
 }
 
+#[cfg(not(stage0))]
+#[deriving(Eq, Hash)]
+pub enum FieldName {
+    NamedField(ast::Name),
+    PositionalField(uint)
+}
+
+#[cfg(stage0)]
 #[deriving(Eq, IterBytes)]
 pub enum ElementKind {
     VecElement,
@@ -122,7 +150,24 @@ pub enum ElementKind {
     OtherElement,
 }
 
+#[cfg(not(stage0))]
+#[deriving(Eq, Hash)]
+pub enum ElementKind {
+    VecElement,
+    StrElement,
+    OtherElement,
+}
+
+#[cfg(stage0)]
 #[deriving(Eq, IterBytes)]
+pub enum MutabilityCategory {
+    McImmutable, // Immutable.
+    McDeclared,  // Directly declared as mutable.
+    McInherited, // Inherited from the fact that owner is mutable.
+}
+
+#[cfg(not(stage0))]
+#[deriving(Eq, Hash)]
 pub enum MutabilityCategory {
     McImmutable, // Immutable.
     McDeclared,  // Directly declared as mutable.

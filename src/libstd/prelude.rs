@@ -54,7 +54,10 @@ pub use cmp::{Eq, Ord, TotalEq, TotalOrd, Ordering, Less, Equal, Greater, Equiv}
 pub use container::{Container, Mutable, Map, MutableMap, Set, MutableSet};
 pub use default::Default;
 pub use from_str::FromStr;
+#[cfg(stage0)]
 pub use hash_old::Hash;
+#[cfg(not(stage0))]
+pub use hash::Hash;
 pub use iter::{FromIterator, Extendable};
 pub use iter::{Iterator, DoubleEndedIterator, RandomAccessIterator, CloneableIterator};
 pub use iter::{OrdIterator, MutableDoubleEndedIterator, ExactSize};
@@ -65,6 +68,7 @@ pub use path::{GenericPath, Path, PosixPath, WindowsPath};
 pub use ptr::RawPtr;
 pub use io::{Buffer, Writer, Reader, Seek};
 pub use str::{Str, StrVector, StrSlice, OwnedStr, IntoMaybeOwned};
+#[cfg(stage0)]
 pub use to_bytes::IterBytes;
 pub use to_str::{ToStr, IntoStr};
 pub use tuple::{CloneableTuple, ImmutableTuple};

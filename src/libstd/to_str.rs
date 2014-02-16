@@ -18,7 +18,10 @@ use option::{Some, None};
 use str::OwnedStr;
 use hashmap::HashMap;
 use hashmap::HashSet;
+#[cfg(stage0)]
 use hash_old::Hash;
+#[cfg(not(stage0))]
+use hash::Hash;
 use iter::Iterator;
 use cmp::Eq;
 use vec::ImmutableVector;

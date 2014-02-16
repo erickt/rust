@@ -15,7 +15,10 @@
 use std::io::BufReader;
 use std::cmp::Eq;
 use std::hashmap::HashMap;
+#[cfg(stage0)]
 use std::to_bytes;
+#[cfg(not(stage0))]
+use std::hash::{StreamState, StreamHash};
 use std::uint;
 
 /// A Uniform Resource Locator (URL).  A URL is a form of URI (Uniform Resource
@@ -786,9 +789,27 @@ impl ToStr for Url {
     }
 }
 
+#[cfg(stage0)]
 impl IterBytes for Url {
     fn iter_bytes(&self, lsb0: bool, f: to_bytes::Cb) -> bool {
         self.to_str().iter_bytes(lsb0, f)
+    }
+}
+
+#[cfg(not(stage0))]
+#[allow(default_type_param_usage)]
+impl<S: StreamState> Hash<S> for Url {
+    fn hash(&self, mut state: S) -> u64 {
+        self.input(&mut state);
+        state.result()
+    }
+}
+
+#[cfg(not(stage0))]
+#[allow(default_type_param_usage)]
+impl<S: StreamState> StreamHash<S> for Url {
+    fn input(&self, state: &mut S) {
+        self.to_str().input(state)
     }
 }
 

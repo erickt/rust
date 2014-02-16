@@ -15,7 +15,17 @@
 
 use std::num::Bitwise;
 
+#[cfg(stage0)]
 #[deriving(Clone, Eq, IterBytes, ToStr, Encodable, Decodable)]
+/// A specialized Set implementation to use enum types.
+pub struct EnumSet<E> {
+    // We must maintain the invariant that no bits are set
+    // for which no variant exists
+    priv bits: uint
+}
+
+#[cfg(not(stage0))]
+#[deriving(Clone, Eq, Hash, ToStr, Encodable, Decodable)]
 /// A specialized Set implementation to use enum types.
 pub struct EnumSet<E> {
     // We must maintain the invariant that no bits are set

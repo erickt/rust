@@ -102,6 +102,7 @@ use from_str::FromStr;
 use vec;
 use vec::{OwnedVector, OwnedCloneableVector, ImmutableVector, MutableVector};
 use default::Default;
+#[cfg(stage0)]
 use to_bytes::{IterBytes, Cb};
 use unstable::raw::Repr;
 
@@ -1186,12 +1187,24 @@ impl<'a> Default for MaybeOwned<'a> {
     fn default() -> MaybeOwned<'a> { Slice("") }
 }
 
+#[cfg(stage0)]
 impl<'a> IterBytes for MaybeOwned<'a> {
     #[inline]
     fn iter_bytes(&self, lsb0: bool, f: Cb) -> bool {
         match *self {
             Slice(s) => s.iter_bytes(lsb0, f),
             Owned(ref s) => s.iter_bytes(lsb0, f)
+        }
+    }
+}
+
+#[cfg(not(stage0))]
+impl<'a, S: ::hash::StreamState> ::hash::Hash<S> for MaybeOwned<'a> {
+    #[inline]
+    fn hash(&self, state: S) -> u64 {
+        match *self {
+            Slice(s) => s.hash(state),
+            Owned(ref s) => s.hash(state),
         }
     }
 }

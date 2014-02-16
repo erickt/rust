@@ -84,7 +84,7 @@ impl<'tcx,'ast> TypeContext<'tcx, 'ast> {
     }
 }
 
-#[deriving(Eq, IterBytes)]
+#[deriving(Eq, Hash)]
 struct NodeId {
     id: uint
 }

@@ -19,7 +19,10 @@ use iter::{AdditiveIterator, Extendable, Iterator, Map};
 use option::{Option, None, Some};
 use str;
 use str::Str;
+#[cfg(stage0)]
 use to_bytes::IterBytes;
+#[cfg(not(stage0))]
+use hash::{Hash, StreamState, StreamHash};
 use vec;
 use vec::{CloneableVector, RevSplits, Splits, Vector, VectorVector,
           ImmutableEqVector, OwnedVector, ImmutableVector, OwnedCloneableVector};
@@ -88,10 +91,28 @@ impl ToCStr for Path {
     }
 }
 
+#[cfg(stage0)]
 impl IterBytes for Path {
     #[inline]
     fn iter_bytes(&self, lsb0: bool, f: |buf: &[u8]| -> bool) -> bool {
         self.repr.iter_bytes(lsb0, f)
+    }
+}
+
+#[cfg(not(stage0))]
+impl<S: StreamState> Hash<S> for Path {
+    #[inline]
+    fn hash(&self, mut state: S) -> u64 {
+        self.input(&mut state);
+        state.result()
+    }
+}
+
+#[cfg(not(stage0))]
+impl<S: StreamState> StreamHash<S> for Path {
+    #[inline]
+    fn input(&self, state: &mut S) {
+        self.repr.input(state)
     }
 }
 
