@@ -234,7 +234,7 @@ pub fn expand_item(it: @ast::Item, fld: &mut MacroExpander)
                 // we'd ideally decorator_items.push_all(expand_item(item, fld)),
                 // but that double-mut-borrows fld
                 dec_fn(fld.cx, attr.span, attr.node.value, it,
-                       |item| decorator_items.push(item));
+                       &|item| decorator_items.push(item));
                 fld.cx.bt_pop();
             }
             _ => {}

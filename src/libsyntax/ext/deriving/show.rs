@@ -24,7 +24,7 @@ pub fn expand_deriving_show(cx: &mut ExtCtxt,
                             span: Span,
                             mitem: @MetaItem,
                             item: @Item,
-                            push: |@Item|) {
+                            push: &|@Item|) {
     // &mut ::std::fmt::Formatter
     let fmtr = Ptr(~Literal(Path::new(~["std", "fmt", "Formatter"])),
                    Borrowed(None, ast::MutMutable));

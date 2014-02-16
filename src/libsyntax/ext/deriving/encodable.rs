@@ -86,7 +86,7 @@ pub fn expand_deriving_encodable(cx: &mut ExtCtxt,
                                  span: Span,
                                  mitem: @MetaItem,
                                  item: @Item,
-                                 push: |@Item|) {
+                                 push: &|@Item|) {
     let trait_def = TraitDef {
         span: span,
         attributes: ~[],

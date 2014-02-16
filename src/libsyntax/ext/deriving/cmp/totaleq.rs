@@ -18,7 +18,7 @@ pub fn expand_deriving_totaleq(cx: &mut ExtCtxt,
                                span: Span,
                                mitem: @MetaItem,
                                item: @Item,
-                               push: |@Item|) {
+                               push: &|@Item|) {
     fn cs_equals(cx: &mut ExtCtxt, span: Span, substr: &Substructure) -> @Expr {
         cs_and(|cx, span, _, _| cx.expr_bool(span, false),
                cx, span, substr)

@@ -19,7 +19,7 @@ pub fn expand_deriving_ord(cx: &mut ExtCtxt,
                            span: Span,
                            mitem: @MetaItem,
                            item: @Item,
-                           push: |@Item|) {
+                           push: &|@Item|) {
     macro_rules! md (
         ($name:expr, $op:expr, $equal:expr) => {
             MethodDef {

@@ -18,7 +18,7 @@ pub fn expand_deriving_eq(cx: &mut ExtCtxt,
                           span: Span,
                           mitem: @MetaItem,
                           item: @Item,
-                          push: |@Item|) {
+                          push: &|@Item|) {
     // structures are equal if all fields are equal, and non equal, if
     // any fields are not equal or if the enum variants are different
     fn cs_eq(cx: &mut ExtCtxt, span: Span, substr: &Substructure) -> @Expr {

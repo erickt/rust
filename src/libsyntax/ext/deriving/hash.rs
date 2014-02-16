@@ -19,7 +19,7 @@ pub fn expand_deriving_hash(cx: &mut ExtCtxt,
                             span: Span,
                             _mitem: @MetaItem,
                             item: @Item,
-                            push: |@Item|) {
+                            push: &|@Item|) {
     let hash_trait_def = TraitDef {
         span: span,
         attributes: ~[
@@ -88,23 +88,23 @@ pub fn expand_deriving_hash(cx: &mut ExtCtxt,
 
     match item.node {
         ItemStruct(struct_def, ref generics) => {
-            push(hash_trait_def.expand_struct_def(cx,
+            (*push)(hash_trait_def.expand_struct_def(cx,
                                                   struct_def,
                                                   item.ident,
                                                   generics));
 
-            push(stream_hash_trait_def.expand_struct_def(cx,
+            (*push)(stream_hash_trait_def.expand_struct_def(cx,
                                                          struct_def,
                                                          item.ident,
                                                          generics));
         }
         ItemEnum(ref enum_def, ref generics) => {
-            push(hash_trait_def.expand_enum_def(cx,
+            (*push)(hash_trait_def.expand_enum_def(cx,
                                                 enum_def,
                                                 item.ident,
                                                 generics));
 
-            push(stream_hash_trait_def.expand_enum_def(cx,
+            (*push)(stream_hash_trait_def.expand_enum_def(cx,
                                                        enum_def,
                                                        item.ident,
                                                        generics));
