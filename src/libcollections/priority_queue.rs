@@ -60,6 +60,12 @@ impl<T: TotalOrd> PriorityQueue<T> {
         self.data.reserve(n)
     }
 
+    /// Reserve capacity for an additional n elements in the PriorityQueue.
+    /// Do nothing if the capacity is already sufficient.
+    pub fn reserve_additional(&mut self, n: uint) {
+        self.data.reserve_additional(n)
+    }
+
     /// Remove the greatest item from a queue and return it, or `None` if it is
     /// empty.
     pub fn pop(&mut self) -> Option<T> {
