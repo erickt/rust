@@ -1559,8 +1559,10 @@ pub mod raw {
 #[inline(always)]
 unsafe fn unsafe_push_all_clone<T: Clone>(dst: &mut Vec<T>, src: &[T]) {
     let mut dst_len = dst.len();
+    let src_len = src.len();
+    debug_assert!(dst_len.checked_add(&src_len).unwrap() <= dst.capacity());
 
-    for i in range(0, src.len()) {
+    for i in range(0, src_len) {
         ptr::write(
             dst.as_mut_slice().unsafe_mut_ref(dst_len),
             src.unsafe_ref(i).clone());
