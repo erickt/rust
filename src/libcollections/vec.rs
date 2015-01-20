@@ -56,7 +56,7 @@ use core::cmp::{Ordering};
 use core::default::Default;
 use core::fmt;
 use core::hash::{self, Hash};
-use core::iter::{repeat, FromIterator};
+use core::iter::{self, repeat, FromIterator};
 use core::marker::{ContravariantLifetime, InvariantType};
 use core::mem;
 use core::nonzero::NonZero;
@@ -429,36 +429,6 @@ impl<T> Vec<T> {
                 data: *self.ptr as *const T,
                 len: self.len,
             })
-        }
-    }
-
-    /// Creates a consuming iterator, that is, one that moves each value out of
-    /// the vector (from start to end). The vector cannot be used after calling
-    /// this.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let v = vec!["a".to_string(), "b".to_string()];
-    /// for s in v.into_iter() {
-    ///     // s has type String, not &String
-    ///     println!("{}", s);
-    /// }
-    /// ```
-    #[inline]
-    #[stable]
-    pub fn into_iter(self) -> IntoIter<T> {
-        unsafe {
-            let ptr = *self.ptr;
-            let cap = self.cap;
-            let begin = ptr as *const T;
-            let end = if mem::size_of::<T>() == 0 {
-                (ptr as uint + self.len()) as *const T
-            } else {
-                ptr.offset(self.len() as int) as *const T
-            };
-            mem::forget(self);
-            IntoIter { allocation: ptr, cap: cap, ptr: begin, end: end }
         }
     }
 
@@ -1420,6 +1390,42 @@ impl<T> AsSlice<T> for Vec<T> {
         }
     }
 }
+
+#[unstable]
+impl<T> iter::IntoIter for Vec<T> {
+    type Iterator = IntoIter<T>;
+
+    /// Creates a consuming iterator, that is, one that moves each value out of
+    /// the vector (from start to end). The vector cannot be used after calling
+    /// this.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let v = vec!["a".to_string(), "b".to_string()];
+    /// for s in v.into_iter() {
+    ///     // s has type String, not &String
+    ///     println!("{}", s);
+    /// }
+    /// ```
+    #[inline]
+    #[stable]
+    fn into_iter(self) -> IntoIter<T> {
+        unsafe {
+            let ptr = *self.ptr;
+            let cap = self.cap;
+            let begin = ptr as *const T;
+            let end = if mem::size_of::<T>() == 0 {
+                (ptr as uint + self.len()) as *const T
+            } else {
+                ptr.offset(self.len() as int) as *const T
+            };
+            mem::forget(self);
+            IntoIter { allocation: ptr, cap: cap, ptr: begin, end: end }
+        }
+    }
+}
+
 
 #[unstable = "recent addition, needs more experience"]
 impl<'a, T: Clone> Add<&'a [T]> for Vec<T> {

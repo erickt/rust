@@ -624,6 +624,12 @@ impl<T> ops::IndexMut<ops::FullRange> for [T] {
     }
 }
 
+impl<'a, T> IntoIter for &'a [T] {
+    type Iterator = Iter<'a, T>;
+
+    fn into_iter(self) -> Iter<'a, T> { self.iter() }
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Common traits

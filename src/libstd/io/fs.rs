@@ -58,7 +58,7 @@ use io::{FileStat, SeekStyle, Seek, Writer, Reader};
 use io::{Read, Truncate, ReadWrite, Append};
 use io::UpdateIoError;
 use io;
-use iter::{Iterator, Extend};
+use iter::{Extend, IntoIter, Iterator};
 use option::Option;
 use option::Option::{Some, None};
 use path::{Path, GenericPath};

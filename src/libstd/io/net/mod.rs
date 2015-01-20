@@ -11,6 +11,7 @@
 //! Networking I/O
 
 use io::{IoError, IoResult, InvalidInput};
+use iter::IntoIter;
 use ops::FnMut;
 use option::Option::None;
 use result::Result::{Ok, Err};

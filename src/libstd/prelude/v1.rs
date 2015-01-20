@@ -30,7 +30,7 @@
 #[stable] #[doc(no_inline)] pub use cmp::{PartialEq, PartialOrd, Eq, Ord};
 #[stable] #[doc(no_inline)] pub use iter::DoubleEndedIterator;
 #[stable] #[doc(no_inline)] pub use iter::ExactSizeIterator;
-#[stable] #[doc(no_inline)] pub use iter::{Iterator, IteratorExt, Extend};
+#[stable] #[doc(no_inline)] pub use iter::{Iterator, IteratorExt, Extend, IntoIter};
 #[stable] #[doc(no_inline)] pub use option::Option::{self, Some, None};
 #[stable] #[doc(no_inline)] pub use ptr::{PtrExt, MutPtrExt};
 #[stable] #[doc(no_inline)] pub use result::Result::{self, Ok, Err};

@@ -116,6 +116,22 @@ pub trait Extend<A> {
     fn extend<T: Iterator<Item=A>>(&mut self, iterator: T);
 }
 
+/// A type that can be transformed into an `Iterator` implementation.
+#[unstable]
+pub trait IntoIter {
+    type Iterator: Iterator;
+
+    /// Construct an iterator that consumes this value.
+    #[unstable]
+    fn into_iter(self) -> Self::Iterator;
+}
+
+impl<Iter> IntoIter for Iter where Iter: Iterator {
+    type Iterator = Iter;
+
+    fn into_iter(self) -> Iter { self }
+}
+
 /// An extension trait providing numerous methods applicable to all iterators.
 #[stable]
 pub trait IteratorExt: Iterator + Sized {

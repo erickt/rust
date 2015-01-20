@@ -920,6 +920,14 @@ impl Default for Bitv {
     fn default() -> Bitv { Bitv::new() }
 }
 
+impl<'a> iter::IntoIter for &'a Bitv {
+    type Iterator = Iter<'a>;
+
+    fn into_iter(self) -> Iter<'a> {
+        self.iter()
+    }
+}
+
 #[stable]
 impl FromIterator<bool> for Bitv {
     fn from_iter<I:Iterator<Item=bool>>(iterator: I) -> Bitv {

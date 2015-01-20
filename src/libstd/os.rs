@@ -36,7 +36,7 @@ use clone::Clone;
 use error::{FromError, Error};
 use fmt;
 use io::{IoResult, IoError};
-use iter::{Iterator, IteratorExt};
+use iter::{IntoIter, Iterator, IteratorExt};
 use marker::Copy;
 use libc::{c_void, c_int, c_char};
 use libc;

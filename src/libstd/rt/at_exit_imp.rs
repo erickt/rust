@@ -15,6 +15,7 @@
 use core::prelude::*;
 
 use boxed::Box;
+use iter::IntoIter;
 use vec::Vec;
 use mem;
 use thunk::Thunk;
