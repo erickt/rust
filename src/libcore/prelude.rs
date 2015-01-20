@@ -41,7 +41,7 @@ pub use mem::drop;
 pub use char::CharExt;
 pub use clone::Clone;
 pub use cmp::{PartialEq, PartialOrd, Eq, Ord};
-pub use iter::{Extend, IteratorExt};
+pub use iter::{Extend, IntoIter, IteratorExt};
 pub use iter::{Iterator, DoubleEndedIterator};
 pub use iter::{ExactSizeIterator};
 pub use option::Option::{self, Some, None};

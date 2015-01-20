@@ -294,13 +294,6 @@ impl<T> DList<T> {
         }
     }
 
-    /// Consumes the list into an iterator yielding elements by value.
-    #[inline]
-    #[stable]
-    pub fn into_iter(self) -> IntoIter<T> {
-        IntoIter{list: self}
-    }
-
     /// Returns `true` if the `DList` is empty.
     ///
     /// This operation should compute in O(1) time.
@@ -639,6 +632,28 @@ impl<T> Drop for DList<T> {
         self.length = 0;
         self.list_head = None;
         self.list_tail = Rawlink::none();
+    }
+}
+
+impl<T> iter::IntoIter for IntoIter<T> {
+    type Iterator = IntoIter<T>;
+
+    /// Consumes the list into an iterator yielding elements by value.
+    #[inline]
+    #[stable]
+    pub fn into_iter(self) -> IntoIter<T> {
+        IntoIter{list: self}
+    }
+}
+
+impl<'a, T> iter::IntoIter for &'a IntoIter<T> {
+    type Iterator = Iter<'a, T>;
+
+    /// Consumes the list into an iterator yielding elements by value.
+    #[inline]
+    #[stable]
+    pub fn into_iter(self) -> Iter<'a, T> {
+        self.iter()
     }
 }
 
