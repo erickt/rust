@@ -42,23 +42,6 @@ pub fn expand_deriving_partial_eq(cx: &mut ExtCtxt,
             Box::new(|cx, span, _, _| cx.expr_bool(span, false)),
             cx, span, substr)
     }
-    fn cs_ne(cx: &mut ExtCtxt, span: Span, substr: &Substructure) -> P<Expr> {
-        cs_fold(
-            true,  // use foldl
-            |cx, span, subexpr, self_f, other_fs| {
-                let other_f = match (other_fs.len(), other_fs.get(0)) {
-                    (1, Some(o_f)) => o_f,
-                    _ => cx.span_bug(span, "not exactly 2 arguments in `derive(PartialEq)`")
-                };
-
-                let eq = cx.expr_binary(span, ast::BiNe, self_f, other_f.clone());
-
-                cx.expr_binary(span, ast::BiOr, subexpr, eq)
-            },
-            cx.expr_bool(span, false),
-            Box::new(|cx, span, _, _| cx.expr_bool(span, true)),
-            cx, span, substr)
-    }
 
     macro_rules! md {
         ($name:expr, $f:ident) => { {
@@ -87,7 +70,6 @@ pub fn expand_deriving_partial_eq(cx: &mut ExtCtxt,
         generics: LifetimeBounds::empty(),
         methods: vec!(
             md!("eq", cs_eq),
-            md!("ne", cs_ne)
         ),
         associated_types: Vec::new(),
     };
