@@ -113,6 +113,7 @@ use crate::sys::process as imp;
 #[unstable(feature = "command_access", issue = "44434")]
 pub use crate::sys_common::process::CommandEnvs;
 use crate::sys_common::{AsInner, AsInnerMut, FromInner, IntoInner};
+use crate::sys_common::rwlock::RWLock;
 
 /// Representation of a running or exited child process.
 ///
@@ -1802,6 +1803,103 @@ pub fn id() -> u32 {
     crate::sys::os::getpid()
 }
 
+#[derive(Copy, Clone)]
+enum Hook {
+    Default,
+    Custom(*mut (dyn Fn(&dyn fmt::Debug))),
+}
+
+static HOOK_LOCK: RWLock = RWLock::new();
+static mut HOOK: Hook = Hook::Default;
+
+/// Registers a custom termination hook, replacing any that was previously registered.
+///
+/// The termination hook is invoked when `Termination::report()` is called. The default hook prints
+/// a message to stadard error, but this behavior can be customized with the `set_termination_hook`
+/// and [`take_termination_hook`] functions.
+///
+/// [`take_termination_hook`]: ./fn.take_termination_hook.html
+///
+/// The hook is provided with a `&dyn fmt::Debug` trait object which contains.
+///
+/// The termination hook is a global resource.
+///
+/// # Examples
+///
+/// The following will print "Custom termination hook: an error occurred":
+///
+/// ```
+/// use std::process;
+///
+/// fn main() -> Result<(), &'static str> {
+///     process::set_termination_hook(Box::new(|err| {
+///         println!("Custom termination hook: %s", err);
+///     }));
+///
+///     Err("an error occurred")
+/// }
+/// ```
+#[unstable(feature = "termination_hook", issue = "none")]
+pub fn set_termination_hook(hook: Box<dyn Fn(&dyn fmt::Debug)>) {
+    unsafe {
+        HOOK_LOCK.write();
+        let old_hook = HOOK;
+        HOOK = Hook::Custom(Box::into_raw(hook));
+        HOOK_LOCK.write_unlock();
+
+        if let Hook::Custom(ptr) = old_hook {
+            #[allow(unused_must_use)]
+            {
+                Box::from_raw(ptr);
+            }
+        }
+    }
+}
+
+/// Unregisters the current termination hook, returning it.
+///
+/// * See also the function [`set_termination_hook`].*
+///
+/// [`set_termination_hook`]: ./fn.set_termination_hook.html
+///
+/// If no custom hook is registered, the default hook will be returned.
+///
+/// # Examples
+///
+/// The following will print "Normal termination":
+///
+/// ```
+/// use std::process;
+///
+/// fn main() -> Result<(), &'static str> {
+///     process::set_hook(Box::new(|_| {
+///         println!("Custom termination hook");
+///     }));
+///
+///     let _ = panic::take_hook();
+///
+///     Err("Normal termination")
+/// }
+/// ```
+#[unstable(feature = "termination_hook", issue = "none")]
+pub fn take_termination_hook() -> Box<dyn Fn(&dyn fmt::Debug)> {
+    unsafe {
+        HOOK_LOCK.write();
+        let hook = HOOK;
+        HOOK = Hook::Default;
+        HOOK_LOCK.write_unlock();
+
+        match hook {
+            Hook::Default => Box::new(default_hook),
+            Hook::Custom(ptr) => Box::from_raw(ptr),
+        }
+    }
+}
+
+fn default_hook(err: &dyn fmt::Debug) {
+    eprintln!("Error: {:?}", err);
+}
+
 /// A trait for implementing arbitrary return types in the `main` function.
 ///
 /// The C-main function only supports to return integers as return type.
@@ -1851,7 +1949,18 @@ impl Termination for ! {
 impl<E: fmt::Debug> Termination for Result<!, E> {
     fn report(self) -> i32 {
         let Err(err) = self;
-        eprintln!("Error: {:?}", err);
+        unsafe {
+            HOOK_LOCK.read();
+            match HOOK {
+                Hook::Default => {
+                    default_hook(&err);
+                }
+                Hook::Custom(ptr) => {
+                    (*ptr)(&err);
+                }
+            }
+            HOOK_LOCK.read_unlock();
+        }
         ExitCode::FAILURE.report()
     }
 }
