@@ -206,6 +206,10 @@ impl TestCx<'_> {
             cmd.env("NODE", node);
         }
 
+        if let Some(ref windows_rc) = self.config.windows_rc {
+            cmd.env("RUSTC_WINDOWS_RC", windows_rc)
+        }
+
         if let Some(ref linker) = self.config.target_linker {
             cmd.env("RUSTC_LINKER", linker);
         }
