@@ -2700,6 +2700,7 @@ pub fn build_session_options(early_dcx: &mut EarlyDiagCtxt, matches: &getopts::M
     if target_triple.tuple().ends_with("fuchsia")
         || target_triple.tuple().contains("-cros-")
         || target_triple.tuple().contains("android")
+        || target_triple.tuple().contains("linux")
     {
         unstable_opts.experimental_relative_rust_abi_vtables = true;
     }
