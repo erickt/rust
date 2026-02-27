@@ -183,7 +183,11 @@ pub(crate) fn load_vtable<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
     nonnull: bool,
     load_relative: bool,
 ) -> Bx::Value {
-    let ptr_align = bx.data_layout().pointer_align().abi;
+    let ptr_align = if bx.cx().sess().opts.unstable_opts.experimental_relative_rust_abi_vtables {
+        bx.tcx().data_layout.i32_align
+    } else {
+        bx.data_layout().pointer_align().abi
+    };
 
     if bx.cx().sess().opts.unstable_opts.virtual_function_elimination
         && bx.cx().sess().lto() == Lto::Fat
@@ -191,6 +195,12 @@ pub(crate) fn load_vtable<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
         if let Some(trait_ref) = dyn_trait_in_self(bx.tcx(), ty) {
             let typeid =
                 bx.typeid_metadata(typeid_for_trait_ref(bx.tcx(), trait_ref).as_bytes()).unwrap();
+            let vtable_byte_offset =
+                if bx.cx().sess().opts.unstable_opts.experimental_relative_rust_abi_vtables {
+                    vtable_byte_offset / 2
+                } else {
+                    vtable_byte_offset
+                };
             // FIXME: Add correct intrinsic for RV here.
             let func = bx.type_checked_load(llvtable, vtable_byte_offset, typeid);
             return func;

@@ -212,7 +212,7 @@ fn unsized_info<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
                         true,
                         /*load_relative*/ true,
                     );
-                    bx.zext(val, bx.type_isize())
+                    val
                 } else {
                     load_vtable(
                         bx,

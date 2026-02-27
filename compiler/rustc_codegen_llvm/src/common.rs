@@ -321,22 +321,29 @@ impl<'ll, 'tcx> ConstCodegenMethods for CodegenCx<'ll, 'tcx> {
                     }
                     GlobalAlloc::Function { instance, .. } => self.get_fn_addr(instance),
                     GlobalAlloc::VTable(ty, dyn_ty) => {
-                        let alloc = self
+                        let principal = dyn_ty.principal().map(|principal| {
+                            self.tcx.instantiate_bound_regions_with_erased(principal)
+                        });
+                        if let Some(&vtable) = self.vtables().borrow().get(&(ty, principal)) {
+                            return vtable;
+                        }
+                        let vtable_allocation = self
                             .tcx
-                            .global_alloc(self.tcx.vtable_allocation((
-                                ty,
-                                dyn_ty.principal().map(|principal| {
-                                    self.tcx.instantiate_bound_regions_with_erased(principal)
-                                }),
-                            )))
+                            .global_alloc(self.tcx.vtable_allocation((ty, principal)))
                             .unwrap_memory();
-                        let init = const_alloc_to_llvm(
-                            self,
-                            alloc.inner(),
-                            /*static*/ false,
-                            /*vtable_base*/ None,
-                        );
-                        self.static_addr_of_impl(init, alloc.inner().align, None)
+                        let vtable_entries = if let Some(principal) = principal {
+                            let trait_ref = principal.with_self_ty(self.tcx, ty);
+                            let trait_ref = self.tcx.erase_and_anonymize_regions(trait_ref);
+                            self.tcx.vtable_entries(trait_ref)
+                        } else {
+                            TyCtxt::COMMON_VTABLE_ENTRIES
+                        };
+                        let vtable =
+                            self.construct_vtable(vtable_allocation, vtable_entries.len() as u64);
+                        self.apply_vcall_visibility_metadata(ty, principal, vtable);
+                        self.create_vtable_debuginfo(ty, principal, vtable);
+                        self.vtables().borrow_mut().insert((ty, principal), vtable);
+                        vtable
                     }
                     GlobalAlloc::Static(def_id) => {
                         assert!(self.tcx.is_static(def_id));

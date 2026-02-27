@@ -26,8 +26,8 @@ use rustc_span::{
     FileName, RealFileName, RemapPathScopeComponents, SourceFileHashAlgorithm, Symbol, sym,
 };
 use rustc_target::spec::{
-    FramePointer, LinkSelfContainedComponents, LinkerFeatures, PanicStrategy, SplitDebuginfo,
-    Target, TargetTuple,
+    FramePointer, LinkSelfContainedComponents, LinkerFeatures, PanicStrategy, SanitizerSet,
+    SplitDebuginfo, Target, TargetTuple,
 };
 use tracing::debug;
 
@@ -1611,12 +1611,10 @@ pub fn build_target_config(
             }
             target
         }
-        Err(e) => {
-            let mut err =
-                early_dcx.early_struct_fatal(format!("error loading target specification: {e}"));
-            err.help("run `rustc --print target-list` for a list of built-in targets");
-            err.emit();
-        }
+        Err(e) => early_dcx
+            .early_struct_fatal(format!("error loading target specification: {e}"))
+            .with_help("run `rustc --print target-list` for a list of built-in targets")
+            .emit(),
     }
 }
 
@@ -2694,14 +2692,11 @@ pub fn build_session_options(early_dcx: &mut EarlyDiagCtxt, matches: &getopts::M
         early_dcx.early_fatal("can't dump dependency graph without `-Z query-dep-graph`");
     }
 
-    // The rust build system doesn't have a good way of saying "cross compile these
-    // libraries for other targets with this flag", so unconditionally build these
-    // archs with relative vtables enabled by default.
-    if target_triple.tuple().ends_with("fuchsia")
-        || target_triple.tuple().contains("-cros-")
-        || target_triple.tuple().contains("android")
+    if unstable_opts.sanitizer.contains(SanitizerSet::CFI)
+        || unstable_opts.sanitizer.contains(SanitizerSet::KCFI)
+        || unstable_opts.virtual_function_elimination
     {
-        unstable_opts.experimental_relative_rust_abi_vtables = true;
+        unstable_opts.experimental_relative_rust_abi_vtables = false;
     }
 
     let logical_env = parse_logical_env(early_dcx, matches);

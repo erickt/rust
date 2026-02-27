@@ -9,8 +9,8 @@ use rustc_hir::def::DefKind;
 use rustc_hir::def_id::{DefId, LOCAL_CRATE};
 use rustc_middle::middle::codegen_fn_attrs::{CodegenFnAttrFlags, CodegenFnAttrs};
 use rustc_middle::mir::interpret::{
-    Allocation, ConstAllocation, ErrorHandled, InitChunk, Pointer, Scalar as InterpScalar,
-    read_target_uint,
+    Allocation, ConstAllocation, ErrorHandled, GlobalAlloc, InitChunk, Pointer,
+    Scalar as InterpScalar, read_target_uint,
 };
 use rustc_middle::mir::mono::MonoItem;
 use rustc_middle::ty::layout::{HasTypingEnv, LayoutOf};
@@ -82,7 +82,7 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
         let max = cx.sess().opts.unstable_opts.uninit_const_chunk_threshold;
         let allow_uninit_chunks = chunks.clone().take(max.saturating_add(1)).count() <= max;
 
-        if allow_uninit_chunks {
+        if allow_uninit_chunks || use_relative_layout {
             if use_relative_layout {
                 // Rather than being stored as a struct of pointers or byte-arrays, a relative
                 // vtable is a pure i32 array, so its components must be chunks of i32s. Here we
@@ -97,25 +97,32 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
                             let bytes =
                                 alloc.inspect_with_uninit_and_ptr_outside_interpreter(range);
                             for bytes in bytes.chunks_exact(pointer_size_bytes) {
-                                assert!(
-                                    bytes[4..pointer_size_bytes].iter().all(|&x| x == 0),
-                                    "Cannot fit constant into 4-bytes: {:?}",
-                                    bytes
-                                );
-                                let bytes: [u8; 4] = bytes[0..4].try_into().unwrap();
-                                let val: u32 = match dl.endian {
-                                    Endian::Big => u32::from_be_bytes(bytes),
-                                    Endian::Little => u32::from_le_bytes(bytes),
+                                let val: u64 = match dl.endian {
+                                    Endian::Big => {
+                                        if pointer_size_bytes == 8 {
+                                            u64::from_be_bytes(bytes.try_into().unwrap())
+                                        } else {
+                                            u32::from_be_bytes(bytes.try_into().unwrap()) as u64
+                                        }
+                                    }
+                                    Endian::Little => {
+                                        if pointer_size_bytes == 8 {
+                                            u64::from_le_bytes(bytes.try_into().unwrap())
+                                        } else {
+                                            u32::from_le_bytes(bytes.try_into().unwrap()) as u64
+                                        }
+                                    }
                                 };
-                                llvals.push(cx.const_u32(val));
+                                llvals.push(cx.const_u32(val as u32));
                             }
                         }
                         InitChunk::Uninit(range) => {
                             let len = range.end.bytes() - range.start.bytes();
-                            let val = cx.const_undef(cx.type_array(cx.type_i8(), len / 2));
-                            llvals.push(val);
+                            for _ in 0..(len / pointer_size_bytes as u64) {
+                                llvals.push(cx.const_undef(cx.type_i32()));
+                            }
                         }
-                    };
+                    }
                 }
             } else {
                 llvals.extend(chunks.map(chunk_to_llval));
@@ -173,8 +180,13 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
             );
 
             if use_relative_layout {
+                let global_alloc = cx.tcx.global_alloc(prov.alloc_id());
                 unsafe {
-                    let fptr = llvm::LLVMDSOLocalEquivalent(scalar);
+                    let fptr = if matches!(global_alloc, GlobalAlloc::Function { .. }) {
+                        llvm::LLVMDSOLocalEquivalent(scalar)
+                    } else {
+                        scalar
+                    };
                     let sub = llvm::LLVMConstSub(
                         llvm::LLVMConstPtrToInt(fptr, cx.type_i64()),
                         llvm::LLVMConstPtrToInt(vtable_base.unwrap(), cx.type_i64()),
@@ -202,10 +214,10 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
     // is a valid C string. LLVM only considers bare arrays for this optimization,
     // not arrays wrapped in a struct. LLVM handles this at:
     // https://github.com/rust-lang/llvm-project/blob/acaea3d2bb8f351b740db7ebce7d7a40b9e21488/llvm/lib/Target/TargetLoweringObjectFile.cpp#L249-L280
-    if let &[data] = &*llvals {
-        data
-    } else if use_relative_layout {
+    if use_relative_layout {
         cx.const_array(cx.type_i32(), &llvals)
+    } else if let &[data] = &*llvals {
+        data
     } else {
         cx.const_struct(&llvals, true)
     }
@@ -371,7 +383,9 @@ impl<'ll> CodegenCx<'ll, '_> {
     }
 
     pub(crate) fn static_addr_of_impl_for_gv(&self, cv: &'ll Value, gv: &'ll Value) -> &'ll Value {
-        assert!(!self.const_globals.borrow().contains_key(&cv));
+        if let Some(&gv) = self.const_globals.borrow().get(&cv) {
+            return gv;
+        }
         let mut binding = self.const_globals.borrow_mut();
         binding.insert(cv, gv);
         llvm::set_initializer(gv, cv);

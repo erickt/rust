@@ -998,6 +998,10 @@ impl<'a, 'gcc, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'gcc, 'tcx> {
         local.to_rvalue()
     }
 
+    fn load_relative(&mut self, _ptr: RValue<'gcc>, _byte_offset: RValue<'gcc>) -> RValue<'gcc> {
+        panic!("load_relative is not supported in the GCC backend yet");
+    }
+
     fn atomic_load(
         &mut self,
         _ty: Type<'gcc>,

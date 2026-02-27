@@ -327,6 +327,19 @@ impl<'gcc, 'tcx> ConstCodegenMethods for CodegenCx<'gcc, 'tcx> {
         res
     }
 
+    fn construct_vtable(
+        &self,
+        vtable_allocation: ConstAllocation<'_>,
+        _num_entries: u64,
+    ) -> Self::Value {
+        if self.sess().opts.unstable_opts.experimental_relative_rust_abi_vtables {
+            panic!("relative vtables not supported in gcc backend yet");
+        }
+        let vtable_const = self.const_data_from_alloc(vtable_allocation);
+        let align = self.data_layout().pointer_align().abi;
+        self.static_addr_of(vtable_const, align, Some("vtable"))
+    }
+
     fn const_ptr_byte_offset(&self, base_addr: Self::Value, offset: abi::Size) -> Self::Value {
         self.context
             .new_array_access(None, base_addr, self.const_usize(offset.bytes()))

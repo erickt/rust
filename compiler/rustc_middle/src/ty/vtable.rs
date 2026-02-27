@@ -141,7 +141,11 @@ pub(super) fn vtable_allocation_provider<'tcx>(
             }
             VtblEntry::TraitVPtr(trait_ref) => {
                 let super_trait_ref = ty::ExistentialTraitRef::erase_self_ty(tcx, trait_ref);
-                let supertrait_alloc_id = tcx.vtable_allocation((ty, Some(super_trait_ref)));
+                let existential_predicate = ty::ExistentialPredicate::Trait(super_trait_ref);
+                let dyn_ty =
+                    tcx.mk_poly_existential_predicates(&[ty::Binder::dummy(existential_predicate)]);
+                let supertrait_alloc_id =
+                    tcx.reserve_and_set_vtable_alloc(ty, dyn_ty, CTFE_ALLOC_SALT);
                 let vptr = Pointer::from(supertrait_alloc_id);
                 Scalar::from_pointer(vptr, &tcx)
             }
