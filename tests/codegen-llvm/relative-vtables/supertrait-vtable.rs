@@ -28,7 +28,7 @@ pub trait Diamond: A + B {
 
 #[no_mangle]
 pub fn upcast_diamond_to_b(x: Box<dyn Diamond>) -> Box<dyn B> {
-    // CHECK-LABEL: define { ptr, ptr } @upcast_diamond_to_b(ptr align 1 %x.0, ptr align 8 %x.1)
+    // CHECK-LABEL: define { ptr, ptr } @upcast_diamond_to_b(ptr align 1 %x.0, ptr align 4 %x.1)
     // CHECK: [[UPCAST_SLOT_PRT:%.+]] = {{.*}}call ptr @llvm.load.relative.i32(ptr %x.1, i32 24)
     // CHECK: [[RES0:%.+]] = insertvalue { ptr, ptr } poison, ptr %x.0, 0
     // CHECK: [[RES1:%.+]] = insertvalue { ptr, ptr } [[RES0]], ptr [[UPCAST_SLOT_PRT]], 1
