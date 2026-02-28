@@ -22,7 +22,8 @@ Before starting any work, the agent MUST:
 1.  **Sequential Execution**: Tasks should be worked on in numerical order. Each task depends on the success and implementation of the previous one.
 2.  **Descriptive Task Naming**: When creating new tasks, use a descriptive name that clearly states the task's objective (e.g., `XX_feature_name.md`).
 3.  **Experimentation**: When testing or verifying a change, save all generated LLVM IR, assembly, or binary snippets in `relative-vtables-project/experiments/` to preserve context for the next agent.
-4.  **Check-in Often**: Frequent commits are required to maintain context. Follow this commit message format:
+4.  **LSP Priority**: Prioritize using the `lsp` skill to search code (`view_file_outline`, `view_code_item`) and observe problems before shelling out to expensive build commands. Iterate on fixing LSP-reported diagnostics after editing code.
+5.  **Check-in Often**: Frequent commits are required to maintain context. Follow this commit message format:
     ```
     <concise description>
 
