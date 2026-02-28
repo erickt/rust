@@ -6,8 +6,8 @@ This document serves as a high-level guide for agents working on the implementat
 Before starting any work, the agent MUST:
 1.  Read Rust's `README.md` to understand the project structure and build system.
 2.  Read the `relative-vtables-project/design_doc.md` to understand the technical approach.
-3.  Run `./x.py build --quiet` to ensure the current state of the codebase is not broken.
-4.  Read through all tasks in `relative-vtables-project/tasks/` to understand the upcoming work.
+3.  Read through all open tasks in `relative-vtables-project/tasks/`, explore previous work in `relative-vtables-project/ideas/`, and check the latest progress in `relative-vtables-project/status`.
+4.  Run `./x.py build --quiet` to ensure the current state of the codebase is not broken.
 
 ## Project Structure
 - `relative-vtables-project/tasks/`: Contains granular, descriptively named task files (e.g., `01_compiler_flags_and_session_options.md`).
@@ -29,8 +29,9 @@ Before starting any work, the agent MUST:
     <detailed description>
     <results>
     ```
-5.  **Reference Implementation**: Refer to Clang's implementation in `src/llvm-project/clang/lib/CodeGen/CGVTables.cpp` for how LLVM's `dso_local_equivalent` and `load.relative` are used.
-6.  **Status Reporting**: Maintain a log in `relative-vtables-project/status`. Periodically append info about what you are currently doing and what you have tried that worked or did not work.
+5.  **Stop on Authentication**: If you are prompted for `gcert` or any other interactive authentication, STOP and notify the user.
+6.  **Reference Implementation**: Refer to Clang's implementation in `src/llvm-project/clang/lib/CodeGen/CGVTables.cpp` for how LLVM's `dso_local_equivalent` and `load.relative` are used.
+7.  **Status Reporting**: Maintain a log in `relative-vtables-project/status`. Periodically append info about what you are currently doing and what you have tried that worked or did not work.
 
 ## Toolchain Usage
 If you want to run the compiler you just built with `cargo`, use the following commands:
