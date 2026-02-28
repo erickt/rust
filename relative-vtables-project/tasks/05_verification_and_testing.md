@@ -14,3 +14,8 @@ Verify the implementation through comprehensive testing and ensure no regression
 
 ## Reference
 - Commit `d3518bc29f3d04a697643fbf74caee33f8f03f8c`: Improved test robustness and regex matching.
+
+## Verification
+- [ ] Run `./x.py check --stage 1 --quiet`
+- [ ] Run `./x.py test --stage 1 --skip tests/debuginfo --skip tests/rustdoc-ui`
+- [ ] **CRITICAL**: Confirm all tests pass (excluding known pre-existing failures).

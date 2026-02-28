@@ -41,12 +41,16 @@ If you want to run the compiler you just built with `cargo`, use the following c
 
 ## Testing Procedure
 Follow these steps in order to verify changes:
-1.  `./x.py check --quiet`
-2.  `./x.py build --quiet`
-3.  `./x.py test --skip tests/debuginfo --skip tests/rustdoc-ui` (skipping known failing tests).
+1.  `./x.py check --stage 1 --quiet`
+2.  `./x.py build --stage 1 --quiet`
+3.  `./x.py test --stage 1 --skip tests/debuginfo --skip tests/rustdoc-ui` (skipping known failing tests).
+    - **CRITICAL**: You MUST ensure that the test suite passes (with exceptions for known failures) before considering a task complete.
 4.  (Once tests pass) Verify with external crates (e.g., `reqwest`):
     - Without feature: `rustup run stage1 cargo build --example simple`
     - With feature: `RUSTFLAGS="-Zexperimental-relative-rust-abi-vtables=y" rustup run stage1 cargo build --example simple`
+5.  **Target Verification**: High-priority targets (Fuchsia, Android, ChromeOS) should have relative vtables enabled by default. Verify with:
+    - `rustup run stage1 rustc --target <target> --emit llvm-ir test.rs`
+    - `grep "llvm.load.relative" test.ll`
 
 ## Documentation
 Always update `relative-vtables-project/design_doc.md` if the implementation approach changes significantly. Ensure the document remains the source of truth for the design.

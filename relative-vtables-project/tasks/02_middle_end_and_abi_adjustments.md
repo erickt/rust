@@ -10,3 +10,8 @@ Update the compiler middle-end to account for the new relative vtable layout in 
 
 ## Reference
 - Commit `da587faa812aaf03df6d5319783be1a754cbd9f5`: Initial ABI adjustments in `abi.rs`.
+
+## Verification
+- [ ] Run `./x.py check --stage 1 --quiet`
+- [ ] Run `./x.py test --stage 1 --skip tests/debuginfo --skip tests/rustdoc-ui`
+- [ ] **CRITICAL**: Confirm all tests pass (excluding known pre-existing failures).
