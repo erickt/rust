@@ -734,6 +734,27 @@ extern "C" LLVMValueRef LLVMBuildLoadRelative(LLVMBuilderRef B, LLVMValueRef Ptr
   return wrap(call);
 }
 
+extern "C" LLVMValueRef LLVMBuildVTableSlotOffset(LLVMBuilderRef B,
+                                                  LLVMValueRef VTable,
+                                                  uint64_t SlotIndex) {
+  LLVMContext &Ctx = unwrap(B)->getContext();
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Type *Int64Ty = Type::getInt64Ty(Ctx);
+  Value *SlotIndexVal = ConstantInt::get(Int64Ty, SlotIndex);
+
+  Module *M = unwrap(B)->GetInsertBlock()->getModule();
+  auto ID = Intrinsic::lookupIntrinsicID("llvm.vtable.slot.offset");
+  if (ID == Intrinsic::not_intrinsic) {
+    // Fallback for when the intrinsic is not available in the LLVM version.
+    return wrap(ConstantInt::get(Int32Ty, SlotIndex * 4));
+  }
+  Function *IntrinsicFn = Intrinsic::getOrInsertDeclaration(M, ID, {Int32Ty});
+
+  Value *call =
+      unwrap(B)->CreateCall(IntrinsicFn, {unwrap(VTable), SlotIndexVal});
+  return wrap(call);
+}
+
 extern "C" uint64_t LLVMRustGetArrayNumElements(LLVMTypeRef Ty) {
   return unwrap(Ty)->getArrayNumElements();
 }

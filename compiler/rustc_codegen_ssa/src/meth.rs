@@ -210,7 +210,9 @@ pub(crate) fn load_vtable<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
     }
 
     let ptr = if load_relative {
-        bx.load_relative(llvtable, bx.const_i32(vtable_byte_offset.try_into().unwrap()))
+        let index = vtable_byte_offset / 4;
+        let vtable_slot_offset = bx.vtable_slot_offset(llvtable, index);
+        bx.load_relative(llvtable, vtable_slot_offset)
     } else {
         let gep = bx.inbounds_ptradd(llvtable, bx.const_usize(vtable_byte_offset));
         bx.load(llty, gep, ptr_align)

@@ -646,6 +646,9 @@ impl<'a, 'll, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'll, 'tcx> {
     fn load_relative(&mut self, ptr: &'ll Value, byte_offset: &'ll Value) -> &'ll Value {
         unsafe { llvm::LLVMBuildLoadRelative(self.llbuilder, ptr, byte_offset) }
     }
+    fn vtable_slot_offset(&mut self, vtable: &'ll Value, slot_index: u64) -> &'ll Value {
+        unsafe { llvm::LLVMBuildVTableSlotOffset(self.llbuilder, vtable, slot_index) }
+    }
 
     fn volatile_load(&mut self, ty: &'ll Type, ptr: &'ll Value) -> &'ll Value {
         unsafe {

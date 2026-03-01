@@ -239,6 +239,9 @@ pub trait BuilderMethods<'a, 'tcx>:
 
     fn load(&mut self, ty: Self::Type, ptr: Self::Value, align: Align) -> Self::Value;
     fn load_relative(&mut self, ptr: Self::Value, byte_offset: Self::Value) -> Self::Value;
+    fn vtable_slot_offset(&mut self, _vtable: Self::Value, byte_offset: u64) -> Self::Value {
+        self.const_i32(byte_offset.try_into().unwrap())
+    }
     fn volatile_load(&mut self, ty: Self::Type, ptr: Self::Value) -> Self::Value;
     fn atomic_load(
         &mut self,

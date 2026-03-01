@@ -1069,6 +1069,11 @@ unsafe extern "C" {
         Ptr: &'a Value,
         ByteOffset: &'a Value,
     ) -> &'a Value;
+    pub(crate) fn LLVMBuildVTableSlotOffset<'a>(
+        Builder: &Builder<'a>,
+        VTable: &'a Value,
+        SlotIndex: u64,
+    ) -> &'a Value;
 
     // Operations on attributes
     pub(crate) fn LLVMCreateStringAttribute(
