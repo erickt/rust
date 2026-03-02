@@ -1,4 +1,4 @@
-# Agent Guidance: Implementing Relative VTables in Rust
+# Agent Guidance: Implementing Relative VVTables in Rust
 
 This document serves as a high-level guide for agents working on the implementation of PIC-friendly relative vtables for Rust.
 
@@ -32,7 +32,7 @@ Before starting any work, the agent MUST:
     ```
 5.  **Stop on Authentication**: If you are prompted for `gcert` or any other interactive authentication, STOP and notify the user.
 6.  **Reference Implementation**: Refer to Clang's implementation in `src/llvm-project/clang/lib/CodeGen/CGVTables.cpp` for how LLVM's `dso_local_equivalent` and `load.relative` are used.
-7.  **Status Reporting**: Maintain a log in `relative-vtables-project/status`. Periodically append info about what you are currently doing and what you have tried that worked or did not work.
+7.  **Status Reporting**: Maintain a log in `relative-vtables-project/status`. Periodically append info about what you are currently doing and what you have tried that worked or did not work. **CRITICAL**: Do NOT overwrite or replace the status; always append new entries to the bottom of the file to preserve history.
 
 ## Toolchain Usage
 If you want to run the compiler you just built with `cargo`, use the following commands:

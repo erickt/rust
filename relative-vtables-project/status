@@ -6,3 +6,20 @@ Successfully implemented and verified the relative vtables support in Rust.
 - Task 3: Implemented LLVM codegen for relative vtable lookups using `llvm.load.relative.i32` and `llvm.vtable.slot.offset` (with fallback).
 - Verified implementation with `tests/codegen-llvm/relative-vtables/simple-vtable.rs`.
 - Completed all planned implementation tasks.
+
+2026-03-02 17:31 UTC
+---
+Transitioning to Task 4: Trait Upcasting & Complex VTable Layouts.
+- Completed Task 3: LLVM codegen for relative vtable lookups is implemented and verified.
+- Task 4 Status: In Progress.
+    - Verified that the current toolchain builds successfully (`x.py build --stage 1`).
+    - Verified that existing relative vtable codegen tests pass (`simple-vtable.rs`).
+    - Verified that standard trait upcasting and diamond inheritance UI tests pass with the current implementation.
+    - Researching "VTable Group Splitting" and its implementation in `rustc_codegen_llvm`.
+
+2026-03-02 17:51 UTC
+---
+Identified technical gaps for Task 4 implementation.
+- Found that `TraitVPtr` (supertrait vtable pointers) in `const_alloc_to_llvm` are still being emitted as absolute pointers.
+- Verified that "VTable Group Splitting" is partially implemented by virtue of `GlobalAlloc::VTable` being separate allocations, but naming and metadata might need refinement.
+- Identified that `LLVMBuildVTableSlotOffset` uses a hardcoded 4-byte multiplier as a fallback; need to ensure this is correct for all targets or use the intrinsic where possible.
