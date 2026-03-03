@@ -182,7 +182,10 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
             if use_relative_layout {
                 let global_alloc = cx.tcx.global_alloc(prov.alloc_id());
                 unsafe {
-                    let fptr = if matches!(global_alloc, GlobalAlloc::Function { .. } | GlobalAlloc::VTable(..)) {
+                    let fptr = if matches!(
+                        global_alloc,
+                        GlobalAlloc::Function { .. } | GlobalAlloc::VTable(..)
+                    ) {
                         llvm::LLVMDSOLocalEquivalent(scalar)
                     } else {
                         scalar

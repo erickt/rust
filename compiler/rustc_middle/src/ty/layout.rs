@@ -895,12 +895,12 @@ where
                                 tcx.instantiate_bound_regions_with_erased(principal)
                             }),
                         );
-                        let vtable_ty = if tcx.sess.opts.unstable_opts.experimental_relative_rust_abi_vtables
-                        {
-                            tcx.types.i32
-                        } else {
-                            tcx.types.usize
-                        };
+                        let vtable_ty =
+                            if tcx.sess.opts.unstable_opts.experimental_relative_rust_abi_vtables {
+                                tcx.types.i32
+                            } else {
+                                tcx.types.usize
+                            };
                         Ty::new_imm_ref(
                             tcx,
                             tcx.lifetimes.re_static,
