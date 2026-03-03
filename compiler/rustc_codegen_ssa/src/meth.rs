@@ -213,6 +213,10 @@ pub(crate) fn load_vtable<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
         let index = vtable_byte_offset / 4;
         let vtable_slot_offset = bx.vtable_slot_offset(llvtable, index);
         bx.load_relative(llvtable, vtable_slot_offset)
+    } else if bx.cx().sess().opts.unstable_opts.experimental_relative_rust_abi_vtables {
+        let gep = bx.inbounds_ptradd(llvtable, bx.const_usize(vtable_byte_offset));
+        let val = bx.load(bx.type_i32(), gep, ptr_align);
+        bx.zext(val, llty)
     } else {
         let gep = bx.inbounds_ptradd(llvtable, bx.const_usize(vtable_byte_offset));
         bx.load(llty, gep, ptr_align)
