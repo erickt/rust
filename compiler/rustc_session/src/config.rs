@@ -26,8 +26,8 @@ use rustc_span::{
     FileName, RealFileName, RemapPathScopeComponents, SourceFileHashAlgorithm, Symbol, sym,
 };
 use rustc_target::spec::{
-    FramePointer, LinkSelfContainedComponents, LinkerFeatures, PanicStrategy, SanitizerSet,
-    SplitDebuginfo, Target, TargetTuple,
+    FramePointer, LinkSelfContainedComponents, LinkerFeatures, PanicStrategy, SplitDebuginfo,
+    Target, TargetTuple,
 };
 use tracing::debug;
 
@@ -2700,13 +2700,6 @@ pub fn build_session_options(early_dcx: &mut EarlyDiagCtxt, matches: &getopts::M
         || target_triple.tuple().contains("android")
     {
         unstable_opts.experimental_relative_rust_abi_vtables = true;
-    }
-
-    if unstable_opts.sanitizer.contains(SanitizerSet::CFI)
-        || unstable_opts.sanitizer.contains(SanitizerSet::KCFI)
-        || unstable_opts.virtual_function_elimination
-    {
-        unstable_opts.experimental_relative_rust_abi_vtables = false;
     }
 
     let logical_env = parse_logical_env(early_dcx, matches);

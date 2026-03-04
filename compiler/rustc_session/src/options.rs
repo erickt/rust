@@ -2329,7 +2329,6 @@ options! {
         "enforce the type length limit when monomorphizing instances in codegen"),
     experimental_default_bounds: bool = (false, parse_bool, [TRACKED],
         "enable default bounds for experimental group of auto traits"),
-    // Change this to true to unconditionally build all runtimes with relative vtables.
     experimental_relative_rust_abi_vtables: bool = (false, parse_bool, [TRACKED],
         "use the relative layout for vtables"),
     export_executable_symbols: bool = (false, parse_bool, [TRACKED],

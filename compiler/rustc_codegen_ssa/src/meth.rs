@@ -201,8 +201,11 @@ pub(crate) fn load_vtable<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
                 } else {
                     vtable_byte_offset
                 };
-            // FIXME: Add correct intrinsic for RV here.
-            let func = bx.type_checked_load(llvtable, vtable_byte_offset, typeid);
+            let func = if bx.cx().sess().opts.unstable_opts.experimental_relative_rust_abi_vtables {
+                bx.type_checked_load_relative(llvtable, vtable_byte_offset, typeid)
+            } else {
+                bx.type_checked_load(llvtable, vtable_byte_offset, typeid)
+            };
             return func;
         } else if nonnull {
             bug!("load nonnull value from a vtable without a principal trait")

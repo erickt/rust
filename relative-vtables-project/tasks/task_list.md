@@ -21,4 +21,5 @@
 - [x] 03_llvm_codegen_implementation.md
 - [x] 04_trait_upcasting_and_complex_layouts.md
 - [/] 05_verification_and_testing.md
-- [ ] 06_external_crate_verification.md
+- [x] 06_external_crate_verification.md
+- [ ] 08_cfi_kcfi_support.md

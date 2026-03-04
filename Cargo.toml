@@ -57,6 +57,9 @@ exclude = [
   "tests/rustdoc-gui",
   # HACK(eddyb) This hardcodes the fact that our CI uses `/checkout/obj`.
   "obj",
+  "reqwest_test_project",
+  "ripgrep_test_project",
+  "servo_test_project",
 ]
 
 [profile.release.package.rustc_thread_pool]
