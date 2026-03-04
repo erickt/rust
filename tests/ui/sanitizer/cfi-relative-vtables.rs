@@ -1,6 +1,6 @@
-// run-pass
-// needs-sanitizer-cfi
-// compile-flags: -Zsanitizer=cfi -Clto -Ccodegen-units=1 -Copt-level=3 -Zexperimental-relative-rust-abi-vtables=y
+//@ run-pass
+//@ needs-sanitizer-cfi
+//@ compile-flags: -Zsanitizer=cfi -Clto -Ccodegen-units=1 -Copt-level=3 -Cunsafe-allow-abi-mismatch=sanitizer -Cprefer-dynamic=no
 
 trait Trait {
     fn foo(&self) -> i32;

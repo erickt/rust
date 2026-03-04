@@ -9,7 +9,7 @@ use rustc_hir::def::DefKind;
 use rustc_hir::def_id::{DefId, LOCAL_CRATE};
 use rustc_middle::middle::codegen_fn_attrs::{CodegenFnAttrFlags, CodegenFnAttrs};
 use rustc_middle::mir::interpret::{
-    Allocation, ConstAllocation, ErrorHandled, GlobalAlloc, InitChunk, Pointer,
+    Allocation, ConstAllocation, ErrorHandled, InitChunk, Pointer,
     Scalar as InterpScalar, read_target_uint,
 };
 use rustc_middle::mir::mono::MonoItem;
@@ -180,21 +180,18 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
             );
 
             if use_relative_layout {
-                let global_alloc = cx.tcx.global_alloc(prov.alloc_id());
                 unsafe {
-                    let fptr = if matches!(
-                        global_alloc,
-                        GlobalAlloc::Function { .. } | GlobalAlloc::VTable(..)
-                    ) {
-                        llvm::LLVMDSOLocalEquivalent(scalar)
-                    } else {
-                        scalar
-                    };
-                    let sub = llvm::LLVMConstSub(
+                    let fptr = llvm::LLVMDSOLocalEquivalent(scalar);
+                    let sub1 = llvm::LLVMConstSub(
                         llvm::LLVMConstPtrToInt(fptr, cx.type_i64()),
                         llvm::LLVMConstPtrToInt(vtable_base.unwrap(), cx.type_i64()),
                     );
-                    llvm::LLVMConstTrunc(sub, cx.type_i32())
+                    // Crucial fix: The C++ relative vtable ABI defines mathematical offset logic where
+                    // llvm.load.relative inherently adds the *AddressOfOffset itself* during extraction.
+                    // This means `Target = StoredOffset + vtable_base + slot_offset`.
+                    // To accurately resolve `Target`, we must store `Target - vtable_base - slot_offset`.
+                    let sub2 = llvm::LLVMConstSub(sub1, cx.const_u64(offset as u64));
+                    llvm::LLVMConstTrunc(sub2, cx.type_i32())
                 }
             } else {
                 scalar
