@@ -20,11 +20,11 @@ pub trait Diamond: A + B {
 
 // CHECK: @vtable.0 = private unnamed_addr constant [8 x i32] [
 // CHECK-SAME: i32 0, i32 0, i32 1,
-// CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[BASE_BASE:@[^ ]+Base4base[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)) to i32),
-// CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[A_A:@[^ ]+1A1a[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)) to i32),
-// CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[B_B:@[^ ]+1B1b[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)) to i32),
-// CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vtable.1 to i64), i64 ptrtoint (ptr @vtable.0 to i64)) to i32),
-// CHECK-SAME: i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[DIAMOND_DIAMOND:@[^ ]+Diamond7diamond[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)) to i32)], align 4
+// CHECK-SAME: i32 trunc (i64 sub (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[BASE_BASE:@[^ ]+Base4base[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)), i64 12) to i32),
+// CHECK-SAME: i32 trunc (i64 sub (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[A_A:@[^ ]+1A1a[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)), i64 16) to i32),
+// CHECK-SAME: i32 trunc (i64 sub (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[B_B:@[^ ]+1B1b[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)), i64 20) to i32),
+// CHECK-SAME: i32 trunc (i64 sub (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vtable.1 to i64), i64 ptrtoint (ptr @vtable.0 to i64)), i64 24) to i32),
+// CHECK-SAME: i32 trunc (i64 sub (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[DIAMOND_DIAMOND:@[^ ]+Diamond7diamond[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)), i64 28) to i32)], align 4
 
 #[no_mangle]
 pub fn upcast_diamond_to_b(x: Box<dyn Diamond>) -> Box<dyn B> {

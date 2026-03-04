@@ -50,5 +50,27 @@ We should mirror the coverage found in LLVM's `type-metadata.cpp` and `RelativeV
 ### Rust-Specific Tests
 1.  **Trait Objects**: All trait object operations (method call, `drop_in_place`).
 2.  **Supertraits**: Upcasting from child trait objects to parent trait objects.
-3.  **Cross-Crate**: Ensure vtables work correctly when the trait and implementation are in different crates.
-4.  **CFI Integration**: Explicitly test that `rustc` with CFI + relative vtables generates the correct `llvm.type.checked.load.relative` calls.
+5.  **CFI Integration**: Explicitly test that `rustc` with CFI + relative vtables generates the correct `llvm.type.checked.load.relative` calls.
+    
+## Implementation Details and Rationale
+
+The final implementation in the Rust compiler differs slightly from the initial theoretical LLVM design in order to accommodate Rust-specific ABI requirements and edge cases.
+
+### 1. 4-Byte Metadata Extraction vs 8-Byte Absolute Metadata
+When extracting the `size` and `align` components from a `dyn Trait` object, absolute vtables simply offset into an array of 8-byte pointers (`*mut u8` and `usize`). Relative vtables pack all elements sequentially as 4-byte `i32` relative offsets. 
+- **Rationale**: Rust's `load_vtable` function in the LLVM backend (`rustc_codegen_llvm/src/builder.rs`) was adjusted to properly extract a sequential 4-byte element and zero-extend it (`zext`) to machine-word size (e.g. `i64`). If we used 8-byte loads against a packed `i32` sequence, we would read two offset values simultaneously, destroying the program integrity.
+
+### 2. Upcasting and NULL Pointer Displacement
+Rust frequently relies on the capacity to represent optionally present virtual method slots and trait super-hierarchies, where unused upcasting slots might be initialized as `ptr null`.
+- **Rationale**: A relative `null` is fundamentally meaningless in algebraic offset logic. We chose to structurally emit `i32 0` directly for any function pointer slot that evaluates to `null` provenance. This guarantees the offset calculation safely skips zeroed memory slots, avoiding LLVM's integer arithmetic panicking on scalar variables lacking alloc provenance.
+
+### 3. CFI jump tables and `offset` algebra
+A critical divergence from naive `Target - Base` geometric distance calculations occurred when we enabled `-Zsanitizer=cfi`. 
+- **Rationale**: The core C++ Relative ABI relies on `llvm.load.relative.i32(ptr %vtable, i32 %offset)`, which *algebraically adds* `%offset` to the memory address loaded from `%vtable`. 
+- During `LowerTypeTests` LTO passes for CFI, LLVM explicitly substitutes relative indices. Because the intrinsic intrinsically adds the slot index internally, the constant stored in the global `.rodata` segment MUST offset this arithmetic by subtracting the target's explicit structural offset.
+- Our final layout formula is `Target - VTable_Base - Slot_Offset`. This completely eliminates jump-table tracking errors caused by LTO offset rewriting without requiring complex `libLTO` manual modifications.
+- **CRITICAL**: The `Slot_Offset` must be the geometric offset within the *relative* layout, not the absolute layout. Rust's internal `Size` algorithms yield the byte offset corresponding to 8-byte vtable slots (e.g., slot 3 = 24 bytes). Since relative vtables pack as `i32` elements, the formula must explicitly scaled to `(absolute_offset_bytes / 8) * 4`.
+
+### 4. Cross-Platform Compatibility Support
+Rather than permanently modifying every backend configuration simultaneously, the feature is tightly gated under `-Zexperimental-relative-rust-abi-vtables` and the `-Cunsafe-allow-abi-mismatch=sanitizer` pipeline.
+- **Rationale**: Different architectures have wildly distinct jump architectures (e.g. AArch64 relative adrp instructions). By bounding the new ABI to experimental flag inclusion, we can rigorously deploy the C++ conformity logic over x86_64 and progressively stabilize the LTO handling on secondary platforms over subsequent compiler release cycles.

@@ -9,8 +9,8 @@ use rustc_hir::def::DefKind;
 use rustc_hir::def_id::{DefId, LOCAL_CRATE};
 use rustc_middle::middle::codegen_fn_attrs::{CodegenFnAttrFlags, CodegenFnAttrs};
 use rustc_middle::mir::interpret::{
-    Allocation, ConstAllocation, ErrorHandled, InitChunk, Pointer,
-    Scalar as InterpScalar, read_target_uint,
+    Allocation, ConstAllocation, ErrorHandled, InitChunk, Pointer, Scalar as InterpScalar,
+    read_target_uint,
 };
 use rustc_middle::mir::mono::MonoItem;
 use rustc_middle::ty::layout::{HasTypingEnv, LayoutOf};
@@ -190,7 +190,13 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
                     // llvm.load.relative inherently adds the *AddressOfOffset itself* during extraction.
                     // This means `Target = StoredOffset + vtable_base + slot_offset`.
                     // To accurately resolve `Target`, we must store `Target - vtable_base - slot_offset`.
-                    let sub2 = llvm::LLVMConstSub(sub1, cx.const_u64(offset as u64));
+
+                    // CRITICAL: `offset` is the layout offset from the *absolute* struct allocation (8-byte pointer slots).
+                    // The relative vtable is an array of 4-byte `i32` elements.
+                    // Therefore, the true byte offset in the `i32` array is `(offset as u64 / ptr_size) * 4`.
+                    let ptr_size = cx.data_layout().pointer_size().bytes();
+                    let relative_offset = (offset as u64 / ptr_size) * 4;
+                    let sub2 = llvm::LLVMConstSub(sub1, cx.const_u64(relative_offset));
                     llvm::LLVMConstTrunc(sub2, cx.type_i32())
                 }
             } else {

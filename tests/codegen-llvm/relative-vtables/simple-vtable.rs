@@ -6,16 +6,16 @@
 // CHECK-SAME:   i32 0,
 // CHECK-SAME:   i32 4,
 // CHECK-SAME:   i32 4,
-// CHECK-SAME:   i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[STRUCT2_FOO:@[^ ]+foo[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)) to i32),
-// CHECK-SAME:   i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[STRUCT2_BAR:@[^ ]+bar[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)) to i32)
+// CHECK-SAME:   i32 trunc (i64 sub (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[STRUCT2_FOO:@[^ ]+foo[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)), i64 12) to i32),
+// CHECK-SAME:   i32 trunc (i64 sub (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[STRUCT2_BAR:@[^ ]+bar[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.0 to i64)), i64 16) to i32)
 // CHECK-SAME: ], align 4
 
 // CHECK:      @vtable.1 = private {{.*}}constant [5 x i32] [
 // CHECK-SAME:   i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[VT1_DROP_IN_PLACE:@[^ ]+drop_in_place[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.1 to i64)) to i32),
 // CHECK-SAME:   i32 24,
 // CHECK-SAME:   i32 8,
-// CHECK-SAME:   i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[STRUCT_FOO:@[^ ]+foo[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.1 to i64)) to i32),
-// CHECK-SAME:   i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[STRUCT_BAR:@[^ ]+bar[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.1 to i64)) to i32)
+// CHECK-SAME:   i32 trunc (i64 sub (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[STRUCT_FOO:@[^ ]+foo[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.1 to i64)), i64 12) to i32),
+// CHECK-SAME:   i32 trunc (i64 sub (i64 sub (i64 ptrtoint (ptr dso_local_equivalent [[STRUCT_BAR:@[^ ]+bar[^ ]*]] to i64), i64 ptrtoint (ptr @vtable.1 to i64)), i64 16) to i32)
 // CHECK-SAME: ], align 4
 
 // CHECK-DAG: define {{.*}}void [[STRUCT2_FOO]](ptr
