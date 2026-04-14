@@ -1675,7 +1675,10 @@ pub(crate) fn apply_vcall_visibility_metadata<'ll, 'tcx>(
 ) {
     // FIXME(flip1995): The virtual function elimination optimization only works with full LTO in
     // LLVM at the moment.
-    if !cx.sess().opts.unstable_opts.virtual_function_elimination || cx.sess().lto() != Lto::Fat {
+    if (!cx.sess().opts.unstable_opts.virtual_function_elimination || cx.sess().lto() != Lto::Fat)
+        && !cx.sess().is_sanitizer_cfi_enabled()
+        && !cx.sess().is_sanitizer_kcfi_enabled()
+    {
         return;
     }
 

@@ -238,6 +238,163 @@ pub trait BuilderMethods<'a, 'tcx>:
     fn alloca_with_ty(&mut self, layout: TyAndLayout<'tcx>) -> Self::Value;
 
     fn load(&mut self, ty: Self::Type, ptr: Self::Value, align: Align) -> Self::Value;
+    fn load_relative(&mut self, ptr: Self::Value, byte_offset: Self::Value) -> Self::Value;
+
+    /// Call this function whenever you need to load a vtable.
+    fn load_vtable_entry(
+        &mut self,
+        llvtable: Self::Value,
+        llty: Self::Type,
+        vtable_byte_offset: u64,
+        ty: Ty<'tcx>,
+        nonnull: bool,
+        load_relative: bool,
+    ) -> Self::Value {
+        let ptr_align = if self
+            .cx()
+            .sess()
+            .opts
+            .unstable_opts
+            .experimental_relative_rust_abi_vtables
+            .unwrap_or(false)
+        {
+            self.tcx().data_layout.i32_align
+        } else {
+            self.data_layout().pointer_align().abi
+        };
+
+        if self.cx().sess().opts.unstable_opts.virtual_function_elimination
+            && self.cx().sess().lto() == rustc_session::config::Lto::Fat
+        {
+            if let Some(trait_ref) = crate::meth::dyn_trait_in_self(self.tcx(), ty) {
+                let typeid = rustc_symbol_mangling::typeid_for_trait_ref(self.tcx(), trait_ref);
+                // vtable_byte_offset is already correct (byte offset)
+                let func = if self
+                    .cx()
+                    .sess()
+                    .opts
+                    .unstable_opts
+                    .experimental_relative_rust_abi_vtables
+                    .unwrap_or(false)
+                {
+                    self.type_checked_load_relative(llvtable, vtable_byte_offset, typeid.as_bytes())
+                } else {
+                    self.type_checked_load(llvtable, vtable_byte_offset, typeid.as_bytes())
+                };
+                return func;
+            } else if nonnull {
+                rustc_middle::bug!("load nonnull value from a vtable without a principal trait")
+            }
+        }
+
+        let ptr = if load_relative {
+            let val = self.load_relative(llvtable, self.const_i32(vtable_byte_offset as i32));
+            self.pointercast(val, llty)
+        } else if self
+            .cx()
+            .sess()
+            .opts
+            .unstable_opts
+            .experimental_relative_rust_abi_vtables
+            .unwrap_or(false)
+        {
+            let gep = self.inbounds_ptradd(llvtable, self.const_usize(vtable_byte_offset));
+            let val = self.load(self.type_i32(), gep, ptr_align);
+            self.zext(val, llty)
+        } else {
+            let gep = self.inbounds_ptradd(llvtable, self.const_usize(vtable_byte_offset));
+            self.load(llty, gep, ptr_align)
+        };
+
+        // VTable loads are invariant.
+        self.set_invariant_load(ptr);
+        // FIXME: The verifier complains with
+        //
+        //   nonnull applies only to load instructions, use attributes for calls or invokes
+        //   @llvm.load.relative.i32  (ptr nonnull %13, i32 12), !dbg !4323, !invariant.load !27, !noalias !27, !nonnull !27
+        //
+        // For now, do not mark the load relative intrinsic with nonnull, but I think it should be fine
+        // to do so since it's effectively a load.
+        if nonnull && !load_relative {
+            self.nonnull_metadata(ptr);
+        }
+        ptr
+    }
+
+    fn get_vtable_fn(
+        &mut self,
+        llvtable: Self::Value,
+        ty: Ty<'tcx>,
+        index: u64,
+        fn_abi: &FnAbi<'tcx, Ty<'tcx>>,
+    ) -> Self::Value {
+        self.get_vtable_fn_inner(llvtable, ty, index, fn_abi, true)
+    }
+
+    fn get_optional_vtable_fn(
+        &mut self,
+        llvtable: Self::Value,
+        ty: Ty<'tcx>,
+        index: u64,
+        fn_abi: &FnAbi<'tcx, Ty<'tcx>>,
+    ) -> Self::Value {
+        self.get_vtable_fn_inner(llvtable, ty, index, fn_abi, false)
+    }
+
+    fn get_vtable_fn_inner(
+        &mut self,
+        llvtable: Self::Value,
+        ty: Ty<'tcx>,
+        index: u64,
+        fn_abi: &FnAbi<'tcx, Ty<'tcx>>,
+        nonnull: bool,
+    ) -> Self::Value {
+        let is_relative = self
+            .cx()
+            .sess()
+            .opts
+            .unstable_opts
+            .experimental_relative_rust_abi_vtables
+            .unwrap_or(false);
+        let ptr_size = self.data_layout().pointer_size();
+        let vtable_byte_offset = if is_relative { index * 4 } else { index * ptr_size.bytes() };
+
+        let llty = self.fn_ptr_backend_type(fn_abi);
+        self.load_vtable_entry(
+            llvtable,
+            llty,
+            vtable_byte_offset,
+            ty,
+            nonnull,
+            /*load_relative*/ is_relative,
+        )
+    }
+
+    fn get_vtable_usize(&mut self, llvtable: Self::Value, ty: Ty<'tcx>, index: u64) -> Self::Value {
+        let is_relative = self
+            .cx()
+            .sess()
+            .opts
+            .unstable_opts
+            .experimental_relative_rust_abi_vtables
+            .unwrap_or(false);
+        let ptr_size = self.data_layout().pointer_size();
+        let vtable_byte_offset = if is_relative { index * 4 } else { index * ptr_size.bytes() };
+
+        let llty = self.type_isize();
+        self.load_vtable_entry(
+            llvtable,
+            llty,
+            vtable_byte_offset,
+            ty,
+            false,
+            /*load_relative*/ false,
+        )
+    }
+
+    fn vtable_slot_offset(&mut self, _vtable: Self::Value, byte_offset: u64) -> Self::Value {
+        self.const_i32(byte_offset.try_into().unwrap())
+    }
     fn volatile_load(&mut self, ty: Self::Type, ptr: Self::Value) -> Self::Value;
     fn atomic_load(
         &mut self,

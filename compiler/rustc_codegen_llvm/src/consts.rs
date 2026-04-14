@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use rustc_abi::{Align, HasDataLayout, Primitive, Scalar, Size, WrappingRange};
+use rustc_abi::{Align, Endian, HasDataLayout, Primitive, Scalar, Size, WrappingRange};
 use rustc_codegen_ssa::common;
 use rustc_codegen_ssa::traits::*;
 use rustc_hir::LangItem;
@@ -30,6 +30,7 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
     cx: &CodegenCx<'ll, '_>,
     alloc: &Allocation,
     is_static: bool,
+    vtable_base: Option<&'ll Value>,
 ) -> &'ll Value {
     // We expect that callers of const_alloc_to_llvm will instead directly codegen a pointer or
     // integer for any &ZST where the ZST is a constant (i.e. not a static). We should never be
@@ -45,6 +46,9 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
     let dl = cx.data_layout();
     let pointer_size = dl.pointer_size();
     let pointer_size_bytes = pointer_size.bytes() as usize;
+    let use_relative_layout =
+        cx.sess().opts.unstable_opts.experimental_relative_rust_abi_vtables.unwrap_or(false)
+            && vtable_base.is_some();
 
     // Note: this function may call `inspect_with_uninit_and_ptr_outside_interpreter`, so `range`
     // must be within the bounds of `alloc` and not contain or overlap a pointer provenance.
@@ -53,7 +57,11 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
         cx: &'a CodegenCx<'ll, 'b>,
         alloc: &'a Allocation,
         range: Range<usize>,
+        use_relative_layout: bool,
     ) {
+        let dl = cx.data_layout();
+        let pointer_size = dl.pointer_size();
+        let pointer_size_bytes = pointer_size.bytes() as usize;
         let chunks = alloc.init_mask().range_as_init_chunks(range.clone().into());
 
         let chunk_to_llval = move |chunk| match chunk {
@@ -75,8 +83,53 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
         let max = cx.sess().opts.unstable_opts.uninit_const_chunk_threshold;
         let allow_uninit_chunks = chunks.clone().take(max.saturating_add(1)).count() <= max;
 
-        if allow_uninit_chunks {
-            llvals.extend(chunks.map(chunk_to_llval));
+        if allow_uninit_chunks || use_relative_layout {
+            if use_relative_layout {
+                // Rather than being stored as a struct of pointers or byte-arrays, a relative
+                // vtable is a pure i32 array, so its components must be chunks of i32s. Here we
+                // explicitly group any sequence of bytes into i32s.
+                //
+                // Normally we can only do this if an 8-byte constant can fit into 4 bytes.
+                for chunk in chunks {
+                    match chunk {
+                        InitChunk::Init(range) => {
+                            let range =
+                                (range.start.bytes() as usize)..(range.end.bytes() as usize);
+                            let bytes =
+                                alloc.inspect_with_uninit_and_ptr_outside_interpreter(range);
+                            for bytes in bytes.chunks_exact(pointer_size_bytes) {
+                                let val: u64 = match dl.endian {
+                                    Endian::Big => {
+                                        if pointer_size_bytes == 8 {
+                                            u64::from_be_bytes(bytes.try_into().unwrap())
+                                        } else {
+                                            u32::from_be_bytes(bytes.try_into().unwrap()) as u64
+                                        }
+                                    }
+                                    Endian::Little => {
+                                        if pointer_size_bytes == 8 {
+                                            u64::from_le_bytes(bytes.try_into().unwrap())
+                                        } else {
+                                            u32::from_le_bytes(bytes.try_into().unwrap()) as u64
+                                        }
+                                    }
+                                };
+                                llvals.push(cx.const_u32(
+                                    u32::try_from(val).expect("relative vtable entry overflow"),
+                                ));
+                            }
+                        }
+                        InitChunk::Uninit(range) => {
+                            let len = range.end.bytes() - range.start.bytes();
+                            for _ in 0..(len / pointer_size_bytes as u64) {
+                                llvals.push(cx.const_undef(cx.type_i32()));
+                            }
+                        }
+                    }
+                }
+            } else {
+                llvals.extend(chunks.map(chunk_to_llval));
+            }
         } else {
             // If this allocation contains any uninit bytes, codegen as if it was initialized
             // (using some arbitrary value for uninit bytes).
@@ -94,7 +147,13 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
             // This `inspect` is okay since we have checked that there is no provenance, it
             // is within the bounds of the allocation, and it doesn't affect interpreter execution
             // (we inspect the result after interpreter execution).
-            append_chunks_of_init_and_uninit_bytes(&mut llvals, cx, alloc, next_offset..offset);
+            append_chunks_of_init_and_uninit_bytes(
+                &mut llvals,
+                cx,
+                alloc,
+                next_offset..offset,
+                use_relative_layout,
+            );
         }
         let ptr_offset = read_target_uint(
             dl.endian,
@@ -110,14 +169,39 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
 
         let address_space = cx.tcx.global_alloc(prov.alloc_id()).address_space(cx);
 
-        llvals.push(cx.scalar_to_backend(
-            InterpScalar::from_pointer(Pointer::new(prov, Size::from_bytes(ptr_offset)), &cx.tcx),
-            Scalar::Initialized {
-                value: Primitive::Pointer(address_space),
-                valid_range: WrappingRange::full(pointer_size),
-            },
-            cx.type_ptr_ext(address_space),
-        ));
+        llvals.push({
+            let scalar = cx.scalar_to_backend(
+                InterpScalar::from_pointer(
+                    Pointer::new(prov, Size::from_bytes(ptr_offset)),
+                    &cx.tcx,
+                ),
+                Scalar::Initialized {
+                    value: Primitive::Pointer(address_space),
+                    valid_range: WrappingRange::full(pointer_size),
+                },
+                cx.type_ptr_ext(address_space),
+            );
+
+            if use_relative_layout {
+                unsafe {
+                    let target = if cx.tcx.sess.is_sanitizer_cfi_enabled() {
+                        scalar
+                    } else {
+                        llvm::LLVMDSOLocalEquivalent(scalar)
+                    };
+                    let vtable_base_int =
+                        llvm::LLVMConstPtrToInt(vtable_base.unwrap(), cx.type_i64());
+                    let sub1 = llvm::LLVMConstSub(
+                        llvm::LLVMConstPtrToInt(target, cx.type_i64()),
+                        vtable_base_int,
+                    );
+                    llvm::LLVMConstTrunc(sub1, cx.type_i32())
+                }
+            } else {
+                scalar
+            }
+        });
+
         next_offset = offset + pointer_size_bytes;
     }
     if alloc.len() >= next_offset {
@@ -125,7 +209,7 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
         // This `inspect` is okay since we have check that it is after all provenance, it is
         // within the bounds of the allocation, and it doesn't affect interpreter execution (we
         // inspect the result after interpreter execution).
-        append_chunks_of_init_and_uninit_bytes(&mut llvals, cx, alloc, range);
+        append_chunks_of_init_and_uninit_bytes(&mut llvals, cx, alloc, range, use_relative_layout);
     }
 
     // Avoid wrapping in a struct if there is only a single value. This ensures
@@ -133,7 +217,13 @@ pub(crate) fn const_alloc_to_llvm<'ll>(
     // is a valid C string. LLVM only considers bare arrays for this optimization,
     // not arrays wrapped in a struct. LLVM handles this at:
     // https://github.com/rust-lang/llvm-project/blob/acaea3d2bb8f351b740db7ebce7d7a40b9e21488/llvm/lib/Target/TargetLoweringObjectFile.cpp#L249-L280
-    if let &[data] = &*llvals { data } else { cx.const_struct(&llvals, true) }
+    if use_relative_layout {
+        cx.const_array(cx.type_i32(), &llvals)
+    } else if let &[data] = &*llvals {
+        data
+    } else {
+        cx.const_struct(&llvals, true)
+    }
 }
 
 fn codegen_static_initializer<'ll, 'tcx>(
@@ -141,7 +231,7 @@ fn codegen_static_initializer<'ll, 'tcx>(
     def_id: DefId,
 ) -> Result<(&'ll Value, ConstAllocation<'tcx>), ErrorHandled> {
     let alloc = cx.tcx.eval_static_initializer(def_id)?;
-    Ok((const_alloc_to_llvm(cx, alloc.inner(), /*static*/ true), alloc))
+    Ok((const_alloc_to_llvm(cx, alloc.inner(), /*static*/ true, /*vtable_base*/ None), alloc))
 }
 
 fn set_global_alignment<'ll>(cx: &CodegenCx<'ll, '_>, gv: &'ll Value, mut align: Align) {
@@ -239,20 +329,30 @@ impl<'ll> CodegenCx<'ll, '_> {
         align: Align,
         kind: Option<&str>,
     ) -> &'ll Value {
+        let gv = self.static_addr_of_mut_from_type(self.val_ty(cv), align, kind);
+        llvm::set_initializer(gv, cv);
+        gv
+    }
+
+    pub(crate) fn static_addr_of_mut_from_type(
+        &self,
+        ty: &'ll Type,
+        align: Align,
+        kind: Option<&str>,
+    ) -> &'ll Value {
         let gv = match kind {
             Some(kind) if !self.tcx.sess.fewer_names() => {
                 let name = self.generate_local_symbol_name(kind);
-                let gv = self.define_global(&name, self.val_ty(cv)).unwrap_or_else(|| {
+                let gv = self.define_global(&name, ty).unwrap_or_else(|| {
                     bug!("symbol `{}` is already defined", name);
                 });
                 gv
             }
-            _ => self.define_global("", self.val_ty(cv)).unwrap_or_else(|| {
+            _ => self.define_global("", ty).unwrap_or_else(|| {
                 bug!("anonymous global symbol is already defined");
             }),
         };
         llvm::set_linkage(gv, llvm::Linkage::PrivateLinkage);
-        llvm::set_initializer(gv, cv);
         set_global_alignment(self, gv, align);
         llvm::set_unnamed_address(gv, llvm::UnnamedAddr::Global);
         gv
@@ -282,6 +382,17 @@ impl<'ll> CodegenCx<'ll, '_> {
         llvm::set_global_constant(gv, true);
 
         self.const_globals.borrow_mut().insert(cv, gv);
+        gv
+    }
+
+    pub(crate) fn static_addr_of_impl_for_gv(&self, cv: &'ll Value, gv: &'ll Value) -> &'ll Value {
+        if let Some(&gv) = self.const_globals.borrow().get(&cv) {
+            return gv;
+        }
+        let mut binding = self.const_globals.borrow_mut();
+        binding.insert(cv, gv);
+        llvm::set_initializer(gv, cv);
+        llvm::set_global_constant(gv, true);
         gv
     }
 
@@ -775,7 +886,7 @@ impl<'ll> StaticCodegenMethods for CodegenCx<'ll, '_> {
     fn static_addr_of(&self, alloc: ConstAllocation<'_>, kind: Option<&str>) -> &'ll Value {
         // FIXME: should we cache `const_alloc_to_llvm` to avoid repeating this for the
         // same `ConstAllocation`?
-        let cv = const_alloc_to_llvm(self, alloc.inner(), /*static*/ false);
+        let cv = const_alloc_to_llvm(self, alloc.inner(), /*static*/ false, None);
 
         let gv = self.static_addr_of_impl(cv, alloc.inner().align, kind);
         // static_addr_of_impl returns the bare global variable, which might not be in the default

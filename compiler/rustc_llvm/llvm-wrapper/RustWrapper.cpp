@@ -140,6 +140,10 @@ extern "C" void LLVMRustSetLastError(const char *Err) {
   LastError = strdup(Err);
 }
 
+extern "C" LLVMValueRef LLVMDSOLocalEquivalent(LLVMValueRef GlobalVal) {
+  return wrap(DSOLocalEquivalent::get(unwrap<GlobalValue>(GlobalVal)));
+}
+
 extern "C" void LLVMRustSetNormalizedTarget(LLVMModuleRef M,
                                             const char *Target) {
   unwrap(M)->setTargetTriple(Triple(Triple::normalize(Target)));
@@ -718,6 +722,35 @@ extern "C" void LLVMRustSetAllowReassoc(LLVMValueRef V) {
   if (auto I = dyn_cast<Instruction>(unwrap<Value>(V))) {
     I->setHasAllowReassoc(true);
   }
+}
+
+extern "C" LLVMValueRef LLVMBuildLoadRelative(LLVMBuilderRef B, LLVMValueRef Ptr,
+                                              LLVMValueRef ByteOffset) {
+  Type *Int32Ty = Type::getInt32Ty(unwrap(B)->getContext());
+  Value *call = unwrap(B)->CreateIntrinsic(
+      Intrinsic::load_relative, {Int32Ty}, {unwrap(Ptr), unwrap(ByteOffset)});
+  return wrap(call);
+}
+
+extern "C" LLVMValueRef LLVMBuildVTableSlotOffset(LLVMBuilderRef B,
+                                                  LLVMValueRef VTable,
+                                                  uint64_t SlotIndex) {
+  LLVMContext &Ctx = unwrap(B)->getContext();
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Type *Int64Ty = Type::getInt64Ty(Ctx);
+  Value *SlotIndexVal = ConstantInt::get(Int64Ty, SlotIndex);
+
+  Module *M = unwrap(B)->GetInsertBlock()->getModule();
+  auto ID = Intrinsic::lookupIntrinsicID("llvm.vtable.slot.offset");
+  if (ID == Intrinsic::not_intrinsic) {
+    // Fallback for when the intrinsic is not available in the LLVM version.
+    return wrap(ConstantInt::get(Int32Ty, SlotIndex * 4));
+  }
+  Function *IntrinsicFn = Intrinsic::getOrInsertDeclaration(M, ID, {Int32Ty});
+
+  Value *call =
+      unwrap(B)->CreateCall(IntrinsicFn, {unwrap(VTable), SlotIndexVal});
+  return wrap(call);
 }
 
 // Enable the NSZ flag on the given instruction.

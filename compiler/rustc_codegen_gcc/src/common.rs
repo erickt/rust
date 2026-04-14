@@ -5,7 +5,7 @@ use rustc_codegen_ssa::traits::{
     BaseTypeCodegenMethods, ConstCodegenMethods, MiscCodegenMethods, StaticCodegenMethods,
 };
 use rustc_middle::mir::Mutability;
-use rustc_middle::mir::interpret::{GlobalAlloc, PointerArithmetic, Scalar};
+use rustc_middle::mir::interpret::{ConstAllocation, GlobalAlloc, PointerArithmetic, Scalar};
 use rustc_middle::ty::layout::LayoutOf;
 
 use crate::consts::const_alloc_to_gcc;
@@ -315,6 +315,33 @@ impl<'gcc, 'tcx> ConstCodegenMethods for CodegenCx<'gcc, 'tcx> {
                 }
             }
         }
+    }
+
+    fn const_data_from_alloc(&self, alloc: ConstAllocation<'_>) -> Self::Value {
+        // We ignore the alignment for the purpose of deduping RValues
+        // The alignment is not handled / used in any way by `const_alloc_to_gcc`,
+        // so it is OK to overwrite it here.
+        let mut mock_alloc = alloc.inner().clone();
+        mock_alloc.align = rustc_abi::Align::MAX;
+        // Check if the rvalue is already in the cache - if so, just return it directly.
+        if let Some(res) = self.const_cache.borrow().get(&mock_alloc) {
+            return *res;
+        }
+        // Rvalue not in the cache - convert and add it.
+        let res = crate::consts::const_alloc_to_gcc_uncached(self, alloc);
+        self.const_cache.borrow_mut().insert(mock_alloc, res);
+        res
+    }
+
+    fn construct_vtable(
+        &self,
+        vtable_allocation: ConstAllocation<'_>,
+        _num_entries: u64,
+    ) -> Self::Value {
+        if self.sess().opts.unstable_opts.experimental_relative_rust_abi_vtables.unwrap_or(false) {
+            panic!("relative vtables not supported in gcc backend yet");
+        }
+        self.static_addr_of(vtable_allocation, Some("vtable"))
     }
 
     fn const_ptr_byte_offset(&self, base_addr: Self::Value, offset: abi::Size) -> Self::Value {

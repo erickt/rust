@@ -1,6 +1,6 @@
 //! This file tests that we correctly generate GEP instructions for DST
 //! field offsets.
-//@ compile-flags: -C no-prepopulate-passes -Copt-level=0
+//@ compile-flags: -C no-prepopulate-passes -Copt-level=0 -Zexperimental-relative-rust-abi-vtables=n
 
 #![crate_type = "lib"]
 #![feature(extern_types, sized_hierarchy)]

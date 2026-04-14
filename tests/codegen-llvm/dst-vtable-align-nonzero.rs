@@ -1,4 +1,4 @@
-//@ compile-flags: -Copt-level=3 -Z merge-functions=disabled
+//@ compile-flags: -Copt-level=3 -Z merge-functions=disabled -Zexperimental-relative-rust-abi-vtables=n
 
 #![crate_type = "lib"]
 #![feature(core_intrinsics)]

@@ -2692,6 +2692,37 @@ pub fn build_session_options(early_dcx: &mut EarlyDiagCtxt, matches: &getopts::M
         early_dcx.early_fatal("can't dump dependency graph without `-Z query-dep-graph`");
     }
 
+    // Enable relative vtables by default for certain targets if requested by bootstrap.
+    //
+    // This is needed for bootstrapping the Rust compiler: the Stage 1 compiler would
+    // otherwise force relative vtables on for host tools (like build scripts) that
+    // link against the Stage 0 standard library (which doesn't use relative vtables),
+    // causing ABI mismatches. By checking for `is_none()`, we allow bootstrap to
+    // explicitly disable it for those host tools.
+    if unstable_opts.experimental_relative_rust_abi_vtables.is_none() {
+        if option_env!("CFG_EXPERIMENTAL_RELATIVE_VTABLES").is_some()
+            && (target_triple.tuple().ends_with("fuchsia")
+                || target_triple.tuple().contains("-cros-")
+                || target_triple.tuple().contains("android")
+                || target_triple.tuple().contains("-linux-"))
+        {
+            unstable_opts.experimental_relative_rust_abi_vtables = Some(true);
+        }
+    }
+
+    if unstable_opts.experimental_relative_rust_abi_vtables.unwrap_or(false) {
+        let target_supported = target_triple.tuple().ends_with("fuchsia")
+            || target_triple.tuple().contains("-cros-")
+            || target_triple.tuple().contains("android")
+            || target_triple.tuple().contains("-linux-");
+        if !target_supported {
+            early_dcx.early_fatal(format!(
+                "relative vtables are not supported for target `{}`",
+                target_triple.tuple()
+            ));
+        }
+    }
+
     let logical_env = parse_logical_env(early_dcx, matches);
 
     let sysroot = Sysroot::new(matches.opt_str("sysroot").map(PathBuf::from));

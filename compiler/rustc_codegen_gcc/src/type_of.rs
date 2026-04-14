@@ -384,4 +384,8 @@ impl<'gcc, 'tcx> LayoutTypeCodegenMethods<'tcx> for CodegenCx<'gcc, 'tcx> {
         let FnAbiGcc { return_type, arguments_type, is_c_variadic, .. } = fn_abi.gcc_type(self);
         self.context.new_function_pointer_type(None, return_type, &arguments_type, is_c_variadic)
     }
+
+    fn vtable_component_type(&self, fn_abi: &FnAbi<'tcx, Ty<'tcx>>) -> Type<'gcc> {
+        self.fn_ptr_backend_type(fn_abi)
+    }
 }

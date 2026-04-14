@@ -727,6 +727,23 @@ impl Builder<'_> {
             rustflags.arg("-Zrandomize-layout");
         }
 
+        if self.config.rust_experimental_relative_vtables {
+            // Enable relative vtables for target libraries and the compiler itself
+            // when built by stage 1+.
+            if build_compiler_stage >= 1 {
+                rustflags.arg("-Zexperimental-relative-rust-abi-vtables=y");
+            }
+            // For stage 1 host tools, disable relative vtables because they link against
+            // the stage 1 compiler (built by stage 0), which uses standard vtables.
+            // For stage 2+ host tools, enable relative vtables as the stage 2 compiler
+            // they link against is built with relative vtables.
+            if build_compiler_stage == 1 {
+                hostflags.arg("-Zexperimental-relative-rust-abi-vtables=n");
+            } else if build_compiler_stage >= 2 {
+                hostflags.arg("-Zexperimental-relative-rust-abi-vtables=y");
+            }
+        }
+
         // Enable compile-time checking of `cfg` names, values and Cargo `features`.
         //
         // Note: `std`, `alloc` and `core` imports some dependencies by #[path] (like
@@ -1319,6 +1336,10 @@ impl Builder<'_> {
 
         // Set this for all builds to make sure doc builds also get it.
         cargo.env("CFG_RELEASE_CHANNEL", &self.config.channel);
+
+        if self.config.rust_experimental_relative_vtables {
+            cargo.env("CFG_EXPERIMENTAL_RELATIVE_VTABLES", "1");
+        }
 
         // verbose cargo output is very noisy, so only enable it with -vv
         for _ in 0..self.verbosity.saturating_sub(1) {

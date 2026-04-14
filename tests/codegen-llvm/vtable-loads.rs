@@ -1,4 +1,4 @@
-//@ compile-flags: -Copt-level=3
+//@ compile-flags: -Copt-level=3 -Zexperimental-relative-rust-abi-vtables=n
 
 #![crate_type = "lib"]
 

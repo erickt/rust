@@ -12,7 +12,7 @@ use rustc_data_structures::stable_hasher::{HashStable, StableHasher};
 use rustc_hashes::Hash128;
 use rustc_hir::def_id::DefId;
 use rustc_middle::bug;
-use rustc_middle::mir::interpret::{GlobalAlloc, PointerArithmetic, Scalar};
+use rustc_middle::mir::interpret::{ConstAllocation, GlobalAlloc, PointerArithmetic, Scalar};
 use rustc_middle::ty::TyCtxt;
 use rustc_session::cstore::DllImport;
 use tracing::debug;
@@ -297,8 +297,12 @@ impl<'ll, 'tcx> ConstCodegenMethods for CodegenCx<'ll, 'tcx> {
                                 self.const_bitcast(llval, llty)
                             };
                         } else {
-                            let init =
-                                const_alloc_to_llvm(self, alloc.inner(), /*static*/ false);
+                            let init = const_alloc_to_llvm(
+                                self,
+                                alloc.inner(),
+                                /*static*/ false,
+                                /*vtable_base*/ None,
+                            );
                             let alloc = alloc.inner();
                             let value = match alloc.mutability {
                                 Mutability::Mut => self.static_addr_of_mut(init, alloc.align, None),
@@ -321,17 +325,29 @@ impl<'ll, 'tcx> ConstCodegenMethods for CodegenCx<'ll, 'tcx> {
                     }
                     GlobalAlloc::Function { instance, .. } => self.get_fn_addr(instance),
                     GlobalAlloc::VTable(ty, dyn_ty) => {
-                        let alloc = self
+                        let principal = dyn_ty.principal().map(|principal| {
+                            self.tcx.instantiate_bound_regions_with_erased(principal)
+                        });
+                        if let Some(&vtable) = self.vtables().borrow().get(&(ty, principal)) {
+                            return vtable;
+                        }
+                        let vtable_allocation = self
                             .tcx
-                            .global_alloc(self.tcx.vtable_allocation((
-                                ty,
-                                dyn_ty.principal().map(|principal| {
-                                    self.tcx.instantiate_bound_regions_with_erased(principal)
-                                }),
-                            )))
+                            .global_alloc(self.tcx.vtable_allocation((ty, principal)))
                             .unwrap_memory();
-                        let init = const_alloc_to_llvm(self, alloc.inner(), /*static*/ false);
-                        self.static_addr_of_impl(init, alloc.inner().align, None)
+                        let vtable_entries = if let Some(principal) = principal {
+                            let trait_ref = principal.with_self_ty(self.tcx, ty);
+                            let trait_ref = self.tcx.erase_and_anonymize_regions(trait_ref);
+                            self.tcx.vtable_entries(trait_ref)
+                        } else {
+                            TyCtxt::COMMON_VTABLE_ENTRIES
+                        };
+                        let vtable =
+                            self.construct_vtable(vtable_allocation, vtable_entries.len() as u64);
+                        self.apply_vcall_visibility_metadata(ty, principal, vtable);
+                        self.create_vtable_debuginfo(ty, principal, vtable);
+                        self.vtables().borrow_mut().insert((ty, principal), vtable);
+                        vtable
                     }
                     GlobalAlloc::Static(def_id) => {
                         assert!(self.tcx.is_static(def_id));
@@ -360,6 +376,38 @@ impl<'ll, 'tcx> ConstCodegenMethods for CodegenCx<'ll, 'tcx> {
                     self.const_bitcast(llval, llty)
                 }
             }
+        }
+    }
+
+    fn const_data_from_alloc(&self, alloc: ConstAllocation<'_>) -> Self::Value {
+        const_alloc_to_llvm(self, alloc.inner(), /*static*/ false, /*vtable_base*/ None)
+    }
+
+    fn construct_vtable(
+        &self,
+        vtable_allocation: ConstAllocation<'_>,
+        num_entries: u64,
+    ) -> Self::Value {
+        // When constructing relative vtables, we need to create the global first before creating
+        // the initializer so the initializer has references to the global we will bind it to.
+        // Regular vtables aren't self-referential so we can just create the initializer on its
+        // own.
+        if self.sess().opts.unstable_opts.experimental_relative_rust_abi_vtables.unwrap_or(false) {
+            let llty = self.type_array(self.type_i32(), num_entries);
+            let vtable = self.static_addr_of_mut_from_type(
+                llty,
+                self.data_layout().i32_align,
+                Some("vtable"),
+            );
+            let init = const_alloc_to_llvm(
+                self,
+                vtable_allocation.inner(),
+                /*static*/ false,
+                Some(vtable),
+            );
+            self.static_addr_of_impl_for_gv(init, vtable)
+        } else {
+            self.static_addr_of(vtable_allocation, Some("vtable"))
         }
     }
 

@@ -17,6 +17,7 @@ define_config! {
         codegen_units_std: Option<u32> = "codegen-units-std",
         rustc_debug_assertions: Option<bool> = "debug-assertions",
         randomize_layout: Option<bool> = "randomize-layout",
+        experimental_relative_vtables: Option<bool> = "experimental-relative-vtables",
         std_debug_assertions: Option<bool> = "debug-assertions-std",
         tools_debug_assertions: Option<bool> = "debug-assertions-tools",
         overflow_checks: Option<bool> = "overflow-checks",
@@ -332,6 +333,7 @@ pub fn check_incompatible_options_for_ci_rustc(
         std_features,
 
         // Rest of the options can simply be ignored.
+        experimental_relative_vtables: _,
         incremental: _,
         debug: _,
         codegen_units: _,

@@ -45,11 +45,10 @@ use crate::back::write::{
     submit_codegened_module_to_llvm, submit_post_lto_module_to_llvm, submit_pre_lto_module_to_llvm,
 };
 use crate::common::{self, IntPredicate, RealPredicate, TypeKind};
-use crate::meth::load_vtable;
 use crate::mir::operand::OperandValue;
 use crate::mir::place::PlaceRef;
 use crate::traits::*;
-use crate::{CachedModuleCodegen, CodegenLintLevels, CrateInfo, ModuleCodegen, errors, meth, mir};
+use crate::{CachedModuleCodegen, CodegenLintLevels, CrateInfo, ModuleCodegen, errors, mir};
 
 pub(crate) fn bin_op_to_icmp_predicate(op: BinOp, signed: bool) -> IntPredicate {
     match (op, signed) {
@@ -201,14 +200,40 @@ fn unsized_info<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
 
             if let Some(entry_idx) = vptr_entry_idx {
                 let ptr_size = bx.data_layout().pointer_size();
-                let vtable_byte_offset = u64::try_from(entry_idx).unwrap() * ptr_size.bytes();
-                load_vtable(bx, old_info, bx.type_ptr(), vtable_byte_offset, source, true)
+                if bx
+                    .cx()
+                    .sess()
+                    .opts
+                    .unstable_opts
+                    .experimental_relative_rust_abi_vtables
+                    .unwrap_or(false)
+                {
+                    let vtable_byte_offset = u64::try_from(entry_idx).unwrap() * 4;
+                    let val = bx.load_vtable_entry(
+                        old_info,
+                        bx.type_ptr(),
+                        vtable_byte_offset,
+                        source,
+                        true,
+                        true,
+                    );
+                    val
+                } else {
+                    let vtable_byte_offset = u64::try_from(entry_idx).unwrap() * ptr_size.bytes();
+                    bx.load_vtable_entry(
+                        old_info,
+                        bx.type_ptr(),
+                        vtable_byte_offset,
+                        source,
+                        true,
+                        false,
+                    )
+                }
             } else {
                 old_info
             }
         }
-        (_, ty::Dynamic(data, _)) => meth::get_vtable(
-            cx,
+        (_, ty::Dynamic(data, _)) => cx.get_vtable(
             source,
             data.principal()
                 .map(|principal| bx.tcx().instantiate_bound_regions_with_erased(principal)),

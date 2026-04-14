@@ -55,6 +55,15 @@ fn main() {
         ("RUSTC_REAL", "RUSTC_LIBDIR")
     };
 
+    // The stage0 compiler doesn't understand `-Zexperimental-relative-rust-abi-vtables`,
+    // so we must strip it when compiling build scripts.
+    if is_build_script {
+        args.retain(|arg| {
+            let s = arg.to_str().unwrap_or("");
+            !s.starts_with("-Zexperimental-relative-rust-abi-vtables")
+        });
+    }
+
     let sysroot = env::var_os("RUSTC_SYSROOT").expect("RUSTC_SYSROOT was not set");
     let on_fail = env::var_os("RUSTC_ON_FAIL").map(Command::new);
 
@@ -164,7 +173,17 @@ fn main() {
         // Find any host flags that were passed by bootstrap.
         // The flags are stored in a RUSTC_HOST_FLAGS variable, separated by spaces.
         if let Ok(flags) = std::env::var("RUSTC_HOST_FLAGS") {
-            cmd.args(flags.split(' '));
+            if is_build_script {
+                // The stage0 compiler doesn't understand `-Zexperimental-relative-rust-abi-vtables`,
+                // so we must strip it when compiling build scripts.
+                cmd.args(
+                    flags
+                        .split(' ')
+                        .filter(|arg| !arg.starts_with("-Zexperimental-relative-rust-abi-vtables")),
+                );
+            } else {
+                cmd.args(flags.split(' '));
+            }
         }
     }
 

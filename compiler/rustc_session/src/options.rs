@@ -2426,6 +2426,12 @@ options! {
         "enforce the type length limit when monomorphizing instances in codegen"),
     experimental_default_bounds: bool = (false, parse_bool, [TRACKED],
         "enable default bounds for experimental group of auto traits"),
+    // This is needed for bootstrapping the Rust compiler: the Stage 1 compiler would
+    // otherwise force relative vtables on for host tools (like build scripts) that
+    // link against the Stage 0 standard library (which doesn't use relative vtables),
+    // causing ABI mismatches.
+    experimental_relative_rust_abi_vtables: Option<bool> = (None, parse_opt_bool, [TRACKED],
+        "use the relative layout for vtables"),
     export_executable_symbols: bool = (false, parse_bool, [TRACKED],
         "export symbols from executables, as if they were dynamic libraries"),
     external_clangrt: bool = (false, parse_bool, [UNTRACKED],

@@ -218,6 +218,7 @@ pub struct Config {
     pub rust_verify_llvm_ir: bool,
     pub rust_thin_lto_import_instr_limit: Option<u32>,
     pub rust_randomize_layout: bool,
+    pub rust_experimental_relative_vtables: bool,
     pub rust_remap_debuginfo: bool,
     pub rust_new_symbol_mangling: Option<bool>,
     pub rust_annotate_moves_size_limit: Option<u64>,
@@ -548,6 +549,7 @@ impl Config {
             backtrace: rust_backtrace,
             incremental: rust_incremental,
             randomize_layout: rust_randomize_layout,
+            experimental_relative_vtables: rust_experimental_relative_vtables,
             default_linker: rust_default_linker,
             channel: rust_channel,
             musl_root: rust_musl_root,
@@ -1451,6 +1453,7 @@ impl Config {
             rust_debuginfo_level_tests: rust_debuginfo_level_tests.unwrap_or(DebuginfoLevel::None),
             rust_debuginfo_level_tools: with_defaults(rust_debuginfo_level_tools),
             rust_dist_src: dist_src_tarball.unwrap_or_else(|| rust_dist_src.unwrap_or(true)),
+            rust_experimental_relative_vtables: rust_experimental_relative_vtables.unwrap_or(false),
             rust_frame_pointers: rust_frame_pointers.unwrap_or(false),
             rust_info,
             rust_lto: rust_lto

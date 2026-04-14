@@ -898,6 +898,14 @@ impl Size {
         if bytes < dl.obj_size_bound() { Some(Size::from_bytes(bytes)) } else { None }
     }
 
+    #[inline]
+    pub fn checked_div<C: HasDataLayout>(self, count: u64, cx: &C) -> Option<Size> {
+        let dl = cx.data_layout();
+
+        let bytes = self.bytes().checked_div(count)?;
+        if bytes < dl.obj_size_bound() { Some(Size::from_bytes(bytes)) } else { None }
+    }
+
     /// Truncates `value` to `self` bits and then sign-extends it to 128 bits
     /// (i.e., if it is negative, fill with 1's on the left).
     #[inline]

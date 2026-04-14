@@ -43,6 +43,14 @@ pub trait IntrinsicCallBuilderMethods<'tcx>: BackendTypes {
         vtable_byte_offset: u64,
         typeid: &[u8],
     ) -> Self::Value;
+    /// Trait method used to load a function while testing if it is associated with a type
+    /// identifier, using a relative vtable.
+    fn type_checked_load_relative(
+        &mut self,
+        llvtable: Self::Value,
+        vtable_slot_offset: u64,
+        typeid: &[u8],
+    ) -> Self::Value;
     /// Trait method used to inject `va_start` on the "spoofed" `VaList` in
     /// Rust defined C-variadic functions.
     fn va_start(&mut self, val: Self::Value) -> Self::Value;

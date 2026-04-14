@@ -20,11 +20,11 @@ use super::operand::OperandRef;
 use super::operand::OperandValue::{Immediate, Pair, Ref, ZeroSized};
 use super::place::{PlaceRef, PlaceValue};
 use super::{CachedLlbb, FunctionCx, LocalRef};
+use crate::MemFlags;
 use crate::base::{self, is_call_from_compiler_builtins_to_upstream_monomorphization};
 use crate::common::{self, IntPredicate};
 use crate::errors::CompilerBuiltinsCannotCall;
 use crate::traits::*;
-use crate::{MemFlags, meth};
 
 // Indicates if we are in the middle of merging a BB's successor into it. This
 // can happen when BB jumps directly to its successor and the successor has no
@@ -620,7 +620,7 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
             args1 = [place.val.llval];
             &args1[..]
         };
-        let (maybe_null, drop_fn, fn_abi, drop_instance) = match ty.kind() {
+        let (maybe_null, drop_fn, fn_abi, drop_instance, vtable) = match ty.kind() {
             // FIXME(eddyb) perhaps move some of this logic into
             // `Instance::resolve_drop_in_place`?
             ty::Dynamic(_, _) => {
@@ -649,10 +649,15 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
                 args = &args[..1];
                 (
                     true,
-                    meth::VirtualIndex::from_index(ty::COMMON_VTABLE_ENTRIES_DROPINPLACE)
-                        .get_optional_fn(bx, vtable, ty, fn_abi),
+                    bx.get_optional_vtable_fn(
+                        vtable,
+                        ty,
+                        ty::COMMON_VTABLE_ENTRIES_DROPINPLACE as u64,
+                        fn_abi,
+                    ),
                     fn_abi,
                     virtual_drop,
+                    Some(vtable),
                 )
             }
             _ => (
@@ -660,6 +665,7 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
                 bx.get_fn_addr(drop_fn),
                 bx.fn_abi_of_instance(drop_fn, ty::List::empty()),
                 drop_fn,
+                None,
             ),
         };
 
@@ -667,10 +673,24 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
         // generated for no-op drops.
         if maybe_null {
             let is_not_null = bx.append_sibling_block("is_not_null");
-            let llty = bx.fn_ptr_backend_type(fn_abi);
-            let null = bx.const_null(llty);
-            let non_null =
-                bx.icmp(base::bin_op_to_icmp_predicate(mir::BinOp::Ne, false), drop_fn, null);
+            let non_null = if bx
+                .cx()
+                .sess()
+                .opts
+                .unstable_opts
+                .experimental_relative_rust_abi_vtables
+                .unwrap_or(false)
+            {
+                bx.icmp(
+                    base::bin_op_to_icmp_predicate(mir::BinOp::Ne, /*signed*/ false),
+                    drop_fn,
+                    vtable.unwrap(),
+                )
+            } else {
+                let llty = bx.fn_ptr_backend_type(fn_abi);
+                let null = bx.const_null(llty);
+                bx.icmp(base::bin_op_to_icmp_predicate(mir::BinOp::Ne, false), drop_fn, null)
+            };
             bx.cond_br(non_null, is_not_null, helper.llbb_with_cleanup(self, target));
             bx.switch_to_block(is_not_null);
             self.set_debug_loc(bx, *source_info);
@@ -1214,23 +1234,13 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
                         // Now that we have `*dyn Trait` or `&dyn Trait`, split it up into its
                         // data pointer and vtable. Look up the method in the vtable, and pass
                         // the data pointer as the first argument.
-                        llfn = Some(meth::VirtualIndex::from_index(idx).get_fn(
-                            bx,
-                            meta,
-                            op.layout.ty,
-                            fn_abi,
-                        ));
+                        llfn = Some(bx.get_vtable_fn(meta, op.layout.ty, idx as u64, fn_abi));
                         llargs.push(data_ptr);
                         continue 'make_args;
                     }
                     Ref(PlaceValue { llval: data_ptr, llextra: Some(meta), .. }) => {
                         // by-value dynamic dispatch
-                        llfn = Some(meth::VirtualIndex::from_index(idx).get_fn(
-                            bx,
-                            meta,
-                            op.layout.ty,
-                            fn_abi,
-                        ));
+                        llfn = Some(bx.get_vtable_fn(meta, op.layout.ty, idx as u64, fn_abi));
                         llargs.push(data_ptr);
                         continue;
                     }
