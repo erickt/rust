@@ -600,6 +600,19 @@ struct LLVMRustSanitizerOptions {
 extern "C" typedef void (*registerEnzymeAndPassPipelineFn)(
     llvm::PassBuilder &PB, bool augment);
 
+/// Forces the bitcode writer to emit full LTO summary instead of thin LTO
+/// summary for embedded bitcode under Fat LTO.
+///
+/// Note the bitcode writer will only emit the full LTO block ID if the
+/// "ThinLTO" metadata is defined and explicitly set to zero. Otherwise,
+/// the thin LTO block ID will be emitted.
+static void forceFullLTOSummary(Module *M) {
+  if (!M->getModuleFlag("ThinLTO")) {
+    auto *Zero = ConstantInt::get(Type::getInt32Ty(M->getContext()), 0);
+    M->addModuleFlag(Module::Error, "ThinLTO", Zero);
+  }
+}
+
 extern "C" LLVMRustResult LLVMRustOptimize(
     LLVMModuleRef ModuleRef, LLVMTargetMachineRef TMRef,
     LLVMRustPassBuilderOptLevel OptLevelRust, LLVMRustOptStage OptStage,
@@ -944,7 +957,10 @@ extern "C" LLVMRustResult LLVMRustOptimize(
             ThinLTODataOS,
             ThinLTOSummaryBufferRef ? &ThinLinkDataOS : nullptr));
       } else {
-        MPM.addPass(BitcodeWriterPass(ThinLTODataOS));
+        forceFullLTOSummary(TheModule);
+        MPM.addPass(BitcodeWriterPass(ThinLTODataOS,
+                                      /*ShouldPreserveUseListOrder=*/false,
+                                      /*EmitSummaryIndex=*/true));
       }
       *ThinLTOBufferRef = ThinLTOBuffer.release();
       if (ThinLTOSummaryBufferRef) {
@@ -1463,23 +1479,26 @@ extern "C" LLVMRustBuffer *LLVMRustModuleSerialize(LLVMModuleRef M,
   {
     auto OS = raw_string_ostream(Ret->data);
     {
+      PassBuilder PB;
+      LoopAnalysisManager LAM;
+      FunctionAnalysisManager FAM;
+      CGSCCAnalysisManager CGAM;
+      ModuleAnalysisManager MAM;
+      PB.registerModuleAnalyses(MAM);
+      PB.registerCGSCCAnalyses(CGAM);
+      PB.registerFunctionAnalyses(FAM);
+      PB.registerLoopAnalyses(LAM);
+      PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+      ModulePassManager MPM;
       if (is_thin) {
-        PassBuilder PB;
-        LoopAnalysisManager LAM;
-        FunctionAnalysisManager FAM;
-        CGSCCAnalysisManager CGAM;
-        ModuleAnalysisManager MAM;
-        PB.registerModuleAnalyses(MAM);
-        PB.registerCGSCCAnalyses(CGAM);
-        PB.registerFunctionAnalyses(FAM);
-        PB.registerLoopAnalyses(LAM);
-        PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
-        ModulePassManager MPM;
         MPM.addPass(ThinLTOBitcodeWriterPass(OS, nullptr));
-        MPM.run(*unwrap(M), MAM);
       } else {
-        WriteBitcodeToFile(*unwrap(M), OS);
+        forceFullLTOSummary(unwrap(M));
+        MPM.addPass(BitcodeWriterPass(OS, /*ShouldPreserveUseListOrder=*/false,
+                                      /*EmitSummaryIndex=*/true));
       }
+      MPM.run(*unwrap(M), MAM);
     }
   }
   return Ret.release();
