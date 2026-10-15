@@ -164,17 +164,40 @@ cfg_select! {
 #[link(name = "dl", cfg(not(target_feature = "crt-static")))]
 unsafe extern "C" {}
 
-// When building with crt-static, we get `gcc_eh` from the `libc` crate, since
-// glibc needs it, and needs it listed later on the linker command line. We
-// don't want to duplicate it here.
-#[cfg(all(
-    target_os = "linux",
-    any(target_env = "gnu", target_env = "uclibc"),
-    not(feature = "llvm-libunwind"),
-    not(feature = "system-llvm-libunwind")
-))]
-#[link(name = "gcc_s", cfg(not(target_feature = "crt-static")))]
-unsafe extern "C" {}
+#[cfg(all(target_os = "linux", any(target_env = "gnu", target_env = "uclibc")))]
+cfg_select! {
+    feature = "llvm-libunwind" => {
+        #[link(name = "unwind", kind = "static", modifiers = "-bundle")]
+        unsafe extern "C" {}
+    }
+    feature = "system-llvm-libunwind" => {
+        #[link(
+            name = "unwind",
+            kind = "static",
+            modifiers = "-bundle",
+            cfg(target_feature = "crt-static")
+        )]
+        unsafe extern "C" {}
+    }
+    _ => {
+        #[link(name = "c", cfg(target_feature = "crt-static"))]
+        #[link(
+            name = "gcc_eh",
+            kind = "static",
+            modifiers = "-bundle",
+            cfg(target_feature = "crt-static")
+        )]
+        #[link(
+            name = "gcc",
+            kind = "static",
+            modifiers = "-bundle",
+            cfg(target_feature = "crt-static")
+        )]
+        #[link(name = "c", cfg(target_feature = "crt-static"))]
+        #[link(name = "gcc_s", cfg(not(target_feature = "crt-static")))]
+        unsafe extern "C" {}
+    }
+}
 
 #[cfg(all(
     target_os = "linux",
